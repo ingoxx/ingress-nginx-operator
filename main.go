@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"github.com/ingoxx/ingress-nginx-operator/logger"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/config"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -49,6 +51,10 @@ func init() {
 }
 
 func main() {
+	// init log config
+	logger.SetLogFile(config.LoggerFile)
+	logger.SetLogLevel(logger.ErrorLevel)
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
