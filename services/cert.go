@@ -72,3 +72,7 @@ func (c *CertServiceImpl) DeleteCert(ctx context.Context, namespace, name string
 func (c *CertServiceImpl) UpdateCert(ctx context.Context, namespace, name string) error {
 	return nil
 }
+
+func (c *CertServiceImpl) ResourceData() error {
+	return nil
+}

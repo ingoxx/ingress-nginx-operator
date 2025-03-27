@@ -3,7 +3,6 @@ package services
 import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
 	"golang.org/x/net/context"
-	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 )
 
@@ -28,8 +27,18 @@ func (i *IngressServiceImpl) GetIngressHosts(ctx context.Context, namespace, nam
 	return hosts
 }
 
-func (i *IngressServiceImpl) GetIngressBackends(ctx context.Context, namespace, name string) ([]v12.Service, error) {
-	var svs []v12.Service
+func (i *IngressServiceImpl) GetIngressBackends(ctx context.Context, namespace, name string) ([]v1.IngressBackend, error) {
+	var bks []v1.IngressBackend
 
-	return svs, nil
+	return bks, nil
+}
+
+func (i *IngressServiceImpl) GetIngressBackend(ctx context.Context, namespace, name string) (v1.IngressBackend, error) {
+	var bks v1.IngressBackend
+
+	return bks, nil
+}
+
+func (i *IngressServiceImpl) ResourceData() error {
+	return nil
 }
