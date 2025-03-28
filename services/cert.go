@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -10,6 +11,7 @@ import (
 // CertServiceImpl 实现 CertService 接口
 type CertServiceImpl struct {
 	K8sClient interfaces.K8sClientSet
+	ingress   service.K8sResourcesIngress
 }
 
 // NewCertServiceImpl 创建 Service 实例
@@ -32,7 +34,7 @@ func (c *CertServiceImpl) certUnstructured() *unstructured.Unstructured {
 	return certificate
 }
 
-func (c *CertServiceImpl) certUnstructuredData(namespace, name string, hosts []string) *unstructured.Unstructured {
+func (c *CertServiceImpl) certUnstructuredData(ctx context.Context, namespace, name string) *unstructured.Unstructured {
 	certUnstructured := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "cert-manager.io/v1",
@@ -42,7 +44,7 @@ func (c *CertServiceImpl) certUnstructuredData(namespace, name string, hosts []s
 				"namespace": namespace,
 			},
 			"spec": map[string]interface{}{
-				"dnsNames": hosts,
+				"dnsNames": c.ingress.GetHosts(ctx, namespace, name),
 				"issuerRef": map[string]interface{}{
 					"kind": "Issuer",
 					"name": name + "-issuer",
