@@ -10,13 +10,15 @@ import (
 
 // CertServiceImpl 实现 CertService 接口
 type CertServiceImpl struct {
-	K8sClient interfaces.K8sClientSet
-	ingress   service.K8sResourcesIngress
+	K8sClient   interfaces.K8sClientSet
+	OperatorCli interfaces.OperatorClientSet
+	ingress     service.K8sResourcesIngress
+	ctx         context.Context
 }
 
 // NewCertServiceImpl 创建 Service 实例
-func NewCertServiceImpl(client interfaces.K8sClientSet) *PodServiceImpl {
-	return &PodServiceImpl{K8sClient: client}
+func NewCertServiceImpl(ctx context.Context, client interfaces.K8sClientSet) *CertServiceImpl {
+	return &CertServiceImpl{K8sClient: client}
 }
 
 func (c *CertServiceImpl) certGVK() schema.GroupVersionResource {
@@ -72,9 +74,5 @@ func (c *CertServiceImpl) DeleteCert(ctx context.Context, namespace, name string
 }
 
 func (c *CertServiceImpl) UpdateCert(ctx context.Context, namespace, name string) error {
-	return nil
-}
-
-func (c *CertServiceImpl) ResourceData() error {
 	return nil
 }

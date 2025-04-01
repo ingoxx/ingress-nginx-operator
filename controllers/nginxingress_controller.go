@@ -18,13 +18,16 @@ package controllers
 
 import (
 	"context"
+	v1 "k8s.io/api/networking/v1"
+	"k8s.io/klog/v2"
 
+	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
+	k8sCli "github.com/ingoxx/ingress-nginx-operator/client"
+	cli "github.com/ingoxx/ingress-nginx-operator/pkg/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
 )
 
 // NginxIngressReconciler reconciles a NginxIngress object
@@ -54,12 +57,21 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
+	var ic = new(v1.Ingress)
+
+	if err := r.Get(ctx, req.NamespacedName, ic); err != nil {
+		klog.Infof("ingress resource %s not found in namesapce %s, maybe has been deleted", req.NamespacedName.Name, req.NamespacedName.Namespace)
+		return ctrl.Result{}, nil
+	}
 
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	k8sCli.NewK8sApiClient()
+	cli.NewOperatorClientImp(r.Client)
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ingressv1.NginxIngress{}).
 		Complete(r)

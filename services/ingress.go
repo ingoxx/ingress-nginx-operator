@@ -10,12 +10,14 @@ import (
 
 // IngressServiceImpl 实现 IngressService 接口
 type IngressServiceImpl struct {
-	K8sClient interfaces.K8sClientSet
+	K8sClient   interfaces.K8sClientSet
+	OperatorCli interfaces.OperatorClientSet
+	ctx         context.Context
 }
 
 // NewIngressServiceImpl 创建 Service 实例
-func NewIngressServiceImpl(client interfaces.K8sClientSet) *PodServiceImpl {
-	return &PodServiceImpl{K8sClient: client}
+func NewIngressServiceImpl(ctx context.Context, client interfaces.K8sClientSet, operatorCli interfaces.OperatorClientSet) *IngressServiceImpl {
+	return &IngressServiceImpl{K8sClient: client, OperatorCli: operatorCli}
 }
 
 func (i *IngressServiceImpl) GetIngress(ctx context.Context, namespace, name string) (v1.Ingress, error) {
