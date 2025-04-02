@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/client"
 	"github.com/ingoxx/ingress-nginx-operator/logger"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/config"
 	"os"
@@ -51,9 +53,14 @@ func init() {
 }
 
 func main() {
-	// init log config
 	logger.SetLogFile(config.LoggerFile)
 	logger.SetLogLevel(logger.ErrorLevel)
+
+	apiClient, err := client.NewK8sApiClient()
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to connect to Kubernetes client API, error msg: %s", err.Error()))
+		os.Exit(1)
+	}
 
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -98,7 +105,7 @@ func main() {
 	if err = (&controllers.NginxIngressReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, apiClient); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NginxIngress")
 		os.Exit(1)
 	}

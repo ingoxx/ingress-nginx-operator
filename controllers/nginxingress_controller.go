@@ -18,12 +18,11 @@ package controllers
 
 import (
 	"context"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/klog/v2"
 
 	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
-	k8sCli "github.com/ingoxx/ingress-nginx-operator/client"
-	cli "github.com/ingoxx/ingress-nginx-operator/pkg/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +32,8 @@ import (
 // NginxIngressReconciler reconciles a NginxIngress object
 type NginxIngressReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	clientSet interfaces.K8sClientSet
+	Scheme    *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=ingress.ingress-k8s.io,resources=nginxingresses,verbs=get;list;watch;create;update;patch;delete
@@ -58,9 +58,8 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// TODO(user): your logic here
 	var ic = new(v1.Ingress)
-
 	if err := r.Get(ctx, req.NamespacedName, ic); err != nil {
-		klog.Infof("ingress resource %s not found in namesapce %s, maybe has been deleted", req.NamespacedName.Name, req.NamespacedName.Namespace)
+		klog.Infof("No ingress resource with name '%s' was found in the namespace '%s'", req.NamespacedName.Namespace, req.NamespacedName.Name)
 		return ctrl.Result{}, nil
 	}
 
@@ -68,11 +67,10 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	k8sCli.NewK8sApiClient()
-	cli.NewOperatorClientImp(r.Client)
-
+func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet interfaces.K8sClientSet) error {
+	r.clientSet = clientSet
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ingressv1.NginxIngress{}).
+		For(&v1.Ingress{}).
 		Complete(r)
 }

@@ -18,4 +18,6 @@ type K8sResourcesIngress interface {
 	GetSecret(key client.ObjectKey) (*corev1.Secret, error)
 	GetTlsData(key client.ObjectKey) (map[string][]byte, error)
 	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string
+	CheckController() error
+	CheckService() error
 }
