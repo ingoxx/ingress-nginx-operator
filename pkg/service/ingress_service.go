@@ -8,7 +8,7 @@ import (
 )
 
 type K8sResourcesIngress interface {
-	GetIngress(ctx context.Context, namespace, name string) (v1.Ingress, error)
+	GetIngress(ctx context.Context, namespace, name string) (*v1.Ingress, error)
 	GetHosts(ctx context.Context, namespace, name string) []string
 	GetBackends(ctx context.Context, namespace, name string) ([]v1.IngressBackend, error)
 	GetBackend(ctx context.Context, namespace, name string) (v1.IngressBackend, error)

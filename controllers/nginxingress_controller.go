@@ -18,22 +18,25 @@ package controllers
 
 import (
 	"context"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
-	v1 "k8s.io/api/networking/v1"
-	"k8s.io/klog/v2"
-
 	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
+	"github.com/ingoxx/ingress-nginx-operator/logger"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
+	"github.com/ingoxx/ingress-nginx-operator/services"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 )
 
 // NginxIngressReconciler reconciles a NginxIngress object
 type NginxIngressReconciler struct {
 	client.Client
-	clientSet interfaces.K8sClientSet
-	Scheme    *runtime.Scheme
+	clientSet   interfaces.K8sClientSet
+	operatorCli interfaces.OperatorClientSet
+	Scheme      *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=ingress.ingress-k8s.io,resources=nginxingresses,verbs=get;list;watch;create;update;patch;delete
@@ -59,8 +62,21 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// TODO(user): your logic here
 	var ic = new(v1.Ingress)
 	if err := r.Get(ctx, req.NamespacedName, ic); err != nil {
-		klog.Infof("No ingress resource with name '%s' was found in the namespace '%s'", req.NamespacedName.Namespace, req.NamespacedName.Name)
+		logger.Info("No ingress resource with name '%s' was found in the namespace '%s'", req.NamespacedName.Namespace, req.NamespacedName.Name)
 		return ctrl.Result{}, nil
+	}
+
+	ing := services.NewIngressServiceImpl(ctx, r.clientSet, r.operatorCli)
+	if err := ing.CheckController(); err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
+	}
+	if err := ing.CheckService(); err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
+	}
+
+	cert := services.NewCertServiceImpl(ctx, ing)
+	if err := cert.CheckCert(); err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -69,6 +85,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // SetupWithManager sets up the controller with the Manager.
 func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet interfaces.K8sClientSet) error {
 	r.clientSet = clientSet
+	r.operatorCli = operatorCli.NewOperatorClientImp(mgr.GetClient())
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ingressv1.NginxIngress{}).
 		For(&v1.Ingress{}).

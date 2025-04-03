@@ -6,6 +6,8 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -21,8 +23,9 @@ func NewIngressServiceImpl(ctx context.Context, k8sCli interfaces.K8sClientSet, 
 	return &IngressServiceImpl{ctx: ctx, K8sCli: k8sCli, OperatorCli: operatorCli}
 }
 
-func (i *IngressServiceImpl) GetIngress(ctx context.Context, namespace, name string) (v1.Ingress, error) {
-	var ing v1.Ingress
+func (i *IngressServiceImpl) GetIngress(ctx context.Context, namespace, name string) (*v1.Ingress, error) {
+	var ing = new(v1.Ingress)
+
 	return ing, nil
 }
 
@@ -84,4 +87,16 @@ func (i *IngressServiceImpl) GetUpstreamName(paths []v1.HTTPIngressPath, ing int
 
 func (i *IngressServiceImpl) getUpstreamBackend(paths []v1.HTTPIngressPath) string {
 	return ""
+}
+
+func (i *IngressServiceImpl) GetClientSet() *kubernetes.Clientset {
+	return i.K8sCli.GetClientSet()
+}
+
+func (i *IngressServiceImpl) GetDynamicClientSet() dynamic.Interface {
+	return i.K8sCli.GetDynamicClientSet()
+}
+
+func (i *IngressServiceImpl) GetClient() client.Client {
+	return i.OperatorCli.GetClient()
 }

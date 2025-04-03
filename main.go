@@ -24,7 +24,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/config"
 	"os"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// Import all Kubernetes operatorCli auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -58,7 +58,7 @@ func main() {
 
 	apiClient, err := client.NewK8sApiClient()
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to Kubernetes client API, error msg: %s", err.Error()))
+		logger.Error(fmt.Sprintf("Failed to connect to Kubernetes operatorCli API, error msg: %s", err.Error()))
 		os.Exit(1)
 	}
 

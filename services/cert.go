@@ -10,15 +10,14 @@ import (
 
 // CertServiceImpl 实现 CertService 接口
 type CertServiceImpl struct {
-	K8sClient   interfaces.K8sClientSet
-	OperatorCli interfaces.OperatorClientSet
-	ingress     service.K8sResourcesIngress
-	ctx         context.Context
+	issuer service.K8sResourcesIssuer
+	ing    interfaces.Generic
+	ctx    context.Context
 }
 
 // NewCertServiceImpl 创建 Service 实例
-func NewCertServiceImpl(ctx context.Context, client interfaces.K8sClientSet) *CertServiceImpl {
-	return &CertServiceImpl{K8sClient: client}
+func NewCertServiceImpl(ctx context.Context, ing interfaces.Generic) *CertServiceImpl {
+	return &CertServiceImpl{ctx: ctx, ing: ing}
 }
 
 func (c *CertServiceImpl) certGVK() schema.GroupVersionResource {
@@ -46,7 +45,7 @@ func (c *CertServiceImpl) certUnstructuredData(ctx context.Context, namespace, n
 				"namespace": namespace,
 			},
 			"spec": map[string]interface{}{
-				"dnsNames": c.ingress.GetHosts(ctx, namespace, name),
+				"dnsNames": c.ing.GetHosts(ctx, namespace, name),
 				"issuerRef": map[string]interface{}{
 					"kind": "Issuer",
 					"name": name + "-issuer",
@@ -74,5 +73,13 @@ func (c *CertServiceImpl) DeleteCert(ctx context.Context, namespace, name string
 }
 
 func (c *CertServiceImpl) UpdateCert(ctx context.Context, namespace, name string) error {
+	return nil
+}
+
+func (c *CertServiceImpl) CheckCert() error {
+
+	if err := c.issuer.CheckIssuer(); err != nil {
+		return err
+	}
 	return nil
 }

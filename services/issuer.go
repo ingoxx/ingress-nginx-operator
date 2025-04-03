@@ -3,20 +3,21 @@ package services
 import (
 	"context"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // IssuerServiceImpl 实现 IssuerService 接口
 type IssuerServiceImpl struct {
-	K8sClient   interfaces.K8sClientSet
-	OperatorCli interfaces.OperatorClientSet
-	ctx         context.Context
+	ingress   service.K8sResourcesIngress
+	clientSet interfaces.Generic
+	ctx       context.Context
 }
 
 // NewIssuerServiceImpl 创建 Service 实例
-func NewIssuerServiceImpl(ctx context.Context, client interfaces.K8sClientSet) *PodServiceImpl {
-	return &PodServiceImpl{K8sClient: client}
+func NewIssuerServiceImpl(ctx context.Context, clientSet interfaces.Generic, ingress service.K8sResourcesIngress) *IssuerServiceImpl {
+	return &IssuerServiceImpl{ctx: ctx, clientSet: clientSet, ingress: ingress}
 }
 
 func (i *IssuerServiceImpl) issuerGVK() schema.GroupVersionResource {
@@ -47,5 +48,9 @@ func (i *IssuerServiceImpl) DeleteIssuer(ctx context.Context, namespace, name st
 }
 
 func (i *IssuerServiceImpl) UpdateIssuer(ctx context.Context, namespace, name string) error {
+	return nil
+}
+
+func (i *IssuerServiceImpl) CheckIssuer() error {
 	return nil
 }

@@ -30,7 +30,7 @@ func NewK8sApiClient() (*K8sApiClient, error) {
 	// 创建 ClientSet
 	clientSet, err := kubernetes.NewForConfig(configSet)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+		return nil, fmt.Errorf("failed to create Kubernetes operatorCli: %w", err)
 	}
 
 	// 创建 dynamicClientSet

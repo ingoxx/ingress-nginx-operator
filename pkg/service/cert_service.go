@@ -9,4 +9,5 @@ type K8sResourcesCert interface {
 	GetCert(ctx context.Context, namespace, name string) error
 	DeleteCert(ctx context.Context, namespace, name string) error
 	UpdateCert(ctx context.Context, namespace, name string) error
+	CheckCert() error
 }
