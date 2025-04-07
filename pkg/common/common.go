@@ -1,4 +1,4 @@
-package interfaces
+package common
 
 import "github.com/ingoxx/ingress-nginx-operator/pkg/service"
 

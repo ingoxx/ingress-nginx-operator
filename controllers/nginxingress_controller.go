@@ -19,8 +19,8 @@ package controllers
 import (
 	"context"
 	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
-	"github.com/ingoxx/ingress-nginx-operator/logger"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
+	cerr "github.com/ingoxx/ingress-nginx-operator/error"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	v1 "k8s.io/api/networking/v1"
@@ -34,8 +34,8 @@ import (
 // NginxIngressReconciler reconciles a NginxIngress object
 type NginxIngressReconciler struct {
 	client.Client
-	clientSet   interfaces.K8sClientSet
-	operatorCli interfaces.OperatorClientSet
+	clientSet   common.K8sClientSet
+	operatorCli common.OperatorClientSet
 	Scheme      *runtime.Scheme
 }
 
@@ -60,16 +60,23 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-	var ic = new(v1.Ingress)
-	if err := r.Get(ctx, req.NamespacedName, ic); err != nil {
-		logger.Info("No ingress resource with name '%s' was found in the namespace '%s'", req.NamespacedName.Namespace, req.NamespacedName.Name)
-		return ctrl.Result{}, nil
-	}
+	//var ic = new(v1.Ingress)
+	//if err := r.Get(ctx, req.NamespacedName, ic); err != nil {
+	//	logger.Info("No ingress resource with name '%s' was found in the namespace '%s'", req.NamespacedName.Namespace, req.NamespacedName.Name)
+	//	return ctrl.Result{}, nil
+	//}
 
 	ing := services.NewIngressServiceImpl(ctx, r.clientSet, r.operatorCli)
+
+	_, err := ing.GetIngress(ctx, req.NamespacedName)
+	if cerr.IsIngressNotError(err) {
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
+	}
+
 	if err := ing.CheckController(); err != nil {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
 	}
+
 	if err := ing.CheckService(); err != nil {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
 	}
@@ -83,7 +90,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet interfaces.K8sClientSet) error {
+func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet common.K8sClientSet) error {
 	r.clientSet = clientSet
 	r.operatorCli = operatorCli.NewOperatorClientImp(mgr.GetClient())
 	return ctrl.NewControllerManagedBy(mgr).

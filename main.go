@@ -19,9 +19,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ingoxx/ingress-nginx-operator/client"
-	"github.com/ingoxx/ingress-nginx-operator/logger"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/client"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/config"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/logger"
 	"os"
 
 	// Import all Kubernetes operatorCli auth plugins (e.g. Azure, GCP, OIDC, etc.)

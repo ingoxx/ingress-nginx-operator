@@ -1,4 +1,4 @@
-package interfaces
+package common
 
 import (
 	"k8s.io/client-go/dynamic"

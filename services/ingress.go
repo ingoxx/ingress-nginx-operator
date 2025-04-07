@@ -2,7 +2,8 @@ package services
 
 import (
 	"fmt"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
+	cerr "github.com/ingoxx/ingress-nginx-operator/error"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -13,18 +14,21 @@ import (
 
 // IngressServiceImpl 实现 IngressService 接口
 type IngressServiceImpl struct {
-	K8sCli      interfaces.K8sClientSet
-	OperatorCli interfaces.OperatorClientSet
+	k8sCli      common.K8sClientSet
+	operatorCli common.OperatorClientSet
 	ctx         context.Context
 }
 
 // NewIngressServiceImpl 创建 Service 实例
-func NewIngressServiceImpl(ctx context.Context, k8sCli interfaces.K8sClientSet, operatorCli interfaces.OperatorClientSet) *IngressServiceImpl {
-	return &IngressServiceImpl{ctx: ctx, K8sCli: k8sCli, OperatorCli: operatorCli}
+func NewIngressServiceImpl(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet) *IngressServiceImpl {
+	return &IngressServiceImpl{ctx: ctx, k8sCli: k8sCli, operatorCli: operatorCli}
 }
 
-func (i *IngressServiceImpl) GetIngress(ctx context.Context, namespace, name string) (*v1.Ingress, error) {
+func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
 	var ing = new(v1.Ingress)
+	if err := i.operatorCli.GetClient().Get(ctx, req, ing); err != nil {
+		return ing, cerr.NewIngressNotError(fmt.Sprintf("No ingress %s found in namespace %s", req.Namespace, req.Name))
+	}
 
 	return ing, nil
 }
@@ -90,13 +94,13 @@ func (i *IngressServiceImpl) getUpstreamBackend(paths []v1.HTTPIngressPath) stri
 }
 
 func (i *IngressServiceImpl) GetClientSet() *kubernetes.Clientset {
-	return i.K8sCli.GetClientSet()
+	return i.k8sCli.GetClientSet()
 }
 
 func (i *IngressServiceImpl) GetDynamicClientSet() dynamic.Interface {
-	return i.K8sCli.GetDynamicClientSet()
+	return i.k8sCli.GetDynamicClientSet()
 }
 
 func (i *IngressServiceImpl) GetClient() client.Client {
-	return i.OperatorCli.GetClient()
+	return i.operatorCli.GetClient()
 }

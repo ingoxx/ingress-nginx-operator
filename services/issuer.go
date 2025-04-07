@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/interfaces"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -11,12 +11,12 @@ import (
 // IssuerServiceImpl 实现 IssuerService 接口
 type IssuerServiceImpl struct {
 	ingress   service.K8sResourcesIngress
-	clientSet interfaces.Generic
+	clientSet common.Generic
 	ctx       context.Context
 }
 
 // NewIssuerServiceImpl 创建 Service 实例
-func NewIssuerServiceImpl(ctx context.Context, clientSet interfaces.Generic, ingress service.K8sResourcesIngress) *IssuerServiceImpl {
+func NewIssuerServiceImpl(ctx context.Context, clientSet common.Generic, ingress service.K8sResourcesIngress) *IssuerServiceImpl {
 	return &IssuerServiceImpl{ctx: ctx, clientSet: clientSet, ingress: ingress}
 }
 
