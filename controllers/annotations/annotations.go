@@ -4,9 +4,11 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/rewrite"
 	v1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type IngressAnnotationsKey struct {
+	metav1.ObjectMeta
 	Rewrite rewrite.Config
 }
 
@@ -23,5 +25,9 @@ func NewExtractor() *Extractor {
 }
 
 func (e *Extractor) Extract(ing *v1.Ingress) *IngressAnnotationsKey {
-	return &IngressAnnotationsKey{}
+	in := &IngressAnnotationsKey{
+		ObjectMeta: ing.ObjectMeta,
+	}
+
+	return in
 }

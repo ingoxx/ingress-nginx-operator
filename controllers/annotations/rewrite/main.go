@@ -5,6 +5,11 @@ import (
 	v1 "k8s.io/api/networking/v1"
 )
 
+const (
+	rewriteTargetAnnotation      = "rewrite-target"
+	rewriteEnableRegexAnnotation = "enable-regex"
+)
+
 type rewrite struct {
 }
 
@@ -13,11 +18,21 @@ type Config struct {
 	EnableRegex   bool   `json:"enable-regex"`
 }
 
+var rewriteAnnotations = parser.AnnotationsContents{
+	rewriteTargetAnnotation: {
+		Doc: "",
+	},
+	rewriteEnableRegexAnnotation: {
+		Doc: "",
+	},
+}
+
 func NewRewrite() parser.IngressAnnotationsParser {
 	return &rewrite{}
 }
 
 func (r *rewrite) Parse(*v1.Ingress) (interface{}, error) {
+
 	return nil, nil
 }
 
