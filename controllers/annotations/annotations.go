@@ -14,19 +14,20 @@ type IngressAnnotationsKey struct {
 
 type Extractor struct {
 	annotations map[string]parser.IngressAnnotationsParser
+	ingress     *v1.Ingress
 }
 
-func NewExtractor() *Extractor {
+func NewExtractor(ing *v1.Ingress) *Extractor {
 	return &Extractor{
 		annotations: map[string]parser.IngressAnnotationsParser{
-			"Rewrite": rewrite.NewRewrite(),
+			"Rewrite": rewrite.NewRewrite(ing),
 		},
 	}
 }
 
-func (e *Extractor) Extract(ing *v1.Ingress) *IngressAnnotationsKey {
+func (e *Extractor) Extract() *IngressAnnotationsKey {
 	in := &IngressAnnotationsKey{
-		ObjectMeta: ing.ObjectMeta,
+		ObjectMeta: e.ingress.ObjectMeta,
 	}
 
 	return in

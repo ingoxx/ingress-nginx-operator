@@ -19,8 +19,8 @@ package controllers
 import (
 	"context"
 	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
-	cerr "github.com/ingoxx/ingress-nginx-operator/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	v1 "k8s.io/api/networking/v1"
@@ -69,7 +69,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	ing := services.NewIngressServiceImpl(ctx, r.clientSet, r.operatorCli)
 
 	_, err := ing.GetIngress(ctx, req.NamespacedName)
-	if cerr.IsIngressNotError(err) {
+	if cerr.IsIngressNotFoundError(err) {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
 	}
 

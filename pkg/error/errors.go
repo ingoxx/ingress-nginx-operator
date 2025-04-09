@@ -1,22 +1,25 @@
 package error
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
-type IngressNotError struct {
+type IngressNotFoundError struct {
 	errMsg string
 }
 
-func (e IngressNotError) Error() string {
+func (e IngressNotFoundError) Error() string {
 	return e.errMsg
 }
 
-func IsIngressNotError(e error) bool {
-	var err IngressNotError
+func IsIngressNotFoundError(e error) bool {
+	var err IngressNotFoundError
 	return errors.As(e, &err)
 }
 
-func NewIngressNotError(errMsg string) error {
-	return IngressNotError{
+func NewIngressNotFoundError(errMsg string) error {
+	return IngressNotFoundError{
 		errMsg: errMsg,
 	}
 }
@@ -73,9 +76,9 @@ func IsMissIngressAnnotationsError(e error) bool {
 	return errors.As(e, &err)
 }
 
-func NewMissIngressAnnotationsError(errMsg string) error {
+func NewMissIngressAnnotationsError(ann, name, namespace string) error {
 	return MissIngressAnnotationsError{
-		errMsg: errMsg,
+		errMsg: fmt.Sprintf(fmt.Sprintf("miss annotations '%s', ingress '%s' in namespace '%s'", ann, name, namespace)),
 	}
 }
 
@@ -95,5 +98,24 @@ func IsIngressAnnotationsContentError(e error) bool {
 func NewIngressAnnotationsContentError(errMsg string) error {
 	return IngressAnnotationsContentError{
 		errMsg: errMsg,
+	}
+}
+
+type InvalidIngressAnnotationsError struct {
+	errMsg string
+}
+
+func (e InvalidIngressAnnotationsError) Error() string {
+	return e.errMsg
+}
+
+func IsInvalidIngressAnnotationsError(e error) bool {
+	var err InvalidIngressAnnotationsError
+	return errors.As(e, &err)
+}
+
+func NewInvalidIngressAnnotationsError(ann, name, namespace string) error {
+	return InvalidIngressAnnotationsError{
+		errMsg: fmt.Sprintf("ingress annotation '%s' contain invalid value, ingress '%s' in namespace '%s'", ann, name, namespace),
 	}
 }

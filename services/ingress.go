@@ -2,8 +2,8 @@ package services
 
 import (
 	"fmt"
-	cerr "github.com/ingoxx/ingress-nginx-operator/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -27,7 +27,7 @@ func NewIngressServiceImpl(ctx context.Context, k8sCli common.K8sClientSet, oper
 func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
 	var ing = new(v1.Ingress)
 	if err := i.operatorCli.GetClient().Get(ctx, req, ing); err != nil {
-		return ing, cerr.NewIngressNotError(fmt.Sprintf("No ingress %s found in namespace %s", req.Namespace, req.Name))
+		return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("ingress '%s' not found in namespace '%s'", req.Name, req.Namespace))
 	}
 
 	return ing, nil
