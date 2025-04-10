@@ -1,13 +1,17 @@
 package annotations
 
 import (
+	"fmt"
+	"github.com/imdario/mergo"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/rewrite"
+	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
-type IngressAnnotationsKey struct {
+type IngressAnnotationsConfig struct {
 	metav1.ObjectMeta
 	Rewrite rewrite.Config
 }
@@ -25,10 +29,36 @@ func NewExtractor(ing *v1.Ingress) *Extractor {
 	}
 }
 
-func (e *Extractor) Extract() *IngressAnnotationsKey {
-	in := &IngressAnnotationsKey{
+func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
+	iak := &IngressAnnotationsConfig{
 		ObjectMeta: e.ingress.ObjectMeta,
 	}
 
-	return in
+	ia := make(map[string]interface{})
+	for name, annotationParser := range e.annotations {
+		if err := annotationParser.Validate(e.ingress.GetAnnotations()); err != nil {
+			return nil, cerr.NewAnnotationValidationFailError(name, e.ingress.Name, e.ingress.Namespace)
+		}
+
+		val, err := annotationParser.Parse(e.ingress)
+		if err != nil {
+			if cerr.IsMissIngressAnnotationsError(err) {
+				continue
+			}
+
+			return nil, err
+		}
+
+		if val != nil {
+			ia[name] = val
+		}
+	}
+
+	err := mergo.MapWithOverwrite(iak, ia)
+	if err != nil {
+		klog.ErrorS(err, fmt.Sprintf("unexpected error merging extracted annotations, ingress '%s', namespace '%s'", e.ingress.Name, e.ingress.Namespace))
+		return nil, err
+	}
+
+	return nil, nil
 }

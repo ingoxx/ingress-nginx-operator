@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
@@ -68,7 +70,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	ing := services.NewIngressServiceImpl(ctx, r.clientSet, r.operatorCli)
 
-	_, err := ing.GetIngress(ctx, req.NamespacedName)
+	ingress, err := ing.GetIngress(ctx, req.NamespacedName)
 	if cerr.IsIngressNotFoundError(err) {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
 	}
@@ -83,6 +85,20 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	cert := services.NewCertServiceImpl(ctx, ing)
 	if err := cert.CheckCert(); err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
+	}
+
+	extract, err := annotations.NewExtractor(ingress).Extract()
+	if err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
+	}
+
+	ar := adapter.ResourceAdapter{
+		Ingress: ing,
+		Secret:  services.NewSecretServiceImpl(ctx, ing),
+	}
+
+	if err := NewNginxController(ar, extract).Run(); err != nil {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
 	}
 

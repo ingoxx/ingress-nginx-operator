@@ -2,14 +2,12 @@ package parser
 
 import (
 	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	v1 "k8s.io/api/networking/v1"
 	"regexp"
+	"strconv"
 	"strings"
-)
-
-const (
-	AnnotationsPrefix = "ingress.nginx.k8s.io"
 )
 
 type IngressAnnotationsParser interface {
@@ -32,21 +30,41 @@ func (g GetAnnotationVal) parseString(name string, ing *v1.Ingress) (string, err
 	val, ok := g[name]
 	if ok {
 		if val == "" {
-			return "", cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
+			return "", cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
 		}
 
 		return val, nil
 	}
 
-	return "", nil
+	return "", cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
 }
 
 func (g GetAnnotationVal) parseBool(name string, ing *v1.Ingress) (bool, error) {
-	return false, nil
+	val, ok := g[name]
+	if ok {
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return false, cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
+		}
+
+		return b, nil
+	}
+
+	return false, cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
 }
 
 func (g GetAnnotationVal) parseSlice(name string, ing *v1.Ingress) ([]string, error) {
-	return []string{}, nil
+	var data = make([]string, 5)
+	val, ok := g[name]
+	if ok {
+		if val == "" {
+			return data, cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
+		}
+
+		return data, nil
+	}
+
+	return data, cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
 }
 
 func GetDnsRegex(str string) string {
@@ -77,9 +95,9 @@ func GetBoolAnnotations(name string, ing *v1.Ingress, config AnnotationsContents
 }
 
 func GetAnnotationSuffix(annotation string) string {
-	return strings.TrimPrefix(annotation, AnnotationsPrefix+"/")
+	return strings.TrimPrefix(annotation, constants.AnnotationsPrefix+"/")
 }
 
 func GetAnnotationKey(suffix string) string {
-	return fmt.Sprintf("%v/%v", AnnotationsPrefix, suffix)
+	return fmt.Sprintf("%v/%v", constants.AnnotationsPrefix, suffix)
 }

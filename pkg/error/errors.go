@@ -119,3 +119,22 @@ func NewInvalidIngressAnnotationsError(ann, name, namespace string) error {
 		errMsg: fmt.Sprintf("ingress annotation '%s' contain invalid value, ingress '%s' in namespace '%s'", ann, name, namespace),
 	}
 }
+
+type AnnotationValidationFailedError struct {
+	errMsg string
+}
+
+func (e AnnotationValidationFailedError) Error() string {
+	return e.errMsg
+}
+
+func IsAnnotationValidationFailError(e error) bool {
+	var err AnnotationValidationFailedError
+	return errors.As(e, &err)
+}
+
+func NewAnnotationValidationFailError(ann, name, namespace string) error {
+	return AnnotationValidationFailedError{
+		errMsg: fmt.Sprintf("the value verification of the annotation for '%s' is invalid, ingress '%s' in namespace '%s'", ann, name, namespace),
+	}
+}

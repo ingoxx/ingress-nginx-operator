@@ -2,7 +2,7 @@ package parser
 
 import (
 	"errors"
-	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	v1 "k8s.io/api/networking/v1"
 	"regexp"
@@ -15,7 +15,7 @@ func IsRegex(str string) bool {
 }
 
 func IsSpecificPrefix(annotation string) bool {
-	pattern := `^` + AnnotationsPrefix + "/"
+	pattern := `^` + constants.AnnotationsPrefix + "/"
 	re := regexp.MustCompile(pattern)
 	return re.FindStringIndex(annotation) != nil
 }
@@ -28,11 +28,10 @@ func CheckAnnotations(annotations map[string]string, config AnnotationsContents,
 		}
 
 		annKey := GetAnnotationSuffix(annotation)
-		annVal := ing.GetAnnotations()[annKey]
-		if cfg, ok := config[annKey]; ok && (cfg.Doc == "" || cfg.Validator(annVal, ing) != nil) {
-			err = errors.Join(err, fmt.Errorf("annotation %s have no description", annotation))
+		annVal := ing.GetAnnotations()[annotation]
+		if cfg, ok := config[annKey]; ok && cfg.Validator(annVal, ing) != nil {
+			err = errors.Join(err)
 		}
-
 	}
 
 	return err

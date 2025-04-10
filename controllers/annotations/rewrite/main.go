@@ -34,9 +34,14 @@ var rewriteAnnotations = parser.AnnotationsContents{
 	rewriteEnableRegexAnnotation: {
 		Doc: "",
 		Validator: func(s string, ing *v1.Ingress) error {
-			if s != "" && (s != "false" && s != "true") {
+			if s != "" {
+				if s == "false" || s == "true" {
+					return nil
+				}
+
 				return cerr.NewInvalidIngressAnnotationsError(s, ing.Name, ing.Namespace)
 			}
+
 			return nil
 		},
 	},
