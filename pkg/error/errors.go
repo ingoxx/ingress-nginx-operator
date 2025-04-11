@@ -128,13 +128,32 @@ func (e AnnotationValidationFailedError) Error() string {
 	return e.errMsg
 }
 
-func IsAnnotationValidationFailError(e error) bool {
+func IsAnnotationValidationFailedError(e error) bool {
 	var err AnnotationValidationFailedError
 	return errors.As(e, &err)
 }
 
-func NewAnnotationValidationFailError(ann, name, namespace string) error {
+func NewAnnotationValidationFailedError(ann, name, namespace string) error {
 	return AnnotationValidationFailedError{
 		errMsg: fmt.Sprintf("the value verification of the annotation for '%s' is invalid, ingress '%s' in namespace '%s'", ann, name, namespace),
+	}
+}
+
+type InvalidSvcPortError struct {
+	errMsg string
+}
+
+func (e InvalidSvcPortError) Error() string {
+	return e.errMsg
+}
+
+func IsInvalidSvcPortError(e error) bool {
+	var err InvalidSvcPortError
+	return errors.As(e, &err)
+}
+
+func NewInvalidSvcPortError(svc, name, namespace string) error {
+	return InvalidSvcPortError{
+		errMsg: fmt.Sprintf("invalid service port, service '%s', ingress '%s' in namespace '%s'", svc, name, namespace),
 	}
 }

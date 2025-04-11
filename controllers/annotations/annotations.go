@@ -37,7 +37,8 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 	ia := make(map[string]interface{})
 	for name, annotationParser := range e.annotations {
 		if err := annotationParser.Validate(e.ingress.GetAnnotations()); err != nil {
-			return nil, cerr.NewAnnotationValidationFailError(name, e.ingress.Name, e.ingress.Namespace)
+			klog.ErrorS(err, "")
+			return nil, err
 		}
 
 		val, err := annotationParser.Parse(e.ingress)

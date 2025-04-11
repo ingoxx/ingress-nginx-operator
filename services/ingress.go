@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
@@ -48,44 +49,112 @@ func (i *IngressServiceImpl) GetNameSpace() string {
 }
 
 func (i *IngressServiceImpl) GetHosts(ctx context.Context, namespace, name string) []string {
-	var hosts []string
+	var hosts = make([]string, 2)
+	if len(i.ingress.Spec.Rules) > 0 {
+		for _, r := range i.ingress.Spec.Rules {
+			hosts = append(hosts, r.Host)
+		}
+	}
 
 	return hosts
 }
 
-func (i *IngressServiceImpl) GetBackends(ctx context.Context, namespace, name string) ([]v1.IngressBackend, error) {
-	var bks []v1.IngressBackend
+func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, error) {
+	var bk = new(v1.ServiceBackendPort)
+	if len(i.ingress.Spec.Rules) > 0 {
+		svc, err := i.GetService(name)
+		if err != nil {
+			return bk, err
+		}
 
-	return bks, nil
+		for _, r := range i.ingress.Spec.Rules {
+			for _, p := range r.HTTP.Paths {
+				if p.Backend.Service.Name == svc.Name {
+					port := i.GetBackendPort(svc)
+					if port == 0 {
+						return bk, cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+					}
+
+					bk.Number = port
+					bk.Name = svc.Name
+
+					return bk, nil
+				}
+			}
+		}
+	}
+
+	return bk, nil
 }
 
-func (i *IngressServiceImpl) GetBackend(ctx context.Context, namespace, name string) (v1.IngressBackend, error) {
-	var bks v1.IngressBackend
+func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error) {
+	var bk = new(v1.ServiceBackendPort)
+	if i.ingress.Spec.DefaultBackend != nil {
+		svc, err := i.GetService(i.ingress.Spec.DefaultBackend.Service.Name)
+		if err != nil {
+			return bk, err
+		}
 
-	return bks, nil
-}
+		port := i.GetDefaultBackendPort(svc)
+		if port == 0 {
+			return bk, cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+		}
 
-func (i *IngressServiceImpl) GetDefaultService() (*corev1.Service, error) {
-	var svc *corev1.Service
-	return svc, nil
+		bk.Number = port
+		bk.Name = svc.Name
+
+	}
+
+	return bk, nil
 }
 
 func (i *IngressServiceImpl) GetService(name string) (*corev1.Service, error) {
 	var svc *corev1.Service
+	key := types.NamespacedName{Name: name, Namespace: i.ingress.Namespace}
+	if err := i.operatorCli.GetClient().Get(i.ctx, key, svc); err != nil {
+		return svc, err
+	}
+
 	return svc, nil
 }
 
-func (i *IngressServiceImpl) GetBackendPort(data interface{}) (uint16, error) {
-	return 0, nil
+func (i *IngressServiceImpl) GetBackendPort(svc *corev1.Service) int32 {
+	var port int32
+	if len(i.ingress.Spec.Rules) > 0 {
+		for _, r := range i.ingress.Spec.Rules {
+			for _, p := range r.HTTP.Paths {
+				if p.Backend.Service.Name == svc.Name {
+					for _, sp := range i.GetSvcPort(svc) {
+						if p.Backend.Service.Port.Number == sp {
+							return sp
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return port
 }
 
-func (i *IngressServiceImpl) GetSecret(key client.ObjectKey) (*corev1.Secret, error) {
-	var sec *corev1.Secret
-	return sec, nil
+func (i *IngressServiceImpl) GetDefaultBackendPort(svc *corev1.Service) int32 {
+	var port int32
+	for _, p := range i.GetSvcPort(svc) {
+		if i.ingress.Spec.DefaultBackend.Service.Port.Number == p {
+			return p
+		}
+	}
+
+	return port
 }
 
-func (i *IngressServiceImpl) GetTlsData(key client.ObjectKey) (map[string][]byte, error) {
-	return nil, nil
+func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
+	var ports = make([]int32, 2)
+	for _, p := range svc.Spec.Ports {
+		ports = append(ports, p.Port)
+	}
+
+	return ports
 }
 
 func (i *IngressServiceImpl) GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string {
@@ -109,12 +178,17 @@ func (i *IngressServiceImpl) GetClient() client.Client {
 }
 
 func (i *IngressServiceImpl) CheckService() error {
+	var err error
+	if err1, err2 := i.checkDefaultBackend(), i.checkBackend(); err1 != nil && err2 != nil {
+		err = errors.Join(err1, err2)
+		return err
+	}
+
 	return nil
 }
 
 func (i *IngressServiceImpl) CheckController() error {
 	ic := new(v1.IngressClass)
-
 	if *i.ingress.Spec.IngressClassName == "" && i.ingress.GetAnnotations()[constants.IngAnnotationKey] == "" {
 		return fmt.Errorf("select available ingress nginx controller")
 	}
@@ -123,11 +197,9 @@ func (i *IngressServiceImpl) CheckController() error {
 		return nil
 	}
 
-	key := types.NamespacedName{Name: *i.ingress.Spec.IngressClassName, Namespace: i.ingress.Namespace}
-	if err := i.operatorCli.GetClient().Get(i.ctx, key, ic); err != nil {
+	if err := i.operatorCli.GetClient().Get(i.ctx, types.NamespacedName{Name: *i.ingress.Spec.IngressClassName}, ic); err != nil {
 		return err
 	}
-
 	if ic.Spec.Controller != constants.IngController {
 		return fmt.Errorf("pls select available ingress nginx controller")
 	}
@@ -141,6 +213,39 @@ func (i *IngressServiceImpl) CheckHost() error {
 }
 
 func (i *IngressServiceImpl) CheckPath() error {
+
+	return nil
+}
+
+func (i *IngressServiceImpl) checkDefaultBackend() error {
+	if i.ingress.Spec.DefaultBackend != nil {
+		svc, err := i.GetService(i.ingress.Spec.DefaultBackend.Service.Name)
+		if err != nil {
+			return err
+		}
+
+		if port := i.GetDefaultBackendPort(svc); port == 0 {
+			return cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+		}
+
+	}
+	return nil
+}
+
+func (i *IngressServiceImpl) checkBackend() error {
+	if len(i.ingress.Spec.Rules) > 0 {
+		for _, r := range i.ingress.Spec.Rules {
+			for _, p := range r.HTTP.Paths {
+				svc, err := i.GetService(p.Backend.Service.Name)
+				if err != nil {
+					return err
+				}
+				if port := i.GetBackendPort(svc); port == 0 {
+					return cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+				}
+			}
+		}
+	}
 
 	return nil
 }

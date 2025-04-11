@@ -10,11 +10,11 @@ import (
 type K8sResourcesIngress interface {
 	GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error)
 	GetHosts(ctx context.Context, namespace, name string) []string
-	GetBackends(ctx context.Context, namespace, name string) ([]v1.IngressBackend, error)
-	GetBackend(ctx context.Context, namespace, name string) (v1.IngressBackend, error)
-	GetDefaultService() (*corev1.Service, error)
+	GetBackend(name string) (*v1.ServiceBackendPort, error)
+	GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	GetService(name string) (*corev1.Service, error)
-	GetBackendPort(data interface{}) (uint16, error)
+	GetBackendPort(svc *corev1.Service) int32
+	GetDefaultBackendPort(svc *corev1.Service) int32
 	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string
 	CheckController() error
 	CheckService() error

@@ -30,7 +30,7 @@ func CheckAnnotations(annotations map[string]string, config AnnotationsContents,
 		annKey := GetAnnotationSuffix(annotation)
 		annVal := ing.GetAnnotations()[annotation]
 		if cfg, ok := config[annKey]; ok && cfg.Validator(annVal, ing) != nil {
-			err = errors.Join(err)
+			err = errors.Join(cerr.NewAnnotationValidationFailedError(annKey, ing.Name, ing.Namespace))
 		}
 	}
 
@@ -43,13 +43,12 @@ func CheckAnnotationsKeyVal(name string, ing *v1.Ingress, config AnnotationsCont
 	}
 
 	annotationFullName := GetAnnotationKey(name)
-	annotationValue := ing.GetAnnotations()[annotationFullName]
-
-	if annotationValue == "" {
-		return "", cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
+	annotationValue, ok := ing.GetAnnotations()[annotationFullName]
+	if !ok {
+		return "", cerr.NewMissIngressAnnotationsError(annotationFullName, ing.Name, ing.Namespace)
 	}
 
-	if err := config[name].Validator(annotationValue, ing); err != nil {
+	if ok && (annotationValue == "" || config[name].Validator(annotationValue, ing) != nil) {
 		return "", cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
 	}
 

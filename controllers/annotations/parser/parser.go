@@ -53,20 +53,6 @@ func (g GetAnnotationVal) parseBool(name string, ing *v1.Ingress) (bool, error) 
 	return false, cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
 }
 
-func (g GetAnnotationVal) parseSlice(name string, ing *v1.Ingress) ([]string, error) {
-	var data = make([]string, 5)
-	val, ok := g[name]
-	if ok {
-		if val == "" {
-			return data, cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
-		}
-
-		return data, nil
-	}
-
-	return data, cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
-}
-
 func GetDnsRegex(str string) string {
 	p := `([a0-z9]+\.)+([a-z]+)`
 	matched := regexp.MustCompile(p)
