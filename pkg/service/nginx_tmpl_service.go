@@ -11,7 +11,8 @@ type NginxTmplData interface {
 	GetNameSpace() string
 	GetTlsData(key client.ObjectKey) (map[string][]byte, error)
 	GetService(name string) (*corev1.Service, error)
-	GetBackendPort(data interface{}) (uint16, error)
+	GetBackendPort(svc *corev1.Service) int32
 	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string
 	GetSecret() (*corev1.Secret, error)
+	GetDefaultBackendPort(svc *corev1.Service) int32
 }

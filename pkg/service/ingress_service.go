@@ -9,7 +9,7 @@ import (
 
 type K8sResourcesIngress interface {
 	GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error)
-	GetHosts(ctx context.Context, namespace, name string) []string
+	GetHosts(namespace, name string) []string
 	GetBackend(name string) (*v1.ServiceBackendPort, error)
 	GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	GetService(name string) (*corev1.Service, error)

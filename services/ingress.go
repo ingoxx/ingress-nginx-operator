@@ -48,7 +48,7 @@ func (i *IngressServiceImpl) GetNameSpace() string {
 	return i.ingress.Namespace
 }
 
-func (i *IngressServiceImpl) GetHosts(ctx context.Context, namespace, name string) []string {
+func (i *IngressServiceImpl) GetHosts(namespace, name string) []string {
 	var hosts = make([]string, 2)
 	if len(i.ingress.Spec.Rules) > 0 {
 		for _, r := range i.ingress.Spec.Rules {
