@@ -1,9 +1,11 @@
 package rewrite
 
 import (
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	v1 "k8s.io/api/networking/v1"
+	"strings"
 )
 
 var (
@@ -28,7 +30,7 @@ type Config struct {
 
 var rewriteAnnotations = parser.AnnotationsContents{
 	rewriteTargetAnnotation: {
-		Doc: "",
+		Doc: "rewrite target path, like: /$1, /$2, /api. required",
 		Validator: func(s string, ing *v1.Ingress) error {
 			if s != "" && !parser.IsRegex(s) {
 				return cerr.NewInvalidIngressAnnotationsError(s, ing.Name, ing.Namespace)
@@ -37,7 +39,7 @@ var rewriteAnnotations = parser.AnnotationsContents{
 		},
 	},
 	rewriteEnableRegexAnnotation: {
-		Doc: "",
+		Doc: "optional",
 		Validator: func(s string, ing *v1.Ingress) error {
 			if s != "" {
 				if s == "false" || s == "true" {
@@ -51,7 +53,7 @@ var rewriteAnnotations = parser.AnnotationsContents{
 		},
 	},
 	rewriteFlagAnnotation: {
-		Doc: "",
+		Doc: fmt.Sprintf("rewrite flag, the value of the flag must be selected from here, '%v'. required", strings.Join(Flags, ",")),
 		Validator: func(s string, ing *v1.Ingress) error {
 			if s != "" {
 				for _, v := range Flags {
@@ -92,7 +94,21 @@ func (r *rewrite) Parse(ing *v1.Ingress) (interface{}, error) {
 		return config, err
 	}
 
+	if err = r.validate(config); err != nil {
+		return config, err
+	}
+
 	return config, nil
+}
+
+func (r *rewrite) validate(config *Config) error {
+	if (config.RewriteTarget == "") != (config.RewriteFlag == "") {
+		return cerr.NewInvalidIngressAnnotationsError(rewriteFlagAnnotation+"/"+rewriteTargetAnnotation,
+			r.ingress.Name,
+			r.ingress.Namespace)
+	}
+
+	return nil
 }
 
 func (r *rewrite) Validate(ing map[string]string) error {
