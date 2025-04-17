@@ -157,3 +157,31 @@ func NewInvalidSvcPortError(svc, name, namespace string) error {
 		errMsg: fmt.Sprintf("invalid service port, service '%s', ingress '%s' in namespace '%s'", svc, name, namespace),
 	}
 }
+
+type InvalidIngressPathError struct {
+	errMsg string
+}
+
+func (e InvalidIngressPathError) Error() string {
+	return e.errMsg
+}
+
+func NewInvalidIngressPathError(path, name, namespace string) error {
+	return InvalidSvcPortError{
+		errMsg: fmt.Sprintf("invalid path '%s', ingress '%s' in namespace '%s'", path, name, namespace),
+	}
+}
+
+type MissIngressFieldError struct {
+	errMsg string
+}
+
+func (e MissIngressFieldError) Error() string {
+	return e.errMsg
+}
+
+func NewMissIngressFieldValueError(field, name, namespace string) error {
+	return MissIngressFieldError{
+		errMsg: fmt.Sprintf("miss %s value, ingress '%s' in namespace '%s'", field, name, namespace),
+	}
+}

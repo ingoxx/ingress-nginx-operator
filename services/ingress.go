@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -72,7 +73,7 @@ func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, er
 				if p.Backend.Service.Name == svc.Name {
 					port := i.GetBackendPort(svc)
 					if port == 0 {
-						return bk, cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+						return bk, cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 					}
 
 					bk.Number = port
@@ -97,7 +98,7 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 
 		port := i.GetDefaultBackendPort(svc)
 		if port == 0 {
-			return bk, cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+			return bk, cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 		}
 
 		bk.Number = port
@@ -207,12 +208,43 @@ func (i *IngressServiceImpl) CheckController() error {
 	return nil
 }
 
-func (i *IngressServiceImpl) CheckHost() error {
+func (i *IngressServiceImpl) CheckHost(host v1.IngressRule) error {
+	if host.Host == "" {
+		return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
+	}
 
 	return nil
 }
 
-func (i *IngressServiceImpl) CheckPath() error {
+func (i *IngressServiceImpl) CheckPath(path v1.HTTPIngressPath) error {
+	pattern := `^/`
+	matched, err := regexp.MatchString(pattern, path.Path)
+	if err != nil {
+		return err
+	}
+
+	if !matched {
+		return cerr.NewInvalidIngressPathError(path.Path, i.GetName(), i.GetNameSpace())
+	}
+
+	if err := i.CheckPathType(path); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *IngressServiceImpl) CheckPathType(path v1.HTTPIngressPath) error {
+	if *path.PathType == "" {
+		return cerr.NewMissIngressFieldValueError("PathType", i.GetName(), i.GetNameSpace())
+	}
+
+	switch *path.PathType {
+	case v1.PathTypePrefix, v1.PathTypeExact, v1.PathTypeImplementationSpecific:
+
+	default:
+		return cerr.NewMissIngressFieldValueError("PathType", i.GetName(), i.GetNameSpace())
+	}
 
 	return nil
 }
@@ -225,7 +257,7 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 		}
 
 		if port := i.GetDefaultBackendPort(svc); port == 0 {
-			return cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+			return cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 		}
 
 	}
@@ -235,13 +267,17 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 func (i *IngressServiceImpl) checkBackend() error {
 	if len(i.ingress.Spec.Rules) > 0 {
 		for _, r := range i.ingress.Spec.Rules {
+
 			for _, p := range r.HTTP.Paths {
+				if err := i.CheckPath(p); err != nil {
+					return err
+				}
 				svc, err := i.GetService(p.Backend.Service.Name)
 				if err != nil {
 					return err
 				}
 				if port := i.GetBackendPort(svc); port == 0 {
-					return cerr.NewInvalidSvcPortError(svc.Name, i.ingress.Name, i.ingress.Namespace)
+					return cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 				}
 			}
 		}

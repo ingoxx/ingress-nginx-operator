@@ -18,8 +18,8 @@ type K8sResourcesIngress interface {
 	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string
 	CheckController() error
 	CheckService() error
-	CheckHost() error
-	CheckPath() error
+	CheckHost(host v1.IngressRule) error
+	CheckPath(path v1.HTTPIngressPath) error
 	GetName() string
 	GetNameSpace() string
 }

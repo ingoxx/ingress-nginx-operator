@@ -8,8 +8,8 @@ const (
 	NginxTlsKey         = "tls.key"
 	NginxPid            = "/var/run/nginx.pid"
 	NginxMainConf       = "/etc/nginx/nginx.conf"
-	NginxTmpl           = ""
-	NginxServerTmpl     = ""
-	NginxMainServerTmpl = ""
-	NginxDefaultTmpl    = ""
+	NginxTmpl           = "/rootfs/etc/nginx/template/nginx.tmpl"
+	NginxServerTmpl     = "/rootfs/etc/nginx/template/server.tmpl"
+	NginxMainServerTmpl = "/rootfs/etc/nginx/template/mainServer.tmpl"
+	NginxDefaultTmpl    = "/rootfs/etc/nginx/template/defaultBackend.tmpl"
 )
