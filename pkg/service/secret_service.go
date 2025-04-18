@@ -7,5 +7,5 @@ import (
 
 type K8sResourcesSecret interface {
 	GetTlsData(key client.ObjectKey) (map[string][]byte, error)
-	GetSecret() (*corev1.Secret, error)
+	GetSecret(key client.ObjectKey) (*corev1.Secret, error)
 }

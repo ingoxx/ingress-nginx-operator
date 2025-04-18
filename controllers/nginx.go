@@ -36,3 +36,5 @@ func (nc *NginxController) generateDefaultBackendTmpl() error {
 func (nc *NginxController) getDefaultBackendCfg() error {
 	return nil
 }
+
+func (nc *NginxController) generateTlsFile() {}

@@ -11,12 +11,27 @@ events {
         use                 epoll;
 }
 
+# accept tcp/udp traffic forwarded to the backend
+{{ if .Annotations.Stream.UseStream }}
+{{ range $bk := .Annotations.Stream.Backend }}
+stream {
+    server {
+        listen $bk.Port;
+        proxy_pass $bk.Name:$bk.Port;
+    }
+}
+{{ end }}
+{{ end }}
+
 http {
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
     proxy_headers_hash_max_size     2048;
     proxy_headers_hash_bucket_size  128;
-
+    # access limit
+    {{ if .Annotations.LimitReq.UseLimitReq }}
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate={{ .Annotations.LimitReq.Min }}r/s;
+    {{ end }}
     log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
                       '$status $body_bytes_sent "$http_referer" '
                       '"$http_user_agent" "$http_x_forwarded_for"';

@@ -162,6 +162,10 @@ func (i *IngressServiceImpl) GetUpstreamName(paths []v1.HTTPIngressPath, ing int
 	return ""
 }
 
+func (i *IngressServiceImpl) GetServers() string {
+	return ""
+}
+
 func (i *IngressServiceImpl) getUpstreamBackend(paths []v1.HTTPIngressPath) string {
 	return ""
 }

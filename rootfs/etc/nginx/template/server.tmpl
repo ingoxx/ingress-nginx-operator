@@ -29,6 +29,11 @@ server {
     listen  [::]:443 ssl;
     server_name {{ .Server.HostName }};
 
+    ### limit req
+    {{ if .Annotations.LimitReq.UseLimit }}
+    limit_req zone=normal_limit burst={{ .Annotations.LimitReq.Max }};
+    {{ end }}
+    
     ### tls
     {{ if .Server.Tls.TlsNoPass }}
     ssl_certificate {{ .Server.Tls.TlsCrt }};

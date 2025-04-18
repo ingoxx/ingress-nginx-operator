@@ -19,10 +19,36 @@ func NewSecretServiceImpl(ctx context.Context, clientSet common.Generic) *Secret
 }
 
 func (s *SecretServiceImpl) GetTlsData(key client.ObjectKey) (map[string][]byte, error) {
-	return nil, nil
+	var data map[string][]byte
+
+	secret, err := s.GetSecret(key)
+	if err != nil {
+		return data, err
+	}
+
+	data, err = s.extractTlsData(secret.Data)
+	if err != nil {
+		return data, err
+	}
+
+	return data, nil
 }
 
-func (s *SecretServiceImpl) GetSecret() (*corev1.Secret, error) {
+func (s *SecretServiceImpl) GetSecret(key client.ObjectKey) (*corev1.Secret, error) {
 	sc := new(corev1.Secret)
+
+	if err := s.clientSet.GetClient().Get(s.ctx, key, sc); err != nil {
+		return sc, err
+	}
+
 	return sc, nil
+}
+
+func (s *SecretServiceImpl) extractTlsData(data map[string][]byte) (map[string][]byte, error) {
+	var parsed = make(map[string][]byte)
+	for k, v := range data {
+		parsed[k] = v
+	}
+
+	return parsed, nil
 }

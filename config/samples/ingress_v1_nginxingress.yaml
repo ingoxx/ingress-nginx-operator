@@ -2,12 +2,36 @@ apiVersion: ingress.ingress-k8s.io/v1
 kind: NginxIngress
 metadata:
   annotations:
-    ingress.nginx.k8s.io/lb-policy: "least_conn"
+    ingress.nginx.k8s.io/set-lb-policy: "least_conn"
     ingress.nginx.k8s.io/use-lb: "true"
-    ingress.nginx.k8s.io/use-weight: |
+    ingress.nginx.k8s.io/set-lb-weight: |
       {
         "svc-1": 80,
         "svc-2": 90
+      }
+    ingress.nginx.k8s.io/use-stream: "true"
+    ingress.nginx.k8s.io/set-stream: |
+      {
+        "svc-1": 8001,
+        "svc-2": 8002,
+      }
+    ingress.nginx.k8s.io/allow-ip-list: "192.168.3.11,192.168.3.12"
+    ingress.nginx.k8s.io/deny-ip-list: "192.168.3.11,192.168.3.12"
+    ingress.nginx.k8s.io/allow-cos: "true"
+    ingress.nginx.k8s.io/allow-ssl: "true"
+    ingress.nginx.k8s.io/use-limit-req: "true"
+    ingress.nginx.k8s.io/set-limit-data: |
+      {
+        "min": 2,
+        "max": 5
+      }
+    ingress.nginx.k8s.io/rewrite-target: "/$2"
+    ingress.nginx.k8s.io/rewrite-flag: "break"
+    ingress.nginx.k8s.io/use-proxy: "true"
+    ingress.nginx.k8s.io/proxy-addr: |
+      {
+        "/api1": "https://api1.aaa.com",
+        "/api2": "https://api2.aaa.com"
       }
   labels:
     app.kubernetes.io/name: nginxingress
