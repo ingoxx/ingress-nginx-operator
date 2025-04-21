@@ -36,7 +36,6 @@ func (s *SecretServiceImpl) GetTlsData(key client.ObjectKey) (map[string][]byte,
 
 func (s *SecretServiceImpl) GetSecret(key client.ObjectKey) (*corev1.Secret, error) {
 	sc := new(corev1.Secret)
-
 	if err := s.clientSet.GetClient().Get(s.ctx, key, sc); err != nil {
 		return sc, err
 	}
