@@ -24,8 +24,8 @@ func (r ResourceAdapter) GetTlsData(key client.ObjectKey) (map[string][]byte, er
 	return r.Secret.GetTlsData(key)
 }
 
-func (r ResourceAdapter) GetSecret() (*corev1.Secret, error) {
-	return r.Secret.GetSecret()
+func (r ResourceAdapter) GetSecret(key client.ObjectKey) (*corev1.Secret, error) {
+	return r.Secret.GetSecret(key)
 }
 
 func (r ResourceAdapter) GetService(name string) (*corev1.Service, error) {
