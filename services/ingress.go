@@ -49,11 +49,22 @@ func (i *IngressServiceImpl) GetNameSpace() string {
 	return i.ingress.Namespace
 }
 
+func (i *IngressServiceImpl) GetRules() []v1.IngressRule {
+	var rs = make([]v1.IngressRule, len(i.ingress.Spec.Rules))
+
+	for k, s := range i.ingress.Spec.Rules {
+		rs = append(rs[:k], s)
+	}
+
+	return rs
+}
+
 func (i *IngressServiceImpl) GetHosts(namespace, name string) []string {
-	var hosts = make([]string, 2)
-	if len(i.ingress.Spec.Rules) > 0 {
-		for _, r := range i.ingress.Spec.Rules {
-			hosts = append(hosts, r.Host)
+	rs := i.GetRules()
+	var hosts = make([]string, len(rs))
+	if len(rs) > 0 {
+		for k, r := range rs {
+			hosts = append(hosts[:k], r.Host)
 		}
 	}
 

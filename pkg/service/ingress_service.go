@@ -22,4 +22,5 @@ type K8sResourcesIngress interface {
 	CheckPath(path v1.HTTPIngressPath) error
 	GetName() string
 	GetNameSpace() string
+	GetRules() []v1.IngressRule
 }

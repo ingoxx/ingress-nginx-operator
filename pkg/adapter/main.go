@@ -43,3 +43,7 @@ func (r ResourceAdapter) GetDefaultBackendPort(svc *corev1.Service) int32 {
 func (r ResourceAdapter) GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string {
 	return r.Ingress.GetUpstreamName(paths, ing)
 }
+
+func (r ResourceAdapter) GetRules() []v1.IngressRule {
+	return r.Ingress.GetRules()
+}

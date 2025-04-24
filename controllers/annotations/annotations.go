@@ -16,6 +16,8 @@ type IngressAnnotationsConfig struct {
 	Rewrite rewrite.Config
 }
 
+func (iac *IngressAnnotationsConfig) GetIngAnnConfig() {}
+
 type Extractor struct {
 	annotations map[string]parser.IngressAnnotationsParser
 	ingress     *v1.Ingress
