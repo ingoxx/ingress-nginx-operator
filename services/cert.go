@@ -2,10 +2,13 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"slices"
 )
 
 // CertServiceImpl 实现 CertService 接口
@@ -17,40 +20,32 @@ type CertServiceImpl struct {
 
 // NewCertServiceImpl 创建 Service 实例
 func NewCertServiceImpl(ctx context.Context, ing common.Generic) *CertServiceImpl {
-	return &CertServiceImpl{ctx: ctx, ing: ing}
+	c := &CertServiceImpl{ctx: ctx, ing: ing}
+	c.issuer = NewIssuerServiceImpl(ctx, ing, c)
+
+	return c
 }
 
 func (c *CertServiceImpl) certGVK() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificates"}
 }
 
-func (c *CertServiceImpl) certUnstructured() *unstructured.Unstructured {
-	certificate := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "cert-manager.io/v1",
-			"kind":       "Certificate",
-		},
-	}
-
-	return certificate
-}
-
-func (c *CertServiceImpl) certUnstructuredData(ctx context.Context, namespace, name string) *unstructured.Unstructured {
+func (c *CertServiceImpl) certUnstructuredData() *unstructured.Unstructured {
 	certUnstructured := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "cert-manager.io/v1",
 			"kind":       "Certificate",
 			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
+				"name":      c.CertObjectKey(),
+				"namespace": c.ing.GetNameSpace(),
 			},
 			"spec": map[string]interface{}{
-				"dnsNames": c.ing.GetHosts(ctx, namespace, name),
+				"dnsNames": c.ing.GetHosts(c.ing.GetNameSpace(), c.ing.GetName()),
 				"issuerRef": map[string]interface{}{
 					"kind": "Issuer",
-					"name": name + "-issuer",
+					"name": c.IssuerObjectKey(),
 				},
-				"secretName": name + "-secret",
+				"secretName": c.SecretObjectKey(),
 			},
 		},
 	}
@@ -58,28 +53,85 @@ func (c *CertServiceImpl) certUnstructuredData(ctx context.Context, namespace, n
 	return certUnstructured
 }
 
-func (c *CertServiceImpl) CreateCert(ctx context.Context, namespace, name string) error {
+func (c *CertServiceImpl) CreateCert() error {
+	if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVK()).Create(c.ctx, c.certUnstructuredData(), metav1.CreateOptions{}); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (c *CertServiceImpl) GetCert(ctx context.Context, namespace, name string) error {
+func (c *CertServiceImpl) GetCert() (*unstructured.Unstructured, error) {
+	cert, err := c.ing.GetDynamicClientSet().Resource(c.certGVK()).Get(c.ctx, c.CertObjectKey(), metav1.GetOptions{})
+	if err != nil {
+		return cert, err
+	}
 
-	return nil
+	return cert, nil
 }
 
-func (c *CertServiceImpl) DeleteCert(ctx context.Context, namespace, name string) error {
-	return nil
+func (c *CertServiceImpl) CertObjectKey() string {
+	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-cert"
 }
 
-func (c *CertServiceImpl) UpdateCert(ctx context.Context, namespace, name string) error {
+func (c *CertServiceImpl) SecretObjectKey() string {
+	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-secret"
+}
+
+func (c *CertServiceImpl) IssuerObjectKey() string {
+	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-issuer"
+}
+
+func (c *CertServiceImpl) DeleteCert() error {
+	return c.ing.GetDynamicClientSet().Resource(c.certGVK()).Delete(c.ctx, c.CertObjectKey(), metav1.DeleteOptions{})
+}
+
+func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Unstructured) error {
+	oh, found, err := unstructured.NestedStringSlice(cert.Object, "spec", "dnsNames")
+	if err != nil {
+		return fmt.Errorf("error parsing dnsNames in Certificate '%s', namespace '%s', %v", c.CertObjectKey(), c.ing.GetNameSpace(), err)
+	}
+
+	if !found {
+		return fmt.Errorf("dnsNames not found in Certificate '%s', namespace '%s'", c.CertObjectKey(), c.ing.GetNameSpace())
+	}
+
+	nh := c.ing.GetHosts(c.ing.GetNameSpace(), c.ing.GetName())
+
+	hp := func(s1, s2 []string) bool {
+		aCopy := slices.Clone(s1)
+		bCopy := slices.Clone(s2)
+
+		slices.Sort(aCopy)
+		slices.Sort(bCopy)
+
+		return slices.Equal(aCopy, bCopy)
+	}
+
+	if !hp(oh, nh) {
+		if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVK()).Update(ctx, c.certUnstructuredData(), metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (c *CertServiceImpl) CheckCert() error {
-
 	if err := c.issuer.CheckIssuer(); err != nil {
 		return err
 	}
+
+	cert, err := c.GetCert()
+	if err != nil {
+		if err := c.CreateCert(); err != nil {
+			return err
+		}
+	}
+
+	if err := c.UpdateCert(c.ctx, cert); err != nil {
+		return err
+	}
+
 	return nil
 }

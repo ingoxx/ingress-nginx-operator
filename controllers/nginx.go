@@ -8,11 +8,11 @@ import (
 )
 
 type NginxController struct {
-	data   service.NginxTmplData
+	data   service.NginxTemplateData
 	config *annotations.IngressAnnotationsConfig
 }
 
-func NewNginxController(data service.NginxTmplData, config *annotations.IngressAnnotationsConfig) *NginxController {
+func NewNginxController(data service.NginxTemplateData, config *annotations.IngressAnnotationsConfig) *NginxController {
 	return &NginxController{
 		data:   data,
 		config: config,
@@ -47,5 +47,6 @@ func (nc *NginxController) getDefaultBackendCfg() error {
 }
 
 func (nc *NginxController) generateTlsFile() (map[string]ingress.Tls, error) {
+
 	return nil, nil
 }

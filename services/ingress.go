@@ -265,6 +265,10 @@ func (i *IngressServiceImpl) CheckPathType(path v1.HTTPIngressPath) error {
 }
 
 func (i *IngressServiceImpl) checkDefaultBackend() error {
+	if i.ingress.Spec.DefaultBackend == nil {
+		return cerr.NewMissIngressFieldValueError("defaultBackend", i.GetName(), i.GetNameSpace())
+	}
+
 	if i.ingress.Spec.DefaultBackend != nil {
 		svc, err := i.GetService(i.ingress.Spec.DefaultBackend.Service.Name)
 		if err != nil {
@@ -280,23 +284,33 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 }
 
 func (i *IngressServiceImpl) checkBackend() error {
-	if len(i.ingress.Spec.Rules) > 0 {
-		for _, r := range i.ingress.Spec.Rules {
+	rules := i.GetRules()
+	if len(rules) == 0 {
+		return cerr.NewMissIngressFieldValueError("rules", i.GetName(), i.GetNameSpace())
+	}
 
-			for _, p := range r.HTTP.Paths {
-				if err := i.CheckPath(p); err != nil {
-					return err
-				}
-				svc, err := i.GetService(p.Backend.Service.Name)
-				if err != nil {
-					return err
-				}
-				if port := i.GetBackendPort(svc); port == 0 {
-					return cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
-				}
+	for _, r := range rules {
+		if r.Host == "" {
+			return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
+		}
+
+		for _, p := range r.HTTP.Paths {
+			if err := i.CheckPath(p); err != nil {
+				return err
+			}
+			svc, err := i.GetService(p.Backend.Service.Name)
+			if err != nil {
+				return err
+			}
+			if port := i.GetBackendPort(svc); port == 0 {
+				return cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 			}
 		}
 	}
 
 	return nil
+}
+
+func (i *IngressServiceImpl) GetTlsData() {
+
 }

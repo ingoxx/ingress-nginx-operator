@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type NginxTmplData interface {
+type NginxTemplateData interface {
 	GetName() string
 	GetNameSpace() string
 	GetTlsData(key client.ObjectKey) (map[string][]byte, error)
@@ -16,4 +16,6 @@ type NginxTmplData interface {
 	GetSecret(key client.ObjectKey) (*corev1.Secret, error)
 	GetDefaultBackendPort(svc *corev1.Service) int32
 	GetRules() []v1.IngressRule
+	CertObjectKey() string
+	SecretObjectKey() string
 }

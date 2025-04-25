@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type K8sResourcesCert interface {
-	CreateCert(ctx context.Context, namespace, name string) error
-	GetCert(ctx context.Context, namespace, name string) error
-	DeleteCert(ctx context.Context, namespace, name string) error
-	UpdateCert(ctx context.Context, namespace, name string) error
+	CreateCert() error
+	GetCert() (*unstructured.Unstructured, error)
+	DeleteCert() error
+	UpdateCert(context.Context, *unstructured.Unstructured) error
 	CheckCert() error
+	CertObjectKey() string
+	SecretObjectKey() string
+	IssuerObjectKey() string
 }

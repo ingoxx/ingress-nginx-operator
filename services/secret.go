@@ -2,14 +2,12 @@ package services
 
 import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SecretServiceImpl struct {
-	ingress   service.K8sResourcesIngress
 	clientSet common.Generic
 	ctx       context.Context
 }

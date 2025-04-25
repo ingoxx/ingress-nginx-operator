@@ -10,6 +10,8 @@ import (
 type ResourceAdapter struct {
 	Ingress service.K8sResourcesIngress
 	Secret  service.K8sResourcesSecret
+	Issuer  service.K8sResourcesIssuer
+	Cert    service.K8sResourcesCert
 }
 
 func (r ResourceAdapter) GetName() string {
@@ -46,4 +48,16 @@ func (r ResourceAdapter) GetUpstreamName(paths []v1.HTTPIngressPath, ing interfa
 
 func (r ResourceAdapter) GetRules() []v1.IngressRule {
 	return r.Ingress.GetRules()
+}
+
+func (r ResourceAdapter) CheckCert() error {
+	return r.Cert.CheckCert()
+}
+
+func (r ResourceAdapter) CertObjectKey() string {
+	return r.Cert.CertObjectKey()
+}
+
+func (r ResourceAdapter) SecretObjectKey() string {
+	return r.Cert.SecretObjectKey()
 }

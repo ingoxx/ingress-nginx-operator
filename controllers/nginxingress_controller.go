@@ -19,12 +19,9 @@ package controllers
 import (
 	"context"
 	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
-	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ngx"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
-	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
-	"github.com/ingoxx/ingress-nginx-operator/services"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -62,44 +59,8 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-	//var ic = new(v1.Ingress)
-	//if err := r.Get(ctx, req.NamespacedName, ic); err != nil {
-	//	logger.Info("No ingress resource with name '%s' was found in the namespace '%s'", req.NamespacedName.Namespace, req.NamespacedName.Name)
-	//	return ctrl.Result{}, nil
-	//}
-
-	ing := services.NewIngressServiceImpl(ctx, r.clientSet, r.operatorCli)
-
-	ingress, err := ing.GetIngress(ctx, req.NamespacedName)
-	if cerr.IsIngressNotFoundError(err) {
+	if err := ngx.NewNginxController(ctx, r.clientSet, r.operatorCli).Start(req); err != nil {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
-	}
-
-	if err := ing.CheckController(); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
-	}
-
-	if err := ing.CheckService(); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
-	}
-
-	cert := services.NewCertServiceImpl(ctx, ing)
-	if err := cert.CheckCert(); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
-	}
-
-	extract, err := annotations.NewExtractor(ingress).Extract()
-	if err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
-	}
-
-	ar := adapter.ResourceAdapter{
-		Ingress: ing,
-		Secret:  services.NewSecretServiceImpl(ctx, ing),
-	}
-
-	if err := NewNginxController(ar, extract).Run(); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
 	}
 
 	return ctrl.Result{}, nil
