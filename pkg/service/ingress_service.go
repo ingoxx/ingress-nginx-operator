@@ -23,4 +23,5 @@ type K8sResourcesIngress interface {
 	GetName() string
 	GetNameSpace() string
 	GetRules() []v1.IngressRule
+	GetTls() []v1.IngressTLS
 }

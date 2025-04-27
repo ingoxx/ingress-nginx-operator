@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
-	"github.com/ingoxx/ingress-nginx-operator/controllers/ngx"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/internal"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
 	v1 "k8s.io/api/networking/v1"
@@ -46,7 +46,7 @@ type NginxIngressReconciler struct {
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// Reconcile is part of the internal kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
 // the NginxIngress object against the actual cluster state, and then
@@ -59,7 +59,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-	if err := ngx.NewNginxController(ctx, r.clientSet, r.operatorCli).Start(req); err != nil {
+	if err := internal.NewNginxController(ctx, r.clientSet, r.operatorCli).Start(req); err != nil {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
 	}
 

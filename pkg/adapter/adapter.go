@@ -61,3 +61,7 @@ func (r ResourceAdapter) CertObjectKey() string {
 func (r ResourceAdapter) SecretObjectKey() string {
 	return r.Cert.SecretObjectKey()
 }
+
+func (r ResourceAdapter) GetTls() []v1.IngressTLS {
+	return r.Ingress.GetTls()
+}

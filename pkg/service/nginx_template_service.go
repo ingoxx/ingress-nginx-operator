@@ -18,4 +18,5 @@ type NginxTemplateData interface {
 	GetRules() []v1.IngressRule
 	CertObjectKey() string
 	SecretObjectKey() string
+	GetTls() []v1.IngressTLS
 }

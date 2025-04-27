@@ -193,6 +193,10 @@ func (i *IngressServiceImpl) GetClient() client.Client {
 	return i.operatorCli.GetClient()
 }
 
+func (i *IngressServiceImpl) GetTls() []v1.IngressTLS {
+	return i.ingress.Spec.TLS
+}
+
 func (i *IngressServiceImpl) CheckService() error {
 	var err error
 	if err1, err2 := i.checkDefaultBackend(), i.checkBackend(); err1 != nil && err2 != nil {
@@ -309,8 +313,4 @@ func (i *IngressServiceImpl) checkBackend() error {
 	}
 
 	return nil
-}
-
-func (i *IngressServiceImpl) GetTlsData() {
-
 }

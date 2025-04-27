@@ -1,4 +1,4 @@
-package ngx
+package internal
 
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers"
