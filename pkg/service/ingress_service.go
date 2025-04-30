@@ -4,12 +4,13 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type K8sResourcesIngress interface {
 	GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error)
-	GetHosts(namespace, name string) []string
+	GetHosts() []string
 	GetBackend(name string) (*v1.ServiceBackendPort, error)
 	GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	GetService(name string) (*corev1.Service, error)
@@ -17,6 +18,7 @@ type K8sResourcesIngress interface {
 	GetDefaultBackendPort(svc *corev1.Service) int32
 	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string
 	CheckController() error
+	GetAnnotations() map[string]string
 	CheckService() error
 	CheckHost(host v1.IngressRule) error
 	CheckPath(path v1.HTTPIngressPath) error
@@ -24,4 +26,6 @@ type K8sResourcesIngress interface {
 	GetNameSpace() string
 	GetRules() []v1.IngressRule
 	GetTls() []v1.IngressTLS
+	CheckTlsHosts() bool
+	GetIngressObjectMate() metav1.ObjectMeta
 }

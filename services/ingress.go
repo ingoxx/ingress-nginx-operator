@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -59,7 +60,7 @@ func (i *IngressServiceImpl) GetRules() []v1.IngressRule {
 	return rs
 }
 
-func (i *IngressServiceImpl) GetHosts(namespace, name string) []string {
+func (i *IngressServiceImpl) GetHosts() []string {
 	rs := i.GetRules()
 	var hosts = make([]string, len(rs))
 	if len(rs) > 0 {
@@ -71,32 +72,72 @@ func (i *IngressServiceImpl) GetHosts(namespace, name string) []string {
 	return hosts
 }
 
+func (i *IngressServiceImpl) GetTlsHosts() []string {
+	rs := i.GetTls()
+	var hosts = make([]string, len(rs))
+	if len(rs) > 0 {
+		for _, r := range rs {
+			for k2, r2 := range r.Hosts {
+				hosts = append(hosts[:k2], r2)
+			}
+		}
+	}
+
+	return hosts
+}
+
+func (i *IngressServiceImpl) CheckTlsHosts() bool {
+	tlsHost := i.GetHosts()
+	ingHost := i.GetTlsHosts()
+
+	set := make(map[string]struct{}, len(tlsHost))
+	for _, item := range tlsHost {
+		set[item] = struct{}{}
+	}
+
+	for _, item := range ingHost {
+		if _, ok := set[item]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, error) {
 	var bk = new(v1.ServiceBackendPort)
-	if len(i.ingress.Spec.Rules) > 0 {
-		svc, err := i.GetService(name)
-		if err != nil {
-			return bk, err
-		}
+	var rs = i.GetRules()
 
-		for _, r := range i.ingress.Spec.Rules {
-			for _, p := range r.HTTP.Paths {
-				if p.Backend.Service.Name == svc.Name {
-					port := i.GetBackendPort(svc)
-					if port == 0 {
-						return bk, cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
-					}
+	svc, err := i.GetService(name)
+	if err != nil {
+		return bk, err
+	}
 
-					bk.Number = port
-					bk.Name = svc.Name
-
-					return bk, nil
+	for _, r := range rs {
+		for _, p := range r.HTTP.Paths {
+			if p.Backend.Service.Name == svc.Name {
+				port := i.GetBackendPort(svc)
+				if port == 0 {
+					return bk, cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 				}
+
+				bk.Number = port
+				bk.Name = svc.Name
+
+				return bk, nil
 			}
 		}
 	}
 
 	return bk, nil
+}
+
+func (i *IngressServiceImpl) GetAnnotations() map[string]string {
+	return i.ingress.GetAnnotations()
+}
+
+func (i *IngressServiceImpl) GetIngressObjectMate() metav1.ObjectMeta {
+	return i.ingress.ObjectMeta
 }
 
 func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error) {
@@ -170,10 +211,6 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 }
 
 func (i *IngressServiceImpl) GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string {
-	return ""
-}
-
-func (i *IngressServiceImpl) GetServers() string {
 	return ""
 }
 

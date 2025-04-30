@@ -65,3 +65,15 @@ func (r ResourceAdapter) SecretObjectKey() string {
 func (r ResourceAdapter) GetTls() []v1.IngressTLS {
 	return r.Ingress.GetTls()
 }
+
+func (r ResourceAdapter) CheckTlsHosts() bool {
+	return r.Ingress.CheckTlsHosts()
+}
+
+func (r ResourceAdapter) GetHosts() []string {
+	return r.Ingress.GetHosts()
+}
+
+func (r ResourceAdapter) GetAnnotations() map[string]string {
+	return r.Ingress.GetAnnotations()
+}

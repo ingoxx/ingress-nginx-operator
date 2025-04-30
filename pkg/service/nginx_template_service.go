@@ -19,4 +19,7 @@ type NginxTemplateData interface {
 	CertObjectKey() string
 	SecretObjectKey() string
 	GetTls() []v1.IngressTLS
+	CheckTlsHosts() bool
+	GetHosts() []string
+	GetAnnotations() map[string]string
 }

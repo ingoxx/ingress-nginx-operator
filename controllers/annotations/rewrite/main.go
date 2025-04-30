@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	v1 "k8s.io/api/networking/v1"
 	"strings"
 )
@@ -18,8 +19,8 @@ const (
 	rewriteFlagAnnotation        = "rewrite-flag"
 )
 
-type rewrite struct {
-	ingress *v1.Ingress
+type rewriteIng struct {
+	ingress service.K8sResourcesIngress
 }
 
 type Config struct {
@@ -70,13 +71,13 @@ var rewriteAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewRewrite(ingress *v1.Ingress) parser.IngressAnnotationsParser {
-	return &rewrite{
+func NewRewrite(ingress service.K8sResourcesIngress) parser.IngressAnnotationsParser {
+	return &rewriteIng{
 		ingress: ingress,
 	}
 }
 
-func (r *rewrite) Parse(ing *v1.Ingress) (interface{}, error) {
+func (r *rewriteIng) Parse(ing *v1.Ingress) (interface{}, error) {
 	var err error
 	config := &Config{}
 	config.RewriteTarget, err = parser.GetStringAnnotation(rewriteTargetAnnotation, ing, rewriteAnnotations)
@@ -101,16 +102,16 @@ func (r *rewrite) Parse(ing *v1.Ingress) (interface{}, error) {
 	return config, nil
 }
 
-func (r *rewrite) validate(config *Config) error {
+func (r *rewriteIng) validate(config *Config) error {
 	if (config.RewriteTarget == "") != (config.RewriteFlag == "") {
 		return cerr.NewInvalidIngressAnnotationsError(rewriteFlagAnnotation+"/"+rewriteTargetAnnotation,
-			r.ingress.Name,
-			r.ingress.Namespace)
+			r.ingress.GetName(),
+			r.ingress.GetNameSpace())
 	}
 
 	return nil
 }
 
-func (r *rewrite) Validate(ing map[string]string) error {
+func (r *rewriteIng) Validate(ing map[string]string) error {
 	return parser.CheckAnnotations(ing, rewriteAnnotations, r.ingress)
 }

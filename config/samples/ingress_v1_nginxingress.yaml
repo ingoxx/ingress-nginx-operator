@@ -2,12 +2,20 @@ apiVersion: ingress.ingress-k8s.io/v1
 kind: NginxIngress
 metadata:
   annotations:
-    ingress.nginx.k8s.io/set-lb-policy: "least_conn"
-    ingress.nginx.k8s.io/use-lb: "true"
-    ingress.nginx.k8s.io/set-lb-weight: |
+    ingress.nginx.k8s.io/lb-policy: "least_conn"
+    ingress.nginx.k8s.io/lb-weight: |
       {
         "svc-1": 80,
-        "svc-2": 90
+        "svc-2": 90,
+      }
+    ingress.nginx.k8s.io/lb-ha: |
+      {
+        "svc-1": "max_fails=3 fail_timeout=30s",
+        "svc-2": "max_fails=3 fail_timeout=30s",
+      }
+    ingress.nginx.k8s.io/lb-standby: |
+      {
+        "svc-3": "backup",
       }
     ingress.nginx.k8s.io/use-stream: "true"
     ingress.nginx.k8s.io/set-stream: |

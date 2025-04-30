@@ -185,3 +185,17 @@ func NewMissIngressFieldValueError(field, name, namespace string) error {
 		errMsg: fmt.Sprintf("miss %s value, ingress '%s' in namespace '%s'", field, name, namespace),
 	}
 }
+
+type NotFoundTlsHostError struct {
+	errMsg string
+}
+
+func (e NotFoundTlsHostError) Error() string {
+	return e.errMsg
+}
+
+func NewNotFoundTlsHostError(name, namespace string) error {
+	return NotFoundTlsHostError{
+		errMsg: fmt.Sprintf("'.spec.host' does not exist in '.spec.tls', ingress '%s' in namespace '%s'", name, namespace),
+	}
+}

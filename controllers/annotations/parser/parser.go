@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	v1 "k8s.io/api/networking/v1"
 	"regexp"
 	"strconv"
@@ -11,11 +12,11 @@ import (
 )
 
 type IngressAnnotationsParser interface {
-	Parse(*v1.Ingress) (interface{}, error)
+	Parse(service.K8sResourcesIngress) (interface{}, error)
 	Validate(map[string]string) error
 }
 
-type AnnotationValidator func(s string, ing *v1.Ingress) error
+type AnnotationValidator func(s string, ing service.K8sResourcesIngress) error
 type AnnotationsContents map[string]AnnotationConfig
 
 // AnnotationConfig 使用说明配置
