@@ -3,18 +3,10 @@ kind: NginxIngress
 metadata:
   annotations:
     ingress.nginx.k8s.io/lb-policy: "least_conn"
-    ingress.nginx.k8s.io/lb-weight: |
+    ingress.nginx.k8s.io/lb-config: |
       {
-        "svc-1": 80,
-        "svc-2": 90,
-      }
-    ingress.nginx.k8s.io/lb-ha: |
-      {
-        "svc-1": "max_fails=3 fail_timeout=30s",
-        "svc-2": "max_fails=3 fail_timeout=30s",
-      }
-    ingress.nginx.k8s.io/lb-standby: |
-      {
+        "svc-1": "max_fails=3 fail_timeout=30s weight=80",
+        "svc-2": "max_fails=3 fail_timeout=30s weight=20",
         "svc-3": "backup",
       }
     ingress.nginx.k8s.io/use-stream: "true"

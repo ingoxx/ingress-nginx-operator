@@ -163,7 +163,7 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 
 func (i *IngressServiceImpl) GetService(name string) (*corev1.Service, error) {
 	var svc *corev1.Service
-	key := types.NamespacedName{Name: name, Namespace: i.ingress.Namespace}
+	key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
 	if err := i.operatorCli.GetClient().Get(i.ctx, key, svc); err != nil {
 		return svc, err
 	}
@@ -210,8 +210,28 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 	return ports
 }
 
-func (i *IngressServiceImpl) GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string {
-	return ""
+func (i *IngressServiceImpl) GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) (map[string]interface{}, error) {
+	var upStreamData = make(map[string]interface{})
+	var upStreamDataList = make([]map[string]interface{}, 0, 4)
+
+	var rs = i.GetRules()
+
+	for _, r := range rs {
+		var svcList = make([]*v1.ServiceBackendPort, 0, 5)
+		upStreamData["host"] = r.Host
+		for _, p := range r.HTTP.Paths {
+			backend, err := i.GetBackend(p.Backend.Service.Name)
+			if err != nil {
+				return nil, err
+			}
+			svcList = append(svcList, backend)
+			upStreamData["svc"] = svcList
+			upStreamData["path"] = p.Path
+		}
+		upStreamDataList = append(upStreamDataList, upStreamData)
+	}
+
+	return nil, nil
 }
 
 func (i *IngressServiceImpl) getUpstreamBackend(paths []v1.HTTPIngressPath) string {

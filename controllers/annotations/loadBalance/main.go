@@ -6,6 +6,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
+	v1 "k8s.io/api/networking/v1"
 	"strings"
 )
 
@@ -14,10 +15,8 @@ var (
 )
 
 const (
-	lbPolicyAnnotation  = "lb-policy"
-	lbWeightAnnotation  = "lb-weight"
-	lbHAAnnotation      = "lb-ha"
-	lbStandbyAnnotation = "lb-standby"
+	lbPolicyAnnotations = "lb-policy"
+	lbConfigAnnotations = "lb-config"
 )
 
 type loadBalanceIng struct {
@@ -25,32 +24,36 @@ type loadBalanceIng struct {
 }
 
 type Config struct {
-	LbPolicy   map[string]interface{} `json:"lb-policy"`
-	LbWeight   map[string]interface{} `json:"lb-weight"`
-	LbHa       map[string]interface{} `json:"lb-ha"`
-	LbStandby  map[string]interface{} `json:"lb-standby"`
-	StreamName string                 `json:"stream_name"`
+	Upstream []UpstreamList `json:"upstream"`
+	LbPolicy string         `json:"lb-policy"`
+}
+
+type UpstreamList struct {
+	SvcList    []*v1.ServiceBackendPort `json:"svc-list"`
+	StreamName string                   `json:"stream-name"`
 }
 
 var loadBalanceAnnotations = parser.AnnotationsContents{
-	lbPolicyAnnotation: {
+	lbPolicyAnnotations: {
 		Doc: fmt.Sprintf("nginx lb policy, the value of the flag must be selected from here: %v.", strings.Join(Policy, ",")),
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
+				var isValidPolicy bool
 				for _, v := range Policy {
 					if s == v {
-						return nil
+						isValidPolicy = true
 					}
 				}
 
-				return cerr.NewInvalidIngressAnnotationsError(s, ing.GetName(), ing.GetNameSpace())
+				if !isValidPolicy {
+					return cerr.NewInvalidIngressAnnotationsError(lbPolicyAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
 			}
-
 			return nil
 		},
 	},
-	lbWeightAnnotation: {
-		Doc: "nginx lb weight, such as: backend01 weight 80;backend02 weight 20.",
+	lbConfigAnnotations: {
+		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, like this: {\"svc-name\": \"max_fails=3 fail_timeout=30s weight=80;...\"}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				data, err := jsonParser.JSONToMap(s)
@@ -58,30 +61,11 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
-				for k, _ := range data {
-					ing.GetBackend(k)
+				for k := range data["services"].(map[string]interface{}) {
+					if _, err := ing.GetBackend(k); err != nil {
+						return cerr.NewInvalidIngressAnnotationsError(k, ing.GetName(), ing.GetNameSpace())
+					}
 				}
-
-			}
-
-			return nil
-		},
-	},
-	lbHAAnnotation: {
-		Doc: "",
-		Validator: func(s string, ing service.K8sResourcesIngress) error {
-			if s != "" {
-
-			}
-
-			return nil
-		},
-	},
-	lbStandbyAnnotation: {
-		Doc: "",
-		Validator: func(s string, ing service.K8sResourcesIngress) error {
-			if s != "" {
-
 			}
 
 			return nil
@@ -95,10 +79,32 @@ func NewLoadBalanceIng(ingress service.K8sResourcesIngress) parser.IngressAnnota
 	}
 }
 
-func (r *loadBalanceIng) Parse(ing service.K8sResourcesIngress) (interface{}, error) {
-	return nil, nil
+func (r *loadBalanceIng) Parse() (interface{}, error) {
+	var err error
+	var config *Config
+	//var upstream UpstreamList
+
+	lbConfig, err := parser.GetStringAnnotation(lbConfigAnnotations, r.ingress, loadBalanceAnnotations)
+	if err != nil {
+		return config, err
+	}
+
+	data, err := jsonParser.JSONToMap(lbConfig)
+	if err != nil {
+		return config, err
+	}
+
+	for k := range data["services"].(map[string]interface{}) {
+		_, err := r.ingress.GetBackend(k)
+		if err != nil {
+			return config, cerr.NewInvalidIngressAnnotationsError(k, r.ingress.GetName(), r.ingress.GetNameSpace())
+		}
+
+	}
+
+	return config, nil
 }
 
 func (r *loadBalanceIng) Validate(ing map[string]string) error {
-	return nil
+	return parser.CheckAnnotations(ing, loadBalanceAnnotations, r.ingress)
 }

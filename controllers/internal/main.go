@@ -28,8 +28,7 @@ func NewNginxController(ctx context.Context, k8sCli common.K8sClientSet, operato
 func (nc *NginxController) Start(req ctrl.Request) error {
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
-	ingress, err := ing.GetIngress(nc.ctx, req.NamespacedName)
-	if cerr.IsIngressNotFoundError(err) {
+	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); cerr.IsIngressNotFoundError(err) {
 		return err
 	}
 
@@ -51,7 +50,7 @@ func (nc *NginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	extract, err := annotations.NewExtractor(ingress).Extract()
+	extract, err := annotations.NewExtractor(ing).Extract()
 	if err != nil {
 		return err
 	}

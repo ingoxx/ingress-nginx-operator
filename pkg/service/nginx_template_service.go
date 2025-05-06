@@ -12,7 +12,7 @@ type NginxTemplateData interface {
 	GetTlsData(key client.ObjectKey) (map[string][]byte, error)
 	GetService(name string) (*corev1.Service, error)
 	GetBackendPort(svc *corev1.Service) int32
-	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string
+	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) (map[string]interface{}, error)
 	GetSecret(key client.ObjectKey) (*corev1.Secret, error)
 	GetDefaultBackendPort(svc *corev1.Service) int32
 	GetRules() []v1.IngressRule

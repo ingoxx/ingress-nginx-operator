@@ -5,14 +5,13 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
-	v1 "k8s.io/api/networking/v1"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
 type IngressAnnotationsParser interface {
-	Parse(service.K8sResourcesIngress) (interface{}, error)
+	Parse() (interface{}, error)
 	Validate(map[string]string) error
 }
 
@@ -27,31 +26,31 @@ type AnnotationConfig struct {
 
 type GetAnnotationVal map[string]string
 
-func (g GetAnnotationVal) parseString(name string, ing *v1.Ingress) (string, error) {
+func (g GetAnnotationVal) parseString(name string, ing service.K8sResourcesIngress) (string, error) {
 	val, ok := g[name]
 	if ok {
 		if val == "" {
-			return "", cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
+			return "", cerr.NewInvalidIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
 		}
 
 		return val, nil
 	}
 
-	return "", cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
+	return "", cerr.NewMissIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
 }
 
-func (g GetAnnotationVal) parseBool(name string, ing *v1.Ingress) (bool, error) {
+func (g GetAnnotationVal) parseBool(name string, ing service.K8sResourcesIngress) (bool, error) {
 	val, ok := g[name]
 	if ok {
 		b, err := strconv.ParseBool(val)
 		if err != nil {
-			return false, cerr.NewInvalidIngressAnnotationsError(name, ing.Name, ing.Namespace)
+			return false, cerr.NewInvalidIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
 		}
 
 		return b, nil
 	}
 
-	return false, cerr.NewMissIngressAnnotationsError(name, ing.Name, ing.Namespace)
+	return false, cerr.NewMissIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
 }
 
 func GetDnsRegex(str string) string {
@@ -65,7 +64,7 @@ func GetDnsRegex(str string) string {
 	return dns[0]
 }
 
-func GetStringAnnotation(name string, ing *v1.Ingress, config AnnotationsContents) (string, error) {
+func GetStringAnnotation(name string, ing service.K8sResourcesIngress, config AnnotationsContents) (string, error) {
 	key, err := CheckAnnotationsKeyVal(name, ing, config)
 	if err != nil {
 		return "", err
@@ -73,7 +72,7 @@ func GetStringAnnotation(name string, ing *v1.Ingress, config AnnotationsContent
 	return GetAnnotationVal(ing.GetAnnotations()).parseString(key, ing)
 }
 
-func GetBoolAnnotations(name string, ing *v1.Ingress, config AnnotationsContents) (bool, error) {
+func GetBoolAnnotations(name string, ing service.K8sResourcesIngress, config AnnotationsContents) (bool, error) {
 	key, err := CheckAnnotationsKeyVal(name, ing, config)
 	if err != nil {
 		return false, err

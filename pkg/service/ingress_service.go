@@ -16,7 +16,7 @@ type K8sResourcesIngress interface {
 	GetService(name string) (*corev1.Service, error)
 	GetBackendPort(svc *corev1.Service) int32
 	GetDefaultBackendPort(svc *corev1.Service) int32
-	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) string
+	GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) (map[string]interface{}, error)
 	CheckController() error
 	GetAnnotations() map[string]string
 	CheckService() error

@@ -5,7 +5,6 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
-	v1 "k8s.io/api/networking/v1"
 	"strings"
 )
 
@@ -32,22 +31,22 @@ type Config struct {
 var rewriteAnnotations = parser.AnnotationsContents{
 	rewriteTargetAnnotation: {
 		Doc: "rewrite target path, like: /$1, /$2, /api. required",
-		Validator: func(s string, ing *v1.Ingress) error {
+		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" && !parser.IsRegex(s) {
-				return cerr.NewInvalidIngressAnnotationsError(s, ing.Name, ing.Namespace)
+				return cerr.NewInvalidIngressAnnotationsError(s, ing.GetName(), ing.GetNameSpace())
 			}
 			return nil
 		},
 	},
 	rewriteEnableRegexAnnotation: {
 		Doc: "optional",
-		Validator: func(s string, ing *v1.Ingress) error {
+		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				if s == "false" || s == "true" {
 					return nil
 				}
 
-				return cerr.NewInvalidIngressAnnotationsError(s, ing.Name, ing.Namespace)
+				return cerr.NewInvalidIngressAnnotationsError(s, ing.GetName(), ing.GetNameSpace())
 			}
 
 			return nil
@@ -55,7 +54,7 @@ var rewriteAnnotations = parser.AnnotationsContents{
 	},
 	rewriteFlagAnnotation: {
 		Doc: fmt.Sprintf("rewrite flag, the value of the flag must be selected from here, '%v'. required", strings.Join(Flags, ",")),
-		Validator: func(s string, ing *v1.Ingress) error {
+		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				for _, v := range Flags {
 					if s == v {
@@ -63,7 +62,7 @@ var rewriteAnnotations = parser.AnnotationsContents{
 					}
 				}
 
-				return cerr.NewInvalidIngressAnnotationsError(s, ing.Name, ing.Namespace)
+				return cerr.NewInvalidIngressAnnotationsError(s, ing.GetName(), ing.GetNameSpace())
 			}
 
 			return nil
@@ -77,20 +76,20 @@ func NewRewrite(ingress service.K8sResourcesIngress) parser.IngressAnnotationsPa
 	}
 }
 
-func (r *rewriteIng) Parse(ing *v1.Ingress) (interface{}, error) {
+func (r *rewriteIng) Parse() (interface{}, error) {
 	var err error
 	config := &Config{}
-	config.RewriteTarget, err = parser.GetStringAnnotation(rewriteTargetAnnotation, ing, rewriteAnnotations)
+	config.RewriteTarget, err = parser.GetStringAnnotation(rewriteTargetAnnotation, r.ingress, rewriteAnnotations)
 	if err != nil {
 		return config, err
 	}
 
-	config.RewriteFlag, err = parser.GetStringAnnotation(rewriteFlagAnnotation, ing, rewriteAnnotations)
+	config.RewriteFlag, err = parser.GetStringAnnotation(rewriteFlagAnnotation, r.ingress, rewriteAnnotations)
 	if err != nil {
 		return config, err
 	}
 
-	config.EnableRegex, err = parser.GetBoolAnnotations(rewriteEnableRegexAnnotation, ing, rewriteAnnotations)
+	config.EnableRegex, err = parser.GetBoolAnnotations(rewriteEnableRegexAnnotation, r.ingress, rewriteAnnotations)
 	if err != nil {
 		return config, err
 	}

@@ -29,7 +29,8 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
-func (nc *NginxController) generateCfg() error {
+func (nc *NginxController) generateBackendCfg() error {
+
 	return nil
 }
 
