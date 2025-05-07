@@ -46,7 +46,7 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 			return nil, err
 		}
 
-		val, err := annotationParser.Parse(e.ingress)
+		val, err := annotationParser.Parse()
 		if err != nil {
 			if cerr.IsMissIngressAnnotationsError(err) {
 				continue

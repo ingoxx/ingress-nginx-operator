@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 // IngressServiceImpl 实现 IngressService 接口
@@ -63,13 +65,26 @@ func (i *IngressServiceImpl) GetRules() []v1.IngressRule {
 func (i *IngressServiceImpl) GetHosts() []string {
 	rs := i.GetRules()
 	var hosts = make([]string, len(rs))
-	if len(rs) > 0 {
-		for k, r := range rs {
-			hosts = append(hosts[:k], r.Host)
-		}
+
+	for k, r := range rs {
+		hosts = append(hosts[:k], r.Host)
 	}
 
 	return hosts
+}
+
+func (i *IngressServiceImpl) GetPaths() []string {
+	rs := i.GetRules()
+	var paths = make([]string, 0, 6)
+
+	for _, r := range rs {
+		for _, p := range r.HTTP.Paths {
+			paths = append(paths, p.Path)
+		}
+
+	}
+
+	return paths
 }
 
 func (i *IngressServiceImpl) GetTlsHosts() []string {
@@ -210,32 +225,39 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 	return ports
 }
 
-func (i *IngressServiceImpl) GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) (map[string]interface{}, error) {
-	var upStreamData = make(map[string]interface{})
-	var upStreamDataList = make([]map[string]interface{}, 0, 4)
-
+func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
+	var upStreamConfig = new(ingress.Backends)
+	var upStreamConfigList = make([]*ingress.Backends, 0, 4)
 	var rs = i.GetRules()
 
 	for _, r := range rs {
-		var svcList = make([]*v1.ServiceBackendPort, 0, 5)
-		upStreamData["host"] = r.Host
+		var svcList = make([]*v1.ServiceBackendPort, 0, len(r.HTTP.Paths))
+		upStreamConfig.Host = r.Host
+		upStreamConfig.Upstream = i.getUpstreamName(r.Host)
+
 		for _, p := range r.HTTP.Paths {
 			backend, err := i.GetBackend(p.Backend.Service.Name)
 			if err != nil {
 				return nil, err
 			}
 			svcList = append(svcList, backend)
-			upStreamData["svc"] = svcList
-			upStreamData["path"] = p.Path
+			upStreamConfig.Path = p.Path
+			upStreamConfig.PathType = string(*p.PathType)
+			upStreamConfig.Services = svcList
 		}
-		upStreamDataList = append(upStreamDataList, upStreamData)
+
+		upStreamConfigList = append(upStreamConfigList, upStreamConfig)
 	}
 
-	return nil, nil
+	return upStreamConfigList, nil
 }
 
-func (i *IngressServiceImpl) getUpstreamBackend(paths []v1.HTTPIngressPath) string {
-	return ""
+func (i *IngressServiceImpl) getUpstreamName(data string) string {
+	return fmt.Sprintf("%s_%s_%s", strings.ReplaceAll(data, ".", "_"), i.GetName(), i.GetNameSpace())
+}
+
+func (i *IngressServiceImpl) GetBackendName(name *v1.ServiceBackendPort) string {
+	return fmt.Sprintf("%s.%s.svc:%d", name.Name, i.GetNameSpace(), name.Number)
 }
 
 func (i *IngressServiceImpl) GetClientSet() *kubernetes.Clientset {
@@ -284,27 +306,55 @@ func (i *IngressServiceImpl) CheckController() error {
 	return nil
 }
 
-func (i *IngressServiceImpl) CheckHost(host v1.IngressRule) error {
-	if host.Host == "" {
-		return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
+func (i *IngressServiceImpl) CheckHost() error {
+	var recordExistsHost string
+	var rs = i.GetRules()
+
+	for _, r := range rs {
+		if recordExistsHost == "" {
+			recordExistsHost = r.Host
+		} else if recordExistsHost == r.Host {
+			return cerr.NewDuplicateHostError(i.GetName(), i.GetNameSpace())
+		}
 	}
 
 	return nil
 }
 
-func (i *IngressServiceImpl) CheckPath(path v1.HTTPIngressPath) error {
+func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	pattern := `^/`
-	matched, err := regexp.MatchString(pattern, path.Path)
-	if err != nil {
-		return err
-	}
+	var recordExistsPath string
+	for _, p := range path {
+		if recordExistsPath == "" {
+			recordExistsPath = p.Path
+		} else if recordExistsPath == p.Path {
+			return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
+		}
 
-	if !matched {
-		return cerr.NewInvalidIngressPathError(path.Path, i.GetName(), i.GetNameSpace())
-	}
+		matched, err := regexp.MatchString(pattern, p.Path)
+		if err != nil {
+			return err
+		}
 
-	if err := i.CheckPathType(path); err != nil {
-		return err
+		if !matched {
+			return cerr.NewInvalidIngressPathError(p.Path, i.GetName(), i.GetNameSpace())
+		}
+
+		if err := i.CheckPathType(p); err != nil {
+			return err
+		}
+
+		if err := i.CheckHost(); err != nil {
+			return err
+		}
+
+		svc, err := i.GetService(p.Backend.Service.Name)
+		if err != nil {
+			return err
+		}
+		if port := i.GetBackendPort(svc); port == 0 {
+			return cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
+		}
 	}
 
 	return nil
@@ -345,6 +395,7 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 }
 
 func (i *IngressServiceImpl) checkBackend() error {
+
 	rules := i.GetRules()
 	if len(rules) == 0 {
 		return cerr.NewMissIngressFieldValueError("rules", i.GetName(), i.GetNameSpace())
@@ -355,18 +406,10 @@ func (i *IngressServiceImpl) checkBackend() error {
 			return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
 		}
 
-		for _, p := range r.HTTP.Paths {
-			if err := i.CheckPath(p); err != nil {
-				return err
-			}
-			svc, err := i.GetService(p.Backend.Service.Name)
-			if err != nil {
-				return err
-			}
-			if port := i.GetBackendPort(svc); port == 0 {
-				return cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
-			}
+		if err := i.CheckPath(r.HTTP.Paths); err != nil {
+			return err
 		}
+
 	}
 
 	return nil

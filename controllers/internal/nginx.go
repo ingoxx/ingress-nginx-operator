@@ -1,6 +1,7 @@
-package controllers
+package internal
 
 import (
+	"bytes"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
@@ -12,6 +13,15 @@ import (
 )
 
 type ssl ingress.Tls
+
+type Config struct {
+	Backends       []*ingress.Backends
+	ServersBuffer  bytes.Buffer
+	ServerTmpl     string
+	MainServerTmpl string
+	ConfName       string
+	Annotations    *annotations.IngressAnnotationsConfig
+}
 
 type NginxController struct {
 	data   service.NginxTemplateData
@@ -29,12 +39,24 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
-func (nc *NginxController) generateBackendCfg() error {
+func (nc *NginxController) generateBackendCfg() (*Config, error) {
+	config, err := nc.data.GetUpstreamConfig()
+	if err != nil {
+		return nil, err
+	}
 
-	return nil
+	c := &Config{
+		Backends:       config,
+		ServerTmpl:     constants.NginxServerTmpl,
+		MainServerTmpl: constants.NginxMainServerTmpl,
+		Annotations:    nc.config,
+	}
+
+	return c, nil
 }
 
 func (nc *NginxController) generateBackendTmpl() error {
+
 	return nil
 }
 

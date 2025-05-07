@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -42,8 +43,8 @@ func (r ResourceAdapter) GetDefaultBackendPort(svc *corev1.Service) int32 {
 	return r.GetDefaultBackendPort(svc)
 }
 
-func (r ResourceAdapter) GetUpstreamName(paths []v1.HTTPIngressPath, ing interface{}) (map[string]interface{}, error) {
-	return r.Ingress.GetUpstreamName(paths, ing)
+func (r ResourceAdapter) GetUpstreamConfig() ([]*ingress.Backends, error) {
+	return r.Ingress.GetUpstreamConfig()
 }
 
 func (r ResourceAdapter) GetRules() []v1.IngressRule {
@@ -76,4 +77,12 @@ func (r ResourceAdapter) GetHosts() []string {
 
 func (r ResourceAdapter) GetAnnotations() map[string]string {
 	return r.Ingress.GetAnnotations()
+}
+
+func (r ResourceAdapter) GetBackendName(bk *v1.ServiceBackendPort) string {
+	return r.Ingress.GetBackendName(bk)
+}
+
+func (r ResourceAdapter) GetPaths() []string {
+	return r.Ingress.GetPaths()
 }

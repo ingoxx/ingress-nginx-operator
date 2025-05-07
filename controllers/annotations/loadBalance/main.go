@@ -3,10 +3,10 @@ package loadBalance
 import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
-	v1 "k8s.io/api/networking/v1"
 	"strings"
 )
 
@@ -24,13 +24,8 @@ type loadBalanceIng struct {
 }
 
 type Config struct {
-	Upstream []UpstreamList `json:"upstream"`
-	LbPolicy string         `json:"lb-policy"`
-}
-
-type UpstreamList struct {
-	SvcList    []*v1.ServiceBackendPort `json:"svc-list"`
-	StreamName string                   `json:"stream-name"`
+	LbConfig []*ingress.Backends `json:"lb-config"`
+	LbPolicy string              `json:"lb-policy"`
 }
 
 var loadBalanceAnnotations = parser.AnnotationsContents{
@@ -61,7 +56,7 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
-				for k := range data["services"].(map[string]interface{}) {
+				for k := range data {
 					if _, err := ing.GetBackend(k); err != nil {
 						return cerr.NewInvalidIngressAnnotationsError(k, ing.GetName(), ing.GetNameSpace())
 					}
@@ -81,26 +76,41 @@ func NewLoadBalanceIng(ingress service.K8sResourcesIngress) parser.IngressAnnota
 
 func (r *loadBalanceIng) Parse() (interface{}, error) {
 	var err error
-	var config *Config
-	//var upstream UpstreamList
+	var config = new(Config)
+
+	config.LbPolicy, err = parser.GetStringAnnotation(lbPolicyAnnotations, r.ingress, loadBalanceAnnotations)
+	if err != nil {
+		return config, err
+	}
 
 	lbConfig, err := parser.GetStringAnnotation(lbConfigAnnotations, r.ingress, loadBalanceAnnotations)
 	if err != nil {
 		return config, err
 	}
 
-	data, err := jsonParser.JSONToMap(lbConfig)
+	upstreamConfig, err := r.ingress.GetUpstreamConfig()
 	if err != nil {
 		return config, err
 	}
 
-	for k := range data["services"].(map[string]interface{}) {
-		_, err := r.ingress.GetBackend(k)
+	if lbConfig != "" {
+		data, err := jsonParser.JSONToMap(lbConfig)
 		if err != nil {
-			return config, cerr.NewInvalidIngressAnnotationsError(k, r.ingress.GetName(), r.ingress.GetNameSpace())
+			return config, err
 		}
 
+		for av := range data {
+			for _, uv := range upstreamConfig {
+				for _, sv := range uv.Services {
+					if av == sv.Name {
+						sv.Name = fmt.Sprintf("%s %s", r.ingress.GetBackendName(sv), data[av])
+					}
+				}
+			}
+		}
 	}
+
+	config.LbConfig = upstreamConfig
 
 	return config, nil
 }

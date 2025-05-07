@@ -102,6 +102,14 @@ func (r *rewriteIng) Parse() (interface{}, error) {
 }
 
 func (r *rewriteIng) validate(config *Config) error {
+	if config.EnableRegex {
+		for _, v := range r.ingress.GetPaths() {
+			if !parser.IsRegex(v) {
+				return cerr.NewInvalidIngressValueError(r.ingress.GetName(), r.ingress.GetNameSpace())
+			}
+		}
+	}
+
 	if (config.RewriteTarget == "") != (config.RewriteFlag == "") {
 		return cerr.NewInvalidIngressAnnotationsError(rewriteFlagAnnotation+"/"+rewriteTargetAnnotation,
 			r.ingress.GetName(),

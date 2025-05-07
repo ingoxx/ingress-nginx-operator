@@ -40,7 +40,7 @@ func (c *CertServiceImpl) certUnstructuredData() *unstructured.Unstructured {
 				"namespace": c.ing.GetNameSpace(),
 			},
 			"spec": map[string]interface{}{
-				"dnsNames": c.ing.GetHosts(c.ing.GetNameSpace(), c.ing.GetName()),
+				"dnsNames": c.ing.GetHosts(),
 				"issuerRef": map[string]interface{}{
 					"kind": "Issuer",
 					"name": c.IssuerObjectKey(),
@@ -96,7 +96,7 @@ func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Uns
 		return fmt.Errorf("dnsNames not found in Certificate '%s', namespace '%s'", c.CertObjectKey(), c.ing.GetNameSpace())
 	}
 
-	nh := c.ing.GetHosts(c.ing.GetNameSpace(), c.ing.GetName())
+	nh := c.ing.GetHosts()
 
 	hp := func(s1, s2 []string) bool {
 		aCopy := slices.Clone(s1)

@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"github.com/ingoxx/ingress-nginx-operator/controllers"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -11,21 +10,21 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-type NginxController struct {
+type CrdNginxController struct {
 	k8sCli      common.K8sClientSet
 	operatorCli common.OperatorClientSet
 	ctx         context.Context
 }
 
-func NewNginxController(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet) *NginxController {
-	return &NginxController{
+func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet) *CrdNginxController {
+	return &CrdNginxController{
 		ctx:         ctx,
 		k8sCli:      k8sCli,
 		operatorCli: operatorCli,
 	}
 }
 
-func (nc *NginxController) Start(req ctrl.Request) error {
+func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
 	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); cerr.IsIngressNotFoundError(err) {
@@ -55,7 +54,7 @@ func (nc *NginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	if err := controllers.NewNginxController(ar, extract).Run(); err != nil {
+	if err := NewNginxController(ar, extract).Run(); err != nil {
 		return err
 	}
 	return nil

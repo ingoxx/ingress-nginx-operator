@@ -199,3 +199,45 @@ func NewNotFoundTlsHostError(name, namespace string) error {
 		errMsg: fmt.Sprintf("'.spec.host' does not exist in '.spec.tls', ingress '%s' in namespace '%s'", name, namespace),
 	}
 }
+
+type DuplicateHostError struct {
+	errMsg string
+}
+
+func (e DuplicateHostError) Error() string {
+	return e.errMsg
+}
+
+func NewDuplicateHostError(name, namespace string) error {
+	return DuplicateHostError{
+		errMsg: fmt.Sprintf("'.spec.host' duplicate, ingress '%s' in namespace '%s'", name, namespace),
+	}
+}
+
+type DuplicatePathError struct {
+	errMsg string
+}
+
+func (e DuplicatePathError) Error() string {
+	return e.errMsg
+}
+
+func NewDuplicatePathError(name, namespace string) error {
+	return DuplicatePathError{
+		errMsg: fmt.Sprintf("'.spec.Host.path' duplicate, ingress '%s' in namespace '%s'", name, namespace),
+	}
+}
+
+type InvalidIngressValueError struct {
+	errMsg string
+}
+
+func (e InvalidIngressValueError) Error() string {
+	return e.errMsg
+}
+
+func NewInvalidIngressValueError(name, namespace string) error {
+	return InvalidIngressValueError{
+		errMsg: fmt.Sprintf("'.spec.Host.path' contain invalid value, have regular expressions been enabled?, ingress '%s' in namespace '%s'", name, namespace),
+	}
+}
