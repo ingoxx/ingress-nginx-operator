@@ -84,7 +84,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	}
 
 	lbConfig, err := parser.GetStringAnnotation(lbConfigAnnotations, r.ingress, loadBalanceAnnotations)
-	if err != nil {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
@@ -108,6 +108,13 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 				}
 			}
 		}
+	} else {
+		for _, uv := range upstreamConfig {
+			for _, sv := range uv.Services {
+				sv.Name = r.ingress.GetBackendName(sv)
+			}
+		}
+
 	}
 
 	config.LbConfig = upstreamConfig

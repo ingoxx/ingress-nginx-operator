@@ -2,25 +2,26 @@ package internal
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 	"os"
 	"path/filepath"
+	"text/template"
 )
 
 type ssl ingress.Tls
 
 type Config struct {
-	Backends       []*ingress.Backends
-	ServersBuffer  bytes.Buffer
-	ServerTmpl     string
-	MainServerTmpl string
-	ConfName       string
-	Annotations    *annotations.IngressAnnotationsConfig
+	ServersBuffer bytes.Buffer
+	Annotations   *annotations.IngressAnnotationsConfig
+	ServerTmpl    string
+	ConfName      string
 }
 
 type NginxController struct {
@@ -36,26 +37,41 @@ func NewNginxController(data service.NginxTemplateData, config *annotations.Ingr
 }
 
 func (nc *NginxController) Run() error {
+	return nc.generateBackendCfg()
+}
+
+func (nc *NginxController) generateBackendCfg() error {
+	c := &Config{
+		ServerTmpl:  constants.NginxServerTmpl,
+		Annotations: nc.config,
+		ConfName:    constants.NginxConfDir,
+	}
+
+	if err := nc.generateBackendTmpl(c); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (nc *NginxController) generateBackendCfg() (*Config, error) {
-	config, err := nc.data.GetUpstreamConfig()
+func (nc *NginxController) generateBackendTmpl(cfg *Config) error {
+	b, err := os.ReadFile(cfg.ServerTmpl)
 	if err != nil {
-		return nil, err
+		klog.ErrorS(err, fmt.Sprintf("tmpelate file '%s' not found", cfg.ServerTmpl))
+		return err
 	}
 
-	c := &Config{
-		Backends:       config,
-		ServerTmpl:     constants.NginxServerTmpl,
-		MainServerTmpl: constants.NginxMainServerTmpl,
-		Annotations:    nc.config,
+	serverTemp, err := template.New("serverMain").Parse(string(b))
+	if err != nil {
+		klog.ErrorS(err, fmt.Sprintf("error parsing template_nginx: %s", cfg.ServerTmpl))
+		return err
 	}
 
-	return c, nil
-}
+	if err := serverTemp.Execute(&cfg.ServersBuffer, cfg); err != nil {
+		return err
+	}
 
-func (nc *NginxController) generateBackendTmpl() error {
+	fmt.Println(cfg.ServersBuffer.String())
 
 	return nil
 }

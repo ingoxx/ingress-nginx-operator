@@ -36,8 +36,6 @@ func (r *NginxIngress) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-//+kubebuilder:webhook:path=/mutate-ingress-ingress-k8s-io-v1-nginxingress,mutating=true,failurePolicy=fail,sideEffects=None,groups=ingress.ingress-k8s.io,resources=nginxingresses,verbs=create;update,versions=v1,name=mnginxingress.kb.io,admissionReviewVersions=v1
-
 var _ webhook.Defaulter = &NginxIngress{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
@@ -48,7 +46,6 @@ func (r *NginxIngress) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-ingress-ingress-k8s-io-v1-nginxingress,mutating=false,failurePolicy=fail,sideEffects=None,groups=ingress.ingress-k8s.io,resources=nginxingresses,verbs=create;update,versions=v1,name=vnginxingress.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NginxIngress{}
 
