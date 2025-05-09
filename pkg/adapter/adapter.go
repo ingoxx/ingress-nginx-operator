@@ -8,6 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type ssl ingress.Tls
+
 type ResourceAdapter struct {
 	Ingress service.K8sResourcesIngress
 	Secret  service.K8sResourcesSecret
@@ -85,4 +87,12 @@ func (r ResourceAdapter) GetBackendName(bk *v1.ServiceBackendPort) string {
 
 func (r ResourceAdapter) GetPaths() []string {
 	return r.Ingress.GetPaths()
+}
+
+func (r ResourceAdapter) GetTlsFile() (map[string]ingress.Tls, error) {
+	return r.Secret.GetTlsFile()
+}
+
+func (r ResourceAdapter) GetPathType(name string) (string, error) {
+	return r.Ingress.GetPathType(name)
 }

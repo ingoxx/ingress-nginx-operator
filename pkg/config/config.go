@@ -1,5 +1,5 @@
 package config
 
 var (
-	LoggerFile = "./kubernetes.log"
+	LoggerFile = "/workspace/kubernetes.log"
 )

@@ -1,8 +1,8 @@
 package constants
 
 const (
-	IngController     = "kubebuilder.io/ingress-nginx-controller"
+	IngController     = "kubernetes.io/ingress-operator"
 	IngAnnotationKey  = "kubernetes.io/ingress.class"
-	IngAnnotationVal  = "ingress-nginx-controller"
+	IngAnnotationVal  = "ingress-operator"
 	AnnotationsPrefix = "ingress.nginx.k8s.io"
 )

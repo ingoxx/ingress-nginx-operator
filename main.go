@@ -20,8 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/client"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/config"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/logger"
+	"k8s.io/klog/v2"
 	"os"
 
 	// Import all Kubernetes operatorCli auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -53,12 +52,12 @@ func init() {
 }
 
 func main() {
-	logger.SetLogFile(config.LoggerFile)
-	logger.SetLogLevel(logger.ErrorLevel)
+	//logger.SetLogFile(config.LoggerFile)
+	//logger.SetLogLevel(logger.ErrorLevel)
 
 	apiClient, err := client.NewK8sApiClient()
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to Kubernetes operatorCli API, error msg: %s", err.Error()))
+		klog.Error(fmt.Sprintf("Failed to connect to Kubernetes operatorCli API, error msg: %s", err.Error()))
 		os.Exit(1)
 	}
 
@@ -109,10 +108,10 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "NginxIngress")
 		os.Exit(1)
 	}
-	//if err = (&ingressv1.NginxIngress{}).SetupWebhookWithManager(mgr); err != nil {
-	//	setupLog.Error(err, "unable to create webhook", "webhook", "NginxIngress")
-	//	os.Exit(1)
-	//}
+	if err = (&ingressv1.NginxIngress{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "NginxIngress")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

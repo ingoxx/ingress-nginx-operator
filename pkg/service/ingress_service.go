@@ -31,4 +31,5 @@ type K8sResourcesIngress interface {
 	GetIngressObjectMate() metav1.ObjectMeta
 	GetBackendName(*v1.ServiceBackendPort) string
 	GetPaths() []string
+	GetPathType(string) (string, error)
 }

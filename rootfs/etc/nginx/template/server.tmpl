@@ -20,7 +20,7 @@ server {
 
     #### backend
     {{ range $path := $ut.Services }}
-	{{ if .Annotations.Rewrite.EnableRegex }}
+	{{ if and (.Annotations.Rewrite.EnableRegex) (eq $ut.PathType "ImplementationSpecific") }}
     location ~ ^{{ $ut.Path }} {
 	{{ else if eq $ut.PathType "Exact" }}
 	location = {{ $ut.Path }} {

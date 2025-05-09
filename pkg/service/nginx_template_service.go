@@ -25,4 +25,6 @@ type NginxTemplateData interface {
 	GetAnnotations() map[string]string
 	GetBackendName(*v1.ServiceBackendPort) string
 	GetPaths() []string
+	GetTlsFile() (map[string]ingress.Tls, error)
+	GetPathType(string) (string, error)
 }

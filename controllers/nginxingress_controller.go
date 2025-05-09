@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	ingressv1 "github.com/ingoxx/ingress-nginx-operator/api/v1"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/internal"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
@@ -73,7 +72,7 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 	r.clientSet = clientSet
 	r.operatorCli = operatorCli.NewOperatorClientImp(mgr.GetClient())
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ingressv1.NginxIngress{}).
+		//For(&ingressv1.NginxIngress{}).
 		For(&v1.Ingress{}).
 		Complete(r)
 }

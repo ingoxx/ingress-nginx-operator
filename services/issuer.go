@@ -11,14 +11,14 @@ import (
 
 // IssuerServiceImpl 实现 IssuerService 接口
 type IssuerServiceImpl struct {
-	ing common.Generic
-	ctx context.Context
-	as  service.CertAssociationResources
+	ing  common.Generic
+	ctx  context.Context
+	cert service.K8sResourcesCert
 }
 
 // NewIssuerServiceImpl 创建 Service 实例
-func NewIssuerServiceImpl(ctx context.Context, clientSet common.Generic, as service.CertAssociationResources) *IssuerServiceImpl {
-	return &IssuerServiceImpl{ctx: ctx, ing: clientSet, as: as}
+func NewIssuerServiceImpl(ctx context.Context, clientSet common.Generic, cert service.K8sResourcesCert) *IssuerServiceImpl {
+	return &IssuerServiceImpl{ctx: ctx, ing: clientSet, cert: cert}
 }
 
 func (i *IssuerServiceImpl) issuerGVK() schema.GroupVersionResource {
@@ -31,7 +31,7 @@ func (i *IssuerServiceImpl) issuerUnstructuredData() *unstructured.Unstructured 
 			"apiVersion": "cert-manager.io/v1",
 			"kind":       "Issuer",
 			"metadata": map[string]interface{}{
-				"name":      i.as.IssuerObjectKey(),
+				"name":      i.cert.IssuerObjectKey(),
 				"namespace": i.ing.GetNameSpace(),
 			},
 			"spec": map[string]interface{}{
@@ -52,7 +52,7 @@ func (i *IssuerServiceImpl) CreateIssuer(ctx context.Context, namespace, name st
 }
 
 func (i *IssuerServiceImpl) GetIssuer(ctx context.Context, namespace, name string) error {
-	if _, err := i.ing.GetDynamicClientSet().Resource(i.issuerGVK()).Get(ctx, i.as.IssuerObjectKey(), metav1.GetOptions{}); err != nil {
+	if _, err := i.ing.GetDynamicClientSet().Resource(i.issuerGVK()).Get(ctx, i.cert.IssuerObjectKey(), metav1.GetOptions{}); err != nil {
 		if err := i.CreateIssuer(ctx, namespace, name); err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func (i *IssuerServiceImpl) GetIssuer(ctx context.Context, namespace, name strin
 }
 
 func (i *IssuerServiceImpl) DeleteIssuer(ctx context.Context, namespace, name string) error {
-	if err := i.ing.GetDynamicClientSet().Resource(i.issuerGVK()).Delete(ctx, i.as.IssuerObjectKey(), metav1.DeleteOptions{}); err != nil {
+	if err := i.ing.GetDynamicClientSet().Resource(i.issuerGVK()).Delete(ctx, i.cert.IssuerObjectKey(), metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

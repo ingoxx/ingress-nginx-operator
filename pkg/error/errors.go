@@ -3,6 +3,7 @@ package error
 import (
 	"errors"
 	"fmt"
+	v1 "k8s.io/api/networking/v1"
 )
 
 type IngressNotFoundError struct {
@@ -239,5 +240,19 @@ func (e InvalidIngressValueError) Error() string {
 func NewInvalidIngressValueError(name, namespace string) error {
 	return InvalidIngressValueError{
 		errMsg: fmt.Sprintf("'.spec.Host.path' contain invalid value, have regular expressions been enabled?, ingress '%s' in namespace '%s'", name, namespace),
+	}
+}
+
+type SetPathTypeError struct {
+	errMsg string
+}
+
+func (e SetPathTypeError) Error() string {
+	return e.errMsg
+}
+
+func NewSetPathTypeError(name, namespace string) error {
+	return SetPathTypeError{
+		errMsg: fmt.Sprintf("'pathType' field setting error, how to make the path field a regular expression, pathType should be set to: %v, ingress '%s' in namespace '%s'", v1.PathTypeImplementationSpecific, name, namespace),
 	}
 }

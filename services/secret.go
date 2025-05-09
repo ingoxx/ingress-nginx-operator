@@ -1,19 +1,27 @@
 package services
 
 import (
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
+	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"os"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SecretServiceImpl struct {
-	clientSet common.Generic
-	ctx       context.Context
+	generic common.Generic
+	ctx     context.Context
+	cert    service.K8sResourcesCert
 }
 
-func NewSecretServiceImpl(ctx context.Context, clientSet common.Generic) *SecretServiceImpl {
-	return &SecretServiceImpl{ctx: ctx, clientSet: clientSet}
+func NewSecretServiceImpl(ctx context.Context, clientSet common.Generic, cert service.K8sResourcesCert) *SecretServiceImpl {
+	return &SecretServiceImpl{ctx: ctx, generic: clientSet, cert: cert}
 }
 
 func (s *SecretServiceImpl) GetTlsData(key client.ObjectKey) (map[string][]byte, error) {
@@ -34,7 +42,7 @@ func (s *SecretServiceImpl) GetTlsData(key client.ObjectKey) (map[string][]byte,
 
 func (s *SecretServiceImpl) GetSecret(key client.ObjectKey) (*corev1.Secret, error) {
 	sc := new(corev1.Secret)
-	if err := s.clientSet.GetClient().Get(s.ctx, key, sc); err != nil {
+	if err := s.generic.GetClient().Get(s.ctx, key, sc); err != nil {
 		return sc, err
 	}
 
@@ -48,4 +56,96 @@ func (s *SecretServiceImpl) extractTlsData(data map[string][]byte) (map[string][
 	}
 
 	return parsed, nil
+}
+
+func (s *SecretServiceImpl) GetTlsFile() (map[string]ingress.Tls, error) {
+	if len(s.generic.GetTls()) > 0 {
+		cs, err := s.caSigned()
+		if err != nil {
+			return nil, err
+		}
+
+		return cs, nil
+	}
+
+	ss, err := s.selfSigned()
+	if err != nil {
+		return nil, err
+	}
+
+	return ss, nil
+}
+
+// selfSigned use cert-manager controller
+func (s *SecretServiceImpl) selfSigned() (map[string]ingress.Tls, error) {
+	var ss ingress.Tls
+	var ht = make(map[string]ingress.Tls)
+
+	key := types.NamespacedName{Name: s.cert.SecretObjectKey(), Namespace: s.generic.GetNameSpace()}
+	data, err := s.GetTlsData(key)
+	if err != nil {
+		return nil, nil
+	}
+
+	for k, v := range data {
+		file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey()+"-"+k)
+		if err := os.WriteFile(file, v, 0644); err != nil {
+			return nil, err
+		}
+
+		if k == constants.NginxTlsCrt {
+			ss.TlsCrt = file
+		} else if k == constants.NginxTlsKey {
+			ss.TlsKey = file
+		}
+	}
+
+	for _, v := range s.generic.GetHosts() {
+		ht[v] = ss
+	}
+
+	return nil, nil
+}
+
+// caSigned ca signed
+func (s *SecretServiceImpl) caSigned() (map[string]ingress.Tls, error) {
+	if !s.generic.CheckTlsHosts() {
+		return nil, cerr.NewNotFoundTlsHostError(s.generic.GetName(), s.generic.GetNameSpace())
+	}
+
+	var ss ingress.Tls
+	var ht = make(map[string]ingress.Tls)
+
+	for _, v := range s.generic.GetTls() {
+		key := types.NamespacedName{Name: v.SecretName, Namespace: s.generic.GetNameSpace()}
+		_, err := s.GetSecret(key)
+		if err != nil {
+			return nil, err
+		}
+
+		data, err := s.GetTlsData(key)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range data {
+			file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey())
+			if err := os.WriteFile(file, v, 0644); err != nil {
+				return nil, err
+			}
+
+			if k == constants.NginxTlsCrt {
+				ss.TlsCrt = file
+			} else if k == constants.NginxTlsKey {
+				ss.TlsKey = file
+			}
+		}
+
+		for _, h := range v.Hosts {
+			ht[h] = ss
+		}
+
+	}
+
+	return nil, nil
 }

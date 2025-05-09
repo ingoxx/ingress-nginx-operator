@@ -21,6 +21,7 @@ type Tls struct {
 type Backends struct {
 	Services             []*v1.ServiceBackendPort `json:"services"`
 	IngAnnotationsConfig IngConfig                `json:"ing_annotations_config"`
+	Cert                 Tls                      `json:"cert"`
 	Host                 string                   `json:"host"`
 	Upstream             string                   `json:"upstream"`
 	Path                 string                   `json:"path"`

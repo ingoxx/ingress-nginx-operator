@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
@@ -87,14 +88,33 @@ func (i *IngressServiceImpl) GetPaths() []string {
 	return paths
 }
 
+func (i *IngressServiceImpl) GetPathType(name string) (string, error) {
+	rs := i.GetRules()
+	var pt string
+
+	for _, r := range rs {
+		for _, p := range r.HTTP.Paths {
+			if _, err := i.GetBackend(name); err != nil {
+				return pt, err
+			}
+			pt = string(*p.PathType)
+		}
+	}
+
+	if pt == "" {
+		return pt, cerr.NewMissIngressFieldValueError("pathType", i.GetName(), i.GetNameSpace())
+	}
+
+	return pt, nil
+}
+
 func (i *IngressServiceImpl) GetTlsHosts() []string {
 	rs := i.GetTls()
 	var hosts = make([]string, len(rs))
-	if len(rs) > 0 {
-		for _, r := range rs {
-			for k2, r2 := range r.Hosts {
-				hosts = append(hosts[:k2], r2)
-			}
+
+	for _, r := range rs {
+		for k2, r2 := range r.Hosts {
+			hosts = append(hosts[:k2], r2)
 		}
 	}
 
@@ -243,6 +263,12 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 			svcList = append(svcList, backend)
 			upStreamConfig.Path = p.Path
 			upStreamConfig.PathType = string(*p.PathType)
+			// 使用正则表达式时pathType字段必须选择对应的
+			imp := v1.PathTypeImplementationSpecific
+			if (parser.IsRegex(p.Path) && *p.PathType != imp) || (*p.PathType == imp && !parser.IsRegex(p.Path)) {
+				return upStreamConfigList, cerr.NewSetPathTypeError(i.GetName(), i.GetNameSpace())
+			}
+
 			upStreamConfig.Services = svcList
 		}
 

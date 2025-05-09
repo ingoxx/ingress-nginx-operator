@@ -15,7 +15,7 @@ import (
 type IngressAnnotationsConfig struct {
 	metav1.ObjectMeta
 	Rewrite     rewrite.Config
-	loadBalance loadBalance.Config
+	LoadBalance loadBalance.Config
 }
 
 func (iac *IngressAnnotationsConfig) GetIngAnnConfig() {}

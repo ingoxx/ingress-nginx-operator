@@ -39,10 +39,15 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
+	cert := services.NewCertServiceImpl(nc.ctx, ing)
+	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
+	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
+
 	ar := adapter.ResourceAdapter{
 		Ingress: ing,
-		Secret:  services.NewSecretServiceImpl(nc.ctx, ing),
-		Cert:    services.NewCertServiceImpl(nc.ctx, ing),
+		Secret:  secret,
+		Cert:    cert,
+		Issuer:  issuer,
 	}
 
 	if err := ar.CheckCert(); err != nil {

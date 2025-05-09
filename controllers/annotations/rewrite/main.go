@@ -102,12 +102,17 @@ func (r *rewriteIng) Parse() (interface{}, error) {
 }
 
 func (r *rewriteIng) validate(config *Config) error {
+	var isValidPath bool
 	if config.EnableRegex {
 		for _, v := range r.ingress.GetPaths() {
-			if !parser.IsRegex(v) {
-				return cerr.NewInvalidIngressValueError(r.ingress.GetName(), r.ingress.GetNameSpace())
+			if parser.IsRegex(v) {
+				isValidPath = true
 			}
 		}
+	}
+
+	if !isValidPath {
+		return cerr.NewInvalidIngressValueError(r.ingress.GetName(), r.ingress.GetNameSpace())
 	}
 
 	if (config.RewriteTarget == "") != (config.RewriteFlag == "") {
