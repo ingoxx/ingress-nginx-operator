@@ -325,6 +325,7 @@ func (i *IngressServiceImpl) CheckController() error {
 	if err := i.operatorCli.GetClient().Get(i.ctx, types.NamespacedName{Name: *i.ingress.Spec.IngressClassName}, ic); err != nil {
 		return err
 	}
+
 	if ic.Spec.Controller != constants.IngController {
 		return fmt.Errorf("pls select available ingress nginx controller")
 	}

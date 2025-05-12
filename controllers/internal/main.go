@@ -7,6 +7,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -28,14 +29,17 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
 	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); cerr.IsIngressNotFoundError(err) {
+		klog.Error(err)
 		return err
 	}
 
 	if err := ing.CheckController(); err != nil {
+		klog.Error(err)
 		return err
 	}
 
 	if err := ing.CheckService(); err != nil {
+		klog.Error(err)
 		return err
 	}
 
@@ -51,16 +55,20 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	if err := ar.CheckCert(); err != nil {
+		klog.Error(err)
 		return err
 	}
 
 	extract, err := annotations.NewExtractor(ing).Extract()
 	if err != nil {
+		klog.Error(err)
 		return err
 	}
 
 	if err := NewNginxController(ar, extract).Run(); err != nil {
+		klog.Error(err)
 		return err
 	}
+
 	return nil
 }

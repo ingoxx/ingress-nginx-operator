@@ -48,13 +48,11 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(ingressv1.AddToScheme(scheme))
+
 	//+kubebuilder:scaffold:scheme
 }
 
 func main() {
-	//logger.SetLogFile(config.LoggerFile)
-	//logger.SetLogLevel(logger.ErrorLevel)
-
 	apiClient, err := client.NewK8sApiClient()
 	if err != nil {
 		klog.Error(fmt.Sprintf("Failed to connect to Kubernetes operatorCli API, error msg: %s", err.Error()))
