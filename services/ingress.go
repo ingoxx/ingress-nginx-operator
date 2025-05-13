@@ -263,7 +263,7 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 			svcList = append(svcList, backend)
 			upStreamConfig.Path = p.Path
 			upStreamConfig.PathType = string(*p.PathType)
-			// 使用正则表达式时pathType字段必须选择对应的
+			// 使用正则表达式时pathType字段必须为：ImplementationSpecific
 			imp := v1.PathTypeImplementationSpecific
 			if (parser.IsRegex(p.Path) && *p.PathType != imp) || (*p.PathType == imp && !parser.IsRegex(p.Path)) {
 				return upStreamConfigList, cerr.NewSetPathTypeError(i.GetName(), i.GetNameSpace())

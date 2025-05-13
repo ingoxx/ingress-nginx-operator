@@ -4,7 +4,6 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
-	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
 	"k8s.io/klog/v2"
@@ -28,7 +27,7 @@ func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, oper
 func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
-	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); cerr.IsIngressNotFoundError(err) {
+	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); err != nil {
 		klog.Error(err)
 		return err
 	}
