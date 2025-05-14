@@ -6,7 +6,7 @@ import (
 )
 
 type K8sResourcesCert interface {
-	CreateCert() error
+	CreateCert() (*unstructured.Unstructured, error)
 	GetCert() (*unstructured.Unstructured, error)
 	DeleteCert() error
 	UpdateCert(context.Context, *unstructured.Unstructured) error

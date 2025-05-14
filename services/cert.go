@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 	"slices"
 )
 
@@ -26,7 +27,7 @@ func NewCertServiceImpl(ctx context.Context, ing common.Generic) *CertServiceImp
 	return c
 }
 
-func (c *CertServiceImpl) certGVK() schema.GroupVersionResource {
+func (c *CertServiceImpl) certGVR() schema.GroupVersionResource {
 	return schema.GroupVersionResource{Group: "cert-manager.io", Version: "v1", Resource: "certificates"}
 }
 
@@ -53,23 +54,6 @@ func (c *CertServiceImpl) certUnstructuredData() *unstructured.Unstructured {
 	return certUnstructured
 }
 
-func (c *CertServiceImpl) CreateCert() error {
-	if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVK()).Create(c.ctx, c.certUnstructuredData(), metav1.CreateOptions{}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *CertServiceImpl) GetCert() (*unstructured.Unstructured, error) {
-	cert, err := c.ing.GetDynamicClientSet().Resource(c.certGVK()).Get(c.ctx, c.CertObjectKey(), metav1.GetOptions{})
-	if err != nil {
-		return cert, err
-	}
-
-	return cert, nil
-}
-
 func (c *CertServiceImpl) CertObjectKey() string {
 	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-cert"
 }
@@ -82,8 +66,26 @@ func (c *CertServiceImpl) IssuerObjectKey() string {
 	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-issuer"
 }
 
+func (c *CertServiceImpl) GetCert() (*unstructured.Unstructured, error) {
+	cert, err := c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Get(c.ctx, c.CertObjectKey(), metav1.GetOptions{})
+	if err != nil {
+		return cert, err
+	}
+
+	return cert, nil
+}
+
+func (c *CertServiceImpl) CreateCert() (*unstructured.Unstructured, error) {
+	cert, err := c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Create(c.ctx, c.certUnstructuredData(), metav1.CreateOptions{})
+	if err != nil {
+		return cert, err
+	}
+
+	return cert, nil
+}
+
 func (c *CertServiceImpl) DeleteCert() error {
-	return c.ing.GetDynamicClientSet().Resource(c.certGVK()).Delete(c.ctx, c.CertObjectKey(), metav1.DeleteOptions{})
+	return c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Delete(c.ctx, c.CertObjectKey(), metav1.DeleteOptions{})
 }
 
 func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Unstructured) error {
@@ -109,7 +111,7 @@ func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Uns
 	}
 
 	if !hp(oh, nh) {
-		if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVK()).Update(ctx, c.certUnstructuredData(), metav1.UpdateOptions{}); err != nil {
+		if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Update(ctx, c.certUnstructuredData(), metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
@@ -119,17 +121,22 @@ func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Uns
 
 func (c *CertServiceImpl) CheckCert() error {
 	if err := c.issuer.CheckIssuer(); err != nil {
+		klog.Error(fmt.Sprintf("CheckIssuer error %v", err))
 		return err
 	}
 
 	cert, err := c.GetCert()
 	if err != nil {
-		if err := c.CreateCert(); err != nil {
+		klog.Error(fmt.Sprintf("GetCert error %v", err))
+		cert, err = c.CreateCert()
+		if err != nil {
+			klog.Error(fmt.Sprintf("CreateCert error %v", err))
 			return err
 		}
 	}
 
 	if err := c.UpdateCert(c.ctx, cert); err != nil {
+		klog.Error(fmt.Sprintf("UpdateCert error %v", err))
 		return err
 	}
 

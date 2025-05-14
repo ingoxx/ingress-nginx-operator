@@ -33,7 +33,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	if err := ing.CheckController(); err != nil {
-		klog.Error(err)
+		klog.Warning(err)
 		return err
 	}
 

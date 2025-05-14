@@ -197,7 +197,7 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 }
 
 func (i *IngressServiceImpl) GetService(name string) (*corev1.Service, error) {
-	var svc *corev1.Service
+	var svc = new(corev1.Service)
 	key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
 	if err := i.operatorCli.GetClient().Get(i.ctx, key, svc); err != nil {
 		return svc, err
@@ -314,7 +314,8 @@ func (i *IngressServiceImpl) CheckService() error {
 
 func (i *IngressServiceImpl) CheckController() error {
 	ic := new(v1.IngressClass)
-	if *i.ingress.Spec.IngressClassName == "" && i.ingress.GetAnnotations()[constants.IngAnnotationKey] == "" {
+
+	if i.ingress.Spec.IngressClassName == nil && i.ingress.GetAnnotations()[constants.IngAnnotationKey] == "" {
 		return fmt.Errorf("select available ingress nginx controller")
 	}
 
@@ -338,6 +339,10 @@ func (i *IngressServiceImpl) CheckHost() error {
 	var rs = i.GetRules()
 
 	for _, r := range rs {
+		if r.Host == "" {
+			return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
+		}
+
 		if recordExistsHost == "" {
 			recordExistsHost = r.Host
 		} else if recordExistsHost == r.Host {
@@ -371,14 +376,15 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 			return err
 		}
 
-		if err := i.CheckHost(); err != nil {
-			return err
+		if p.Backend.Service == nil {
+			return cerr.NewMissIngressFieldValueError("Service", i.GetName(), i.GetNameSpace())
 		}
 
 		svc, err := i.GetService(p.Backend.Service.Name)
 		if err != nil {
 			return err
 		}
+
 		if port := i.GetBackendPort(svc); port == 0 {
 			return cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 		}
@@ -388,7 +394,7 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 }
 
 func (i *IngressServiceImpl) CheckPathType(path v1.HTTPIngressPath) error {
-	if *path.PathType == "" {
+	if path.PathType == nil {
 		return cerr.NewMissIngressFieldValueError("PathType", i.GetName(), i.GetNameSpace())
 	}
 
@@ -422,21 +428,23 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 }
 
 func (i *IngressServiceImpl) checkBackend() error {
-
 	rules := i.GetRules()
 	if len(rules) == 0 {
 		return cerr.NewMissIngressFieldValueError("rules", i.GetName(), i.GetNameSpace())
 	}
 
 	for _, r := range rules {
-		if r.Host == "" {
-			return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
+		if err := i.CheckHost(); err != nil {
+			return err
+		}
+
+		if r.HTTP == nil {
+			return cerr.NewMissIngressFieldValueError("HTTP", i.GetName(), i.GetNameSpace())
 		}
 
 		if err := i.CheckPath(r.HTTP.Paths); err != nil {
 			return err
 		}
-
 	}
 
 	return nil

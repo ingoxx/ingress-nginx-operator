@@ -8,8 +8,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ssl ingress.Tls
-
 type ResourceAdapter struct {
 	Ingress service.K8sResourcesIngress
 	Secret  service.K8sResourcesSecret

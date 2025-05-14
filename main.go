@@ -55,7 +55,7 @@ func init() {
 func main() {
 	apiClient, err := client.NewK8sApiClient()
 	if err != nil {
-		klog.Error(fmt.Sprintf("Failed to connect to Kubernetes operatorCli API, error msg: %s", err.Error()))
+		klog.Error(fmt.Sprintf("failed to connect to Kubernetes operatorCli API, error '%s'", err.Error()))
 		os.Exit(1)
 	}
 
