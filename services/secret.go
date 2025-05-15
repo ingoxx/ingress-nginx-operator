@@ -62,7 +62,7 @@ func (s *SecretServiceImpl) GetTlsFile() (map[string]ingress.Tls, error) {
 	if len(s.generic.GetTls()) > 0 {
 		cs, err := s.caSigned()
 		if err != nil {
-			return nil, err
+			return cs, err
 		}
 
 		return cs, nil
@@ -70,13 +70,12 @@ func (s *SecretServiceImpl) GetTlsFile() (map[string]ingress.Tls, error) {
 
 	ss, err := s.selfSigned()
 	if err != nil {
-		return nil, err
+		return ss, err
 	}
 
 	return ss, nil
 }
 
-// selfSigned use cert-manager controller
 func (s *SecretServiceImpl) selfSigned() (map[string]ingress.Tls, error) {
 	var ss ingress.Tls
 	var ht = make(map[string]ingress.Tls)
@@ -84,30 +83,29 @@ func (s *SecretServiceImpl) selfSigned() (map[string]ingress.Tls, error) {
 	key := types.NamespacedName{Name: s.cert.SecretObjectKey(), Namespace: s.generic.GetNameSpace()}
 	data, err := s.GetTlsData(key)
 	if err != nil {
-		return nil, nil
-	}
-
-	for k, v := range data {
-		file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey()+"-"+k)
-		if err := os.WriteFile(file, v, 0644); err != nil {
-			return nil, err
-		}
-
-		if k == constants.NginxTlsCrt {
-			ss.TlsCrt = file
-		} else if k == constants.NginxTlsKey {
-			ss.TlsKey = file
-		}
+		return ht, nil
 	}
 
 	for _, v := range s.generic.GetHosts() {
+		for k, v2 := range data {
+			file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey()+"-"+k)
+			if err := os.WriteFile(file, v2, 0644); err != nil {
+				return ht, err
+			}
+
+			if k == constants.NginxTlsCrt {
+				ss.TlsCrt = file
+			} else if k == constants.NginxTlsKey {
+				ss.TlsKey = file
+			}
+		}
+
 		ht[v] = ss
 	}
 
-	return nil, nil
+	return ht, nil
 }
 
-// caSigned ca signed
 func (s *SecretServiceImpl) caSigned() (map[string]ingress.Tls, error) {
 	if !s.generic.CheckTlsHosts() {
 		return nil, cerr.NewNotFoundTlsHostError(s.generic.GetName(), s.generic.GetNameSpace())
@@ -127,25 +125,22 @@ func (s *SecretServiceImpl) caSigned() (map[string]ingress.Tls, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		for k, v := range data {
-			file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey())
-			if err := os.WriteFile(file, v, 0644); err != nil {
-				return nil, err
-			}
-
-			if k == constants.NginxTlsCrt {
-				ss.TlsCrt = file
-			} else if k == constants.NginxTlsKey {
-				ss.TlsKey = file
-			}
-		}
-
 		for _, h := range v.Hosts {
+			for k, v2 := range data {
+				file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey())
+				if err := os.WriteFile(file, v2, 0644); err != nil {
+					return nil, err
+				}
+
+				if k == constants.NginxTlsCrt {
+					ss.TlsCrt = file
+				} else if k == constants.NginxTlsKey {
+					ss.TlsKey = file
+				}
+			}
 			ht[h] = ss
 		}
-
 	}
 
-	return nil, nil
+	return ht, nil
 }

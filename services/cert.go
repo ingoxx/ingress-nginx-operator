@@ -127,7 +127,6 @@ func (c *CertServiceImpl) CheckCert() error {
 
 	cert, err := c.GetCert()
 	if err != nil {
-		klog.Error(fmt.Sprintf("GetCert error %v", err))
 		cert, err = c.CreateCert()
 		if err != nil {
 			klog.Error(fmt.Sprintf("CreateCert error %v", err))

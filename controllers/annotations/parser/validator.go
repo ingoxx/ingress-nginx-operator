@@ -9,9 +9,9 @@ import (
 )
 
 func IsRegex(str string) bool {
-	pattern := `^\/(\w+)|^/\$([0-9])$|^\$([0-9])$|^/\(.*\)\$$`
-	matched, _ := regexp.MatchString(pattern, str)
-	return matched
+	pattern := `[.*+?^${}()|\[\]\\]`
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(str)
 }
 
 func IsSpecificPrefix(annotation string) bool {

@@ -79,12 +79,12 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	var config = new(Config)
 
 	config.LbPolicy, err = parser.GetStringAnnotation(lbPolicyAnnotations, r.ingress, loadBalanceAnnotations)
-	if err != nil {
+	if !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
 	lbConfig, err := parser.GetStringAnnotation(lbConfigAnnotations, r.ingress, loadBalanceAnnotations)
-	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
+	if !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
@@ -116,7 +116,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		}
 
 	}
-
+	
 	config.LbConfig = upstreamConfig
 
 	return config, nil

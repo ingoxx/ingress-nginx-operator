@@ -8,12 +8,10 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/rewrite"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
 
 type IngressAnnotationsConfig struct {
-	metav1.ObjectMeta
 	Rewrite     rewrite.Config
 	LoadBalance loadBalance.Config
 }
@@ -31,18 +29,17 @@ func NewExtractor(ing service.K8sResourcesIngress) *Extractor {
 			"Rewrite":     rewrite.NewRewrite(ing),
 			"LoadBalance": loadBalance.NewLoadBalanceIng(ing),
 		},
+		ingress: ing,
 	}
 }
 
 func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
-	iak := &IngressAnnotationsConfig{
-		ObjectMeta: e.ingress.GetIngressObjectMate(),
-	}
+	iak := new(IngressAnnotationsConfig)
 
 	ia := make(map[string]interface{})
 	for name, annotationParser := range e.annotations {
 		if err := annotationParser.Validate(e.ingress.GetAnnotations()); err != nil {
-			klog.ErrorS(err, "")
+			klog.Error(err)
 			return nil, err
 		}
 
@@ -60,11 +57,10 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 		}
 	}
 
-	err := mergo.MapWithOverwrite(iak, ia)
-	if err != nil {
+	if err := mergo.MapWithOverwrite(iak, ia); err != nil {
 		klog.ErrorS(err, fmt.Sprintf("unexpected error merging extracted annotations, ingress '%s', namespace '%s'", e.ingress.GetName(), e.ingress.GetNameSpace()))
 		return nil, err
 	}
 
-	return nil, nil
+	return iak, nil
 }
