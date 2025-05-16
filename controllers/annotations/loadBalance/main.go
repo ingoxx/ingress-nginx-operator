@@ -20,7 +20,8 @@ const (
 )
 
 type loadBalanceIng struct {
-	ingress service.K8sResourcesIngress
+	ingress   service.K8sResourcesIngress
+	resources service.ResourcesData
 }
 
 type Config struct {
@@ -48,7 +49,7 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 		},
 	},
 	lbConfigAnnotations: {
-		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, like this: {\"svc-name\": \"max_fails=3 fail_timeout=30s weight=80;...\"}",
+		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"svc-name\": \"max_fails=3 fail_timeout=30s weight=80;...\"}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				data, err := jsonParser.JSONToMap(s)
@@ -58,7 +59,7 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 
 				for k := range data {
 					if _, err := ing.GetBackend(k); err != nil {
-						return cerr.NewInvalidIngressAnnotationsError(k, ing.GetName(), ing.GetNameSpace())
+						return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 					}
 				}
 			}
@@ -68,9 +69,10 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewLoadBalanceIng(ingress service.K8sResourcesIngress) parser.IngressAnnotationsParser {
+func NewLoadBalanceIng(ingress service.K8sResourcesIngress, resources service.ResourcesData) parser.IngressAnnotationsParser {
 	return &loadBalanceIng{
-		ingress: ingress,
+		ingress:   ingress,
+		resources: resources,
 	}
 }
 
@@ -88,7 +90,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	upstreamConfig, err := r.ingress.GetUpstreamConfig()
+	upstreamConfig, err := r.resources.GetUpstreamConfig()
 	if err != nil {
 		return config, err
 	}
@@ -111,12 +113,12 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	} else {
 		for _, uv := range upstreamConfig {
 			for _, sv := range uv.Services {
-				sv.Name = r.ingress.GetBackendName(sv)
+				sv.Name = r.resources.GetBackendName(sv)
 			}
 		}
 
 	}
-	
+
 	config.LbConfig = upstreamConfig
 
 	return config, nil

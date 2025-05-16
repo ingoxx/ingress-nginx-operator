@@ -256,3 +256,17 @@ func NewSetPathTypeError(name, namespace string) error {
 		errMsg: fmt.Sprintf("'pathType' field setting error, how to make the path field a regular expression, pathType should be set to: %v, ingress '%s' in namespace '%s'", v1.PathTypeImplementationSpecific, name, namespace),
 	}
 }
+
+type KubernetesResourcesNotFoundError struct {
+	errMsg string
+}
+
+func (e KubernetesResourcesNotFoundError) Error() string {
+	return e.errMsg
+}
+
+func NewKubernetesResourcesNotFoundError(resource, name, namespace string) error {
+	return KubernetesResourcesNotFoundError{
+		errMsg: fmt.Sprintf("%s '%s' resource not found  not found, namespace '%s'", resource, name, namespace),
+	}
+}

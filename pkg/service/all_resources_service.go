@@ -7,14 +7,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type NginxTemplateData interface {
+type ResourcesData interface {
 	GetName() string
 	GetNameSpace() string
-	GetTlsData(key client.ObjectKey) (map[string][]byte, error)
-	GetService(name string) (*corev1.Service, error)
-	GetBackendPort(svc *corev1.Service) int32
+	GetTlsData(client.ObjectKey) (map[string][]byte, error)
+	GetService(string) (*corev1.Service, error)
+	GetBackendPort(*corev1.Service) int32
 	GetUpstreamConfig() ([]*ingress.Backends, error)
-	GetSecret(key client.ObjectKey) (*corev1.Secret, error)
+	GetSecret(client.ObjectKey) (*corev1.Secret, error)
 	GetDefaultBackendPort(svc *corev1.Service) int32
 	GetRules() []v1.IngressRule
 	CertObjectKey() string
@@ -27,4 +27,6 @@ type NginxTemplateData interface {
 	GetPaths() []string
 	GetTlsFile() (map[string]ingress.Tls, error)
 	GetPathType(string) (string, error)
+	GetConfigMapData(string) ([]byte, error)
+	GetAnyBackendName(*v1.ServiceBackendPort, string) string
 }

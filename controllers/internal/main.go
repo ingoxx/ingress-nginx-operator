@@ -45,12 +45,14 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	cert := services.NewCertServiceImpl(nc.ctx, ing)
 	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
 	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
+	configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
 
 	ar := adapter.ResourceAdapter{
-		Ingress: ing,
-		Secret:  secret,
-		Cert:    cert,
-		Issuer:  issuer,
+		Ingress:   ing,
+		Secret:    secret,
+		Cert:      cert,
+		Issuer:    issuer,
+		ConfigMap: configMap,
 	}
 
 	if err := ar.CheckCert(); err != nil {
@@ -58,7 +60,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	extract, err := annotations.NewExtractor(ing).Extract()
+	extract, err := annotations.NewExtractor(ing, ar).Extract()
 	if err != nil {
 		klog.Error(err)
 		return err

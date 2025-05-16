@@ -6,6 +6,7 @@ const (
 	NginxSSLDir         = "/etc/nginx/ssl"
 	NginxTlsCrt         = "tls.crt"
 	NginxTlsKey         = "tls.key"
+	NginxFullChain      = "fullchain.pem"
 	NginxPid            = "/var/run/nginx.pid"
 	NginxMainConf       = "/etc/nginx/nginx.conf"
 	NginxTmpl           = "/rootfs/etc/nginx/template/nginx.tmpl"

@@ -32,4 +32,5 @@ type K8sResourcesIngress interface {
 	GetBackendName(*v1.ServiceBackendPort) string
 	GetPaths() []string
 	GetPathType(string) (string, error)
+	GetAnyBackendName(name *v1.ServiceBackendPort, ns string) string
 }

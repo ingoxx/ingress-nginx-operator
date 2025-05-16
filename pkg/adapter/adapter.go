@@ -9,10 +9,11 @@ import (
 )
 
 type ResourceAdapter struct {
-	Ingress service.K8sResourcesIngress
-	Secret  service.K8sResourcesSecret
-	Issuer  service.K8sResourcesIssuer
-	Cert    service.K8sResourcesCert
+	Ingress   service.K8sResourcesIngress
+	Secret    service.K8sResourcesSecret
+	Issuer    service.K8sResourcesIssuer
+	Cert      service.K8sResourcesCert
+	ConfigMap service.K8sConfigMapCert
 }
 
 func (r ResourceAdapter) GetName() string {
@@ -93,4 +94,12 @@ func (r ResourceAdapter) GetTlsFile() (map[string]ingress.Tls, error) {
 
 func (r ResourceAdapter) GetPathType(name string) (string, error) {
 	return r.Ingress.GetPathType(name)
+}
+
+func (r ResourceAdapter) GetConfigMapData(name string) ([]byte, error) {
+	return r.ConfigMap.GetConfigMapData(name)
+}
+
+func (r ResourceAdapter) GetAnyBackendName(svc *v1.ServiceBackendPort, namespace string) string {
+	return r.Ingress.GetAnyBackendName(svc, namespace)
 }

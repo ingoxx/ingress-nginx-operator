@@ -19,7 +19,8 @@ const (
 )
 
 type rewriteIng struct {
-	ingress service.K8sResourcesIngress
+	ingress   service.K8sResourcesIngress
+	resources service.ResourcesData
 }
 
 type Config struct {
@@ -30,7 +31,7 @@ type Config struct {
 
 var rewriteAnnotations = parser.AnnotationsContents{
 	rewriteTargetAnnotation: {
-		Doc: "rewrite target path, like: /$1, /$2, /api. required",
+		Doc: "rewrite target path, like: /$1, /$2, /api.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" && !parser.IsRegex(s) {
 				return cerr.NewInvalidIngressAnnotationsError(s, ing.GetName(), ing.GetNameSpace())
@@ -39,7 +40,7 @@ var rewriteAnnotations = parser.AnnotationsContents{
 		},
 	},
 	rewriteEnableRegexAnnotation: {
-		Doc: "optional",
+		Doc: "set true or false to use Regex.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				if s == "false" || s == "true" {
@@ -53,7 +54,7 @@ var rewriteAnnotations = parser.AnnotationsContents{
 		},
 	},
 	rewriteFlagAnnotation: {
-		Doc: fmt.Sprintf("rewrite flag, the value of the flag must be selected from here, '%v'. required", strings.Join(Flags, ",")),
+		Doc: fmt.Sprintf("rewrite flag, the value of the flag must be selected from here, '%v'.", strings.Join(Flags, ",")),
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				for _, v := range Flags {
@@ -70,9 +71,10 @@ var rewriteAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewRewrite(ingress service.K8sResourcesIngress) parser.IngressAnnotationsParser {
+func NewRewrite(ingress service.K8sResourcesIngress, resources service.ResourcesData) parser.IngressAnnotationsParser {
 	return &rewriteIng{
-		ingress: ingress,
+		ingress:   ingress,
+		resources: resources,
 	}
 }
 

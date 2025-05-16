@@ -9,21 +9,19 @@ metadata:
         "svc-2": "max_fails=3 fail_timeout=30s weight=20",
         "svc-3": "backup"
       }
-    ingress.nginx.k8s.io/use-stream: "true"
-    ingress.nginx.k8s.io/set-stream: |
+    ingress.nginx.k8s.io/enable-stream: "true"
+    ingress.nginx.k8s.io/set-stream-config: |
       {
-        "svc-1": 8001,
-        "svc-2": 8002,
+        "backends": [ {"name": "svc-1", "namespace": "web"}, {"name": "svc-2", "namespace": "api"} ]
       }
     ingress.nginx.k8s.io/allow-ip-list: "192.168.3.11,192.168.3.12"
     ingress.nginx.k8s.io/deny-ip-list: "192.168.3.11,192.168.3.12"
-    ingress.nginx.k8s.io/allow-cos: "true"
-    ingress.nginx.k8s.io/allow-ssl: "true"
-    ingress.nginx.k8s.io/use-limit-req: "true"
-    ingress.nginx.k8s.io/set-limit-data: |
+    ingress.nginx.k8s.io/enable-cos: "true"
+    ingress.nginx.k8s.io/enable-limit-req: "true"
+    ingress.nginx.k8s.io/set-limit-config: |
       {
-        "min": 2,
-        "max": 5
+        "limit_req_zone": "$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s",
+        "limit_req": "limit_req zone=per_ip_uri burst=5 nodelay;"
       }
     ingress.nginx.k8s.io/rewrite-target: "/$2"
     ingress.nginx.k8s.io/rewrite-flag: "break"

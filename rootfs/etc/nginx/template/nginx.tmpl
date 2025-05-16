@@ -11,7 +11,7 @@ events {
         use                 epoll;
 }
 
-# accept tcp/udp traffic forwarded to the backend
+### stream
 {{ if .Annotations.Stream.UseStream }}
 {{ range $bk := .Annotations.Stream.Backend }}
 stream {
@@ -28,9 +28,9 @@ http {
     default_type  application/octet-stream;
     proxy_headers_hash_max_size     2048;
     proxy_headers_hash_bucket_size  128;
-    # access limit
-    {{ if .Annotations.LimitReq.UseLimitReq }}
-    limit_req_zone $binary_remote_addr zone=api_limit:10m rate={{ .Annotations.LimitReq.Min }}r/s;
+    ### limit req
+    {{ if .Annotations.EnableReqLimit.EnableRequestLimit }}
+    limit_req_zone {{ .Annotations.EnableReqLimit.SetLimitConfig }};
     {{ end }}
     log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
                       '$status $body_bytes_sent "$http_referer" '
@@ -44,8 +44,6 @@ http {
     keepalive_timeout  65;
 
     # gzip  on;
-
-    {{ template "servers" }}
 
     include /etc/nginx/conf.d/*.conf;
 }

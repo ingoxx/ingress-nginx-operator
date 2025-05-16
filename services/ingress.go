@@ -286,6 +286,10 @@ func (i *IngressServiceImpl) GetBackendName(name *v1.ServiceBackendPort) string 
 	return fmt.Sprintf("%s.%s.svc:%d", name.Name, i.GetNameSpace(), name.Number)
 }
 
+func (i *IngressServiceImpl) GetAnyBackendName(name *v1.ServiceBackendPort, ns string) string {
+	return fmt.Sprintf("%s.%s.svc:%d", name.Name, ns, name.Number)
+}
+
 func (i *IngressServiceImpl) GetClientSet() *kubernetes.Clientset {
 	return i.k8sCli.GetClientSet()
 }

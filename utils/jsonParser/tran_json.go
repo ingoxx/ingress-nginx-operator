@@ -14,3 +14,12 @@ func JSONToMap(jsonStr string) (map[string]interface{}, error) {
 	}
 	return result, nil
 }
+
+// JSONToStruct 将 JSON 字符串转换为指定类型的结构体（需要传指针）
+func JSONToStruct[T any](jsonStr string, out *T) error {
+	if err := json.Unmarshal([]byte(jsonStr), out); err != nil {
+		return fmt.Errorf("json parse failed: %w", err)
+	}
+
+	return nil
+}

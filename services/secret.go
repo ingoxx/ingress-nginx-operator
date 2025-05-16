@@ -83,7 +83,7 @@ func (s *SecretServiceImpl) selfSigned() (map[string]ingress.Tls, error) {
 	key := types.NamespacedName{Name: s.cert.SecretObjectKey(), Namespace: s.generic.GetNameSpace()}
 	data, err := s.GetTlsData(key)
 	if err != nil {
-		return ht, nil
+		return ht, err
 	}
 
 	for _, v := range s.generic.GetHosts() {
@@ -99,7 +99,6 @@ func (s *SecretServiceImpl) selfSigned() (map[string]ingress.Tls, error) {
 				ss.TlsKey = file
 			}
 		}
-
 		ht[v] = ss
 	}
 

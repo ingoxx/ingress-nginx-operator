@@ -15,18 +15,19 @@ type Config struct {
 	ServersBuffer bytes.Buffer
 	Annotations   *annotations.IngressAnnotationsConfig
 	ServerTmpl    string
+	NginxConfTmpl string
 	ConfName      string
 }
 
 type NginxController struct {
-	data   service.NginxTemplateData
-	config *annotations.IngressAnnotationsConfig
+	resData service.ResourcesData
+	config  *annotations.IngressAnnotationsConfig
 }
 
-func NewNginxController(data service.NginxTemplateData, config *annotations.IngressAnnotationsConfig) *NginxController {
+func NewNginxController(data service.ResourcesData, config *annotations.IngressAnnotationsConfig) *NginxController {
 	return &NginxController{
-		data:   data,
-		config: config,
+		resData: data,
+		config:  config,
 	}
 }
 
@@ -35,7 +36,7 @@ func (nc *NginxController) Run() error {
 }
 
 func (nc *NginxController) updateBackendCfg() (*annotations.IngressAnnotationsConfig, error) {
-	tls, err := nc.data.GetTlsFile()
+	tls, err := nc.resData.GetTlsFile()
 	if err != nil {
 		return nil, err
 	}
@@ -60,28 +61,26 @@ func (nc *NginxController) generateBackendCfg() error {
 	}
 
 	c := &Config{
-		ServerTmpl:  constants.NginxServerTmpl,
-		Annotations: cfg,
-		ConfName:    constants.NginxConfDir,
+		ServerTmpl:    constants.NginxServerTmpl,
+		NginxConfTmpl: constants.NginxTmpl,
+		Annotations:   cfg,
+		ConfName:      constants.NginxConfDir,
 	}
 
-	if err := nc.generateBackendTmpl(c); err != nil {
+	if err := nc.generateNgxConfTmpl(c); err != nil {
+		return err
+	}
+
+	if err := nc.generateServerTmpl(c); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (nc *NginxController) generateBackendTmpl(cfg *Config) error {
-	b, err := os.ReadFile(cfg.ServerTmpl)
+func (nc *NginxController) generateServerTmpl(cfg *Config) error {
+	serverTemp, err := nc.renderTemplateData(cfg.ServerTmpl)
 	if err != nil {
-		klog.ErrorS(err, fmt.Sprintf("tmpelate file '%s' not found", cfg.ServerTmpl))
-		return err
-	}
-
-	serverTemp, err := template.New("server").Parse(string(b))
-	if err != nil {
-		klog.ErrorS(err, fmt.Sprintf("error parsing template '%s'", cfg.ServerTmpl))
 		return err
 	}
 
@@ -89,9 +88,41 @@ func (nc *NginxController) generateBackendTmpl(cfg *Config) error {
 		return err
 	}
 
-	fmt.Println(cfg.ServersBuffer.String())
+	fmt.Println("server.conf >>> ", cfg.ServersBuffer.String())
 
 	return nil
+}
+
+func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
+	serverTemp, err := nc.renderTemplateData(cfg.NginxConfTmpl)
+	if err != nil {
+		return err
+	}
+
+	if err := serverTemp.Execute(&cfg.ServersBuffer, cfg); err != nil {
+		return err
+	}
+
+	fmt.Println("nginx.conf >>> ", cfg.ServersBuffer.String())
+
+	return nil
+}
+
+func (nc *NginxController) renderTemplateData(file string) (*template.Template, error) {
+	var tmp = new(template.Template)
+	b, err := os.ReadFile(file)
+	if err != nil {
+		klog.ErrorS(err, fmt.Sprintf("tmpelate file '%s' not found", file))
+		return tmp, err
+	}
+
+	tmp, err = template.New("server").Parse(string(b))
+	if err != nil {
+		klog.ErrorS(err, fmt.Sprintf("error parsing template '%s'", file))
+		return tmp, err
+	}
+
+	return tmp, nil
 }
 
 func (nc *NginxController) generateDefaultBackendTmpl() error {
