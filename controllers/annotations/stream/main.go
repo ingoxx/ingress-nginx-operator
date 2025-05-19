@@ -2,6 +2,7 @@ package stream
 
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
@@ -23,15 +24,6 @@ type Config struct {
 	SetStreamConfig string `json:"set-stream-config"`
 }
 
-type BackendList struct {
-	Backends []Backend
-}
-
-type Backend struct {
-	Name      string
-	Namespace string
-}
-
 var enableStreamIngAnnotations = parser.AnnotationsContents{
 	enableStreamAnnotations: {
 		Doc: "set true or false.",
@@ -48,7 +40,7 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 	setStreamConfigAnnotations: {
 		Doc: "nginx stream, support cross namespace, example: \"backends\": [ {\"name\": \"svc-1\", \"namespace\": \"web\"}, {\"name\": \"svc-2\", \"namespace\": \"api\"} ]",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
-			var bks = new(BackendList)
+			var bks = new(ingress.StreamBackend)
 			if s != "" {
 				if err := jsonParser.JSONToStruct(s, bks); err != nil {
 					return err

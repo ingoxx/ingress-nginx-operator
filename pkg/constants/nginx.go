@@ -13,4 +13,5 @@ const (
 	NginxServerTmpl     = "/rootfs/etc/nginx/template/server.tmpl"
 	NginxMainServerTmpl = "/rootfs/etc/nginx/template/mainServer.tmpl"
 	NginxDefaultTmpl    = "/rootfs/etc/nginx/template/defaultBackend.tmpl"
+	NginxImages         = "gotec007/nginx:noroot5.3"
 )
