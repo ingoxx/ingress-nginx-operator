@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ResourcesData interface {
+type ResourcesMth interface {
 	GetName() string
 	GetNameSpace() string
 	GetTlsData(client.ObjectKey) (map[string][]byte, error)

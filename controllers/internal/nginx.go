@@ -20,11 +20,11 @@ type Config struct {
 }
 
 type NginxController struct {
-	resData service.ResourcesData
+	resData service.ResourcesMth
 	config  *annotations.IngressAnnotationsConfig
 }
 
-func NewNginxController(data service.ResourcesData, config *annotations.IngressAnnotationsConfig) *NginxController {
+func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
 	return &NginxController{
 		resData: data,
 		config:  config,
@@ -55,15 +55,15 @@ func (nc *NginxController) updateBackendCfg() (*annotations.IngressAnnotationsCo
 }
 
 func (nc *NginxController) generateBackendCfg() error {
-	cfg, err := nc.updateBackendCfg()
-	if err != nil {
-		return err
-	}
+	//cfg, err := nc.updateBackendCfg()
+	//if err != nil {
+	//	return err
+	//}
 
 	c := &Config{
 		ServerTmpl:    constants.NginxServerTmpl,
 		NginxConfTmpl: constants.NginxTmpl,
-		Annotations:   cfg,
+		Annotations:   nc.config,
 		ConfName:      constants.NginxConfDir,
 	}
 

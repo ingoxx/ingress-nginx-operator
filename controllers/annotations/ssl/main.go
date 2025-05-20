@@ -18,7 +18,7 @@ const (
 
 type sslIng struct {
 	ingress   service.K8sResourcesIngress
-	resources service.ResourcesData
+	resources service.ResourcesMth
 }
 
 type Config struct {
@@ -61,7 +61,7 @@ var sslAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewSSL(ingress service.K8sResourcesIngress, resources service.ResourcesData) parser.IngressAnnotationsParser {
+func NewSSL(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
 	return &sslIng{
 		ingress:   ingress,
 		resources: resources,

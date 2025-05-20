@@ -9,6 +9,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/rewrite"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/ssl"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"k8s.io/klog/v2"
@@ -20,17 +21,18 @@ type IngressAnnotationsConfig struct {
 	SSLStapling    ssl.Config
 	EnableCos      allowcos.Config
 	EnableReqLimit limitreq.Config
+	EnableStream   stream.Config
 }
 
 func (iac *IngressAnnotationsConfig) GetIngAnnConfig() {}
 
 type Extractor struct {
 	annotations map[string]parser.IngressAnnotationsParser
-	ingress     service.K8sResourcesIngress // 将会移除, 使用下面的resources调各个资源的方法
-	resources   service.ResourcesData
+	ingress     service.K8sResourcesIngress // 将会移除, 使用ResourcesMth接口调各个资源的方法
+	resources   service.ResourcesMth
 }
 
-func NewExtractor(ing service.K8sResourcesIngress, resources service.ResourcesData) *Extractor {
+func NewExtractor(ing service.K8sResourcesIngress, resources service.ResourcesMth) *Extractor {
 	return &Extractor{
 		annotations: map[string]parser.IngressAnnotationsParser{
 			"Rewrite":        rewrite.NewRewrite(ing, resources),
@@ -38,6 +40,7 @@ func NewExtractor(ing service.K8sResourcesIngress, resources service.ResourcesDa
 			"SSLStapling":    ssl.NewSSL(ing, resources),
 			"EnableCos":      allowcos.NewEnableCosIng(ing, resources),
 			"EnableReqLimit": limitreq.NewRequestLimitIng(ing, resources),
+			"EnableStream":   stream.NewEnableStreamIng(ing, resources),
 		},
 		ingress:   ing,
 		resources: resources,

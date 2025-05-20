@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -144,7 +145,7 @@ func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, er
 	var rs = i.GetRules()
 
 	svc, err := i.GetService(name)
-	if err != nil {
+	if err != nil && !kerr.IsNotFound(err) {
 		return bk, err
 	}
 
@@ -179,7 +180,7 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	var bk = new(v1.ServiceBackendPort)
 	if i.ingress.Spec.DefaultBackend != nil {
 		svc, err := i.GetService(i.ingress.Spec.DefaultBackend.Service.Name)
-		if err != nil {
+		if err != nil && !kerr.IsNotFound(err) {
 			return bk, err
 		}
 
@@ -385,7 +386,7 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 		}
 
 		svc, err := i.GetService(p.Backend.Service.Name)
-		if err != nil {
+		if err != nil && !kerr.IsNotFound(err) {
 			return err
 		}
 
@@ -419,7 +420,7 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 
 	if i.ingress.Spec.DefaultBackend != nil {
 		svc, err := i.GetService(i.ingress.Spec.DefaultBackend.Service.Name)
-		if err != nil {
+		if err != nil && !kerr.IsNotFound(err) {
 			return err
 		}
 

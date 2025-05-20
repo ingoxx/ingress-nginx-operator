@@ -15,7 +15,7 @@ const (
 
 type RequestLimitIng struct {
 	ingress   service.K8sResourcesIngress
-	resources service.ResourcesData
+	resources service.ResourcesMth
 }
 
 type Config struct {
@@ -58,7 +58,7 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewRequestLimitIng(ingress service.K8sResourcesIngress, resources service.ResourcesData) parser.IngressAnnotationsParser {
+func NewRequestLimitIng(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
 	return &RequestLimitIng{
 		ingress:   ingress,
 		resources: resources,

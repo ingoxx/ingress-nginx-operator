@@ -20,7 +20,7 @@ const (
 
 type rewriteIng struct {
 	ingress   service.K8sResourcesIngress
-	resources service.ResourcesData
+	resources service.ResourcesMth
 }
 
 type Config struct {
@@ -71,7 +71,7 @@ var rewriteAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewRewrite(ingress service.K8sResourcesIngress, resources service.ResourcesData) parser.IngressAnnotationsParser {
+func NewRewrite(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
 	return &rewriteIng{
 		ingress:   ingress,
 		resources: resources,

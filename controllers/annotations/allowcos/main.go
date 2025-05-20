@@ -13,7 +13,7 @@ const (
 
 type enableCosIng struct {
 	ingress   service.K8sResourcesIngress
-	resources service.ResourcesData
+	resources service.ResourcesMth
 }
 
 type Config struct {
@@ -35,7 +35,7 @@ var enableCosIngAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewEnableCosIng(ingress service.K8sResourcesIngress, resources service.ResourcesData) parser.IngressAnnotationsParser {
+func NewEnableCosIng(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
 	return &enableCosIng{
 		ingress:   ingress,
 		resources: resources,

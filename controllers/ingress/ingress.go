@@ -22,7 +22,7 @@ type Backends struct {
 }
 
 type StreamBackendList struct {
-	Backends []StreamBackend
+	Backends []*StreamBackend
 }
 
 type StreamBackend struct {

@@ -16,12 +16,13 @@ const (
 
 type enableStreamIng struct {
 	ingress   service.K8sResourcesIngress
-	resources service.ResourcesData
+	resources service.ResourcesMth
 }
 
 type Config struct {
-	EnableStream    bool   `json:"enable-stream"`
-	SetStreamConfig string `json:"set-stream-config"`
+	EnableStream      bool                     `json:"enable-stream"`
+	SetStreamConfig   string                   `json:"set-stream-config"`
+	StreamBackendList []*ingress.StreamBackend `json:"stream-backend"`
 }
 
 var enableStreamIngAnnotations = parser.AnnotationsContents{
@@ -40,7 +41,7 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 	setStreamConfigAnnotations: {
 		Doc: "nginx stream, support cross namespace, example: \"backends\": [ {\"name\": \"svc-1\", \"namespace\": \"web\"}, {\"name\": \"svc-2\", \"namespace\": \"api\"} ]",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
-			var bks = new(ingress.StreamBackend)
+			var bks = new(ingress.StreamBackendList)
 			if s != "" {
 				if err := jsonParser.JSONToStruct(s, bks); err != nil {
 					return err
@@ -50,4 +51,47 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 			return nil
 		},
 	},
+}
+
+func NewEnableStreamIng(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
+	return &enableStreamIng{
+		ingress:   ingress,
+		resources: resources,
+	}
+}
+
+func (r *enableStreamIng) Parse() (interface{}, error) {
+	var err error
+	var config = new(Config)
+
+	config.EnableStream, err = parser.GetBoolAnnotations(enableStreamAnnotations, r.ingress, enableStreamIngAnnotations)
+	if !cerr.IsMissIngressAnnotationsError(err) {
+		return config, err
+	}
+
+	config.SetStreamConfig, err = parser.GetStringAnnotation(setStreamConfigAnnotations, r.ingress, enableStreamIngAnnotations)
+	if !cerr.IsMissIngressAnnotationsError(err) {
+		return config, err
+	}
+
+	return config, err
+}
+
+func (r *enableStreamIng) validate(config *Config) error {
+	var bks = new(ingress.StreamBackendList)
+	if config.EnableStream && config.SetStreamConfig == "" {
+		return cerr.NewInvalidIngressAnnotationsError(enableStreamAnnotations+","+setStreamConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+	}
+
+	if err := jsonParser.JSONToStruct(config.SetStreamConfig, bks); err != nil {
+		return err
+	}
+
+	config.StreamBackendList = bks.Backends
+
+	return nil
+}
+
+func (r *enableStreamIng) Validate(ing map[string]string) error {
+	return parser.CheckAnnotations(ing, enableStreamIngAnnotations, r.ingress)
 }

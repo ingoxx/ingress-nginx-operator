@@ -21,7 +21,7 @@ const (
 
 type loadBalanceIng struct {
 	ingress   service.K8sResourcesIngress
-	resources service.ResourcesData
+	resources service.ResourcesMth
 }
 
 type Config struct {
@@ -69,7 +69,7 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewLoadBalanceIng(ingress service.K8sResourcesIngress, resources service.ResourcesData) parser.IngressAnnotationsParser {
+func NewLoadBalanceIng(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
 	return &loadBalanceIng{
 		ingress:   ingress,
 		resources: resources,
@@ -95,6 +95,11 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
+	tls, err := r.resources.GetTlsFile()
+	if err != nil {
+		return config, err
+	}
+
 	if lbConfig != "" {
 		data, err := jsonParser.JSONToMap(lbConfig)
 		if err != nil {
@@ -103,6 +108,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 
 		for av := range data {
 			for _, uv := range upstreamConfig {
+				uv.Cert = tls[uv.Host]
 				for _, sv := range uv.Services {
 					if av == sv.Name {
 						sv.Name = fmt.Sprintf("%s %s", r.ingress.GetBackendName(sv), data[av])
@@ -112,6 +118,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		}
 	} else {
 		for _, uv := range upstreamConfig {
+			uv.Cert = tls[uv.Host]
 			for _, sv := range uv.Services {
 				sv.Name = r.resources.GetBackendName(sv)
 			}
