@@ -11,7 +11,7 @@ type ResourcesMth interface {
 	GetName() string
 	GetNameSpace() string
 	GetTlsData(client.ObjectKey) (map[string][]byte, error)
-	GetService(string) (*corev1.Service, error)
+	GetService(client.ObjectKey) (*corev1.Service, error)
 	GetBackendPort(*corev1.Service) int32
 	GetUpstreamConfig() ([]*ingress.Backends, error)
 	GetSecret(client.ObjectKey) (*corev1.Secret, error)
@@ -29,4 +29,6 @@ type ResourcesMth interface {
 	GetPathType(string) (string, error)
 	GetConfigMapData(string) ([]byte, error)
 	GetAnyBackendName(*v1.ServiceBackendPort, string) string
+	GetDaemonSetNameLabel() string
+	GetDeployNameLabel() string
 }

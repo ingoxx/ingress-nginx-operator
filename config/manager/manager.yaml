@@ -72,18 +72,13 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
-#
-        securityContext:ports:
-          #        - containerPort: 80
-          #          name: http
-          #          protocol: TCP
-          #        - containerPort: 443
-          #          name: https
-          #          protocol: TCP
-#          allowPrivilegeEscalation: false
-#          capabilities:
-#            drop:
-#              - "ALL"
+        securityContext:
+          # allowPrivilegeEscalation: false
+          # capabilities:
+          #   add:
+          #   - NET_BIND_SERVICE
+          #   drop:
+          #   - ALL
          readOnlyRootFilesystem: false
          runAsNonRoot: true
          runAsUser: 33

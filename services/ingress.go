@@ -143,8 +143,8 @@ func (i *IngressServiceImpl) CheckTlsHosts() bool {
 func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, error) {
 	var bk = new(v1.ServiceBackendPort)
 	var rs = i.GetRules()
-
-	svc, err := i.GetService(name)
+	key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
+	svc, err := i.GetService(key)
 	if err != nil && !kerr.IsNotFound(err) {
 		return bk, err
 	}
@@ -179,7 +179,8 @@ func (i *IngressServiceImpl) GetIngressObjectMate() metav1.ObjectMeta {
 func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error) {
 	var bk = new(v1.ServiceBackendPort)
 	if i.ingress.Spec.DefaultBackend != nil {
-		svc, err := i.GetService(i.ingress.Spec.DefaultBackend.Service.Name)
+		key := types.NamespacedName{Name: i.ingress.Spec.DefaultBackend.Service.Name, Namespace: i.GetNameSpace()}
+		svc, err := i.GetService(key)
 		if err != nil && !kerr.IsNotFound(err) {
 			return bk, err
 		}
@@ -197,9 +198,9 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	return bk, nil
 }
 
-func (i *IngressServiceImpl) GetService(name string) (*corev1.Service, error) {
+func (i *IngressServiceImpl) GetService(key client.ObjectKey) (*corev1.Service, error) {
 	var svc = new(corev1.Service)
-	key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
+	//key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
 	if err := i.operatorCli.GetClient().Get(i.ctx, key, svc); err != nil {
 		return svc, err
 	}
@@ -307,6 +308,14 @@ func (i *IngressServiceImpl) GetTls() []v1.IngressTLS {
 	return i.ingress.Spec.TLS
 }
 
+func (i *IngressServiceImpl) GetDaemonSetNameLabel() string {
+	return "daemonset-manager"
+}
+
+func (i *IngressServiceImpl) GetDeployNameLabel() string {
+	return "deploy-manager"
+}
+
 func (i *IngressServiceImpl) CheckService() error {
 	var err error
 	if err1, err2 := i.checkDefaultBackend(), i.checkBackend(); err1 != nil && err2 != nil {
@@ -385,7 +394,8 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 			return cerr.NewMissIngressFieldValueError("Service", i.GetName(), i.GetNameSpace())
 		}
 
-		svc, err := i.GetService(p.Backend.Service.Name)
+		key := types.NamespacedName{Name: p.Backend.Service.Name, Namespace: i.GetNameSpace()}
+		svc, err := i.GetService(key)
 		if err != nil && !kerr.IsNotFound(err) {
 			return err
 		}
@@ -419,7 +429,8 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 	}
 
 	if i.ingress.Spec.DefaultBackend != nil {
-		svc, err := i.GetService(i.ingress.Spec.DefaultBackend.Service.Name)
+		key := types.NamespacedName{Namespace: i.GetNameSpace(), Name: i.ingress.Spec.DefaultBackend.Service.Name}
+		svc, err := i.GetService(key)
 		if err != nil && !kerr.IsNotFound(err) {
 			return err
 		}

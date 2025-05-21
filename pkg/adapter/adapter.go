@@ -13,7 +13,8 @@ type ResourceAdapter struct {
 	Secret    service.K8sResourcesSecret
 	Issuer    service.K8sResourcesIssuer
 	Cert      service.K8sResourcesCert
-	ConfigMap service.K8sConfigMapCert
+	ConfigMap service.K8sResourceConfigMap
+	Svc       service.K8sResourcesSvc
 }
 
 func (r ResourceAdapter) GetName() string {
@@ -32,8 +33,8 @@ func (r ResourceAdapter) GetSecret(key client.ObjectKey) (*corev1.Secret, error)
 	return r.Secret.GetSecret(key)
 }
 
-func (r ResourceAdapter) GetService(name string) (*corev1.Service, error) {
-	return r.Ingress.GetService(name)
+func (r ResourceAdapter) GetService(key client.ObjectKey) (*corev1.Service, error) {
+	return r.Ingress.GetService(key)
 }
 
 func (r ResourceAdapter) GetBackendPort(svc *corev1.Service) int32 {
@@ -102,4 +103,12 @@ func (r ResourceAdapter) GetConfigMapData(name string) ([]byte, error) {
 
 func (r ResourceAdapter) GetAnyBackendName(svc *v1.ServiceBackendPort, namespace string) string {
 	return r.Ingress.GetAnyBackendName(svc, namespace)
+}
+
+func (r ResourceAdapter) GetDaemonSetNameLabel() string {
+	return r.Ingress.GetDaemonSetNameLabel()
+}
+
+func (r ResourceAdapter) GetDeployNameLabel() string {
+	return r.Ingress.GetDeployNameLabel()
 }

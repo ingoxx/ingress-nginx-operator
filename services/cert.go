@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/klog/v2"
 	"slices"
 )
 
@@ -88,7 +88,7 @@ func (c *CertServiceImpl) DeleteCert() error {
 	return c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Delete(c.ctx, c.CertObjectKey(), metav1.DeleteOptions{})
 }
 
-func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Unstructured) error {
+func (c *CertServiceImpl) UpdateCert(cert *unstructured.Unstructured) error {
 	oh, found, err := unstructured.NestedStringSlice(cert.Object, "spec", "dnsNames")
 	if err != nil {
 		return fmt.Errorf("error parsing dnsNames in Certificate '%s', namespace '%s', %v", c.CertObjectKey(), c.ing.GetNameSpace(), err)
@@ -111,7 +111,7 @@ func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Uns
 	}
 
 	if !hp(oh, nh) {
-		if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Update(ctx, c.certUnstructuredData(), metav1.UpdateOptions{}); err != nil {
+		if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Update(c.ctx, c.certUnstructuredData(), metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
@@ -121,21 +121,24 @@ func (c *CertServiceImpl) UpdateCert(ctx context.Context, cert *unstructured.Uns
 
 func (c *CertServiceImpl) CheckCert() error {
 	if err := c.issuer.CheckIssuer(); err != nil {
-		klog.Error(fmt.Sprintf("CheckIssuer error %v", err))
 		return err
 	}
 
 	cert, err := c.GetCert()
 	if err != nil {
-		cert, err = c.CreateCert()
-		if err != nil {
-			klog.Error(fmt.Sprintf("CreateCert error %v", err))
-			return err
+		if errors.IsNotFound(err) {
+			cert, err = c.CreateCert()
+			if err != nil {
+				return err
+			}
+
+			return nil
 		}
+
+		return err
 	}
 
-	if err := c.UpdateCert(c.ctx, cert); err != nil {
-		klog.Error(fmt.Sprintf("UpdateCert error %v", err))
+	if err := c.UpdateCert(cert); err != nil {
 		return err
 	}
 

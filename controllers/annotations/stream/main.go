@@ -6,6 +6,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
+	"k8s.io/apimachinery/pkg/types"
 	"strconv"
 )
 
@@ -45,6 +46,13 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 			if s != "" {
 				if err := jsonParser.JSONToStruct(s, bks); err != nil {
 					return err
+				}
+
+				for _, v := range bks.Backends {
+					key := types.NamespacedName{Name: v.Name, Namespace: v.Namespace}
+					if _, err := ing.GetService(key); err != nil {
+						return err
+					}
 				}
 			}
 

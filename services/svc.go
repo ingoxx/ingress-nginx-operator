@@ -1,7 +1,6 @@
 package services
 
 import (
-	cuerr "errors"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"golang.org/x/net/context"
@@ -36,18 +35,7 @@ func (s *SvcServiceImpl) GetSvc(key client.ObjectKey) (*v13.Service, error) {
 		return svc, err
 	}
 
-	if err := s.UpdateSvc(svc); err != nil {
-		cuerr.Join(err)
-	}
-
 	return svc, nil
-}
-
-func (s *SvcServiceImpl) CreateSvc(data *buildSvcData) error {
-	if err := s.generic.GetClient().Create(s.ctx, s.buildSvcData(data)); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service) error {
@@ -56,6 +44,13 @@ func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service) error {
 
 func (s *SvcServiceImpl) DeleteSvc(svc *v13.Service) error {
 	return s.generic.GetClient().Delete(s.ctx, svc)
+}
+
+func (s *SvcServiceImpl) CreateSvc(data *buildSvcData) error {
+	if err := s.generic.GetClient().Create(s.ctx, s.buildSvcData(data)); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *SvcServiceImpl) buildSvcData(data *buildSvcData) *v13.Service {
@@ -102,32 +97,45 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 	return sps
 }
 
-func (s *SvcServiceImpl) CheckSvc() error {
-	var err error
-
-	var streamSvc = make([]*v1.ServiceBackendPort, 0, len(s.config.EnableStream.StreamBackendList))
+func (s *SvcServiceImpl) streamSvc() error {
 	if s.config.EnableStream.EnableStream {
+		var streamSvc = make([]*v1.ServiceBackendPort, 0, len(s.config.EnableStream.StreamBackendList))
 		for _, s1 := range s.config.EnableStream.StreamBackendList {
-			key := types.NamespacedName{Name: s1.Name, Namespace: s1.Namespace}
-			svc, err := s.GetSvc(key)
+			daemonSetKey := types.NamespacedName{Name: s1.Name, Namespace: s1.Namespace}
+			svc, err := s.GetSvc(daemonSetKey)
 			if err != nil {
-				err = cuerr.Join(err)
-				continue
-			}
-			port := s.generic.GetBackendPort(svc)
-			svcBackendPort := &v1.ServiceBackendPort{
-				Name:   svc.Name,
-				Number: port,
+				if errors.IsNotFound(err) {
+					port := s.generic.GetBackendPort(svc)
+					svcBackendPort := &v1.ServiceBackendPort{
+						Name:   svc.Name,
+						Number: port,
+					}
+					streamSvc = append(streamSvc, svcBackendPort)
+					data := &buildSvcData{
+						key:    daemonSetKey,
+						sbp:    streamSvc,
+						labels: map[string]string{"app": s.generic.GetDaemonSetNameLabel()},
+					}
+					if err := s.CreateSvc(data); err != nil {
+						return err
+					}
+
+					continue
+				}
+
+				return err
 			}
 
-			streamSvc = append(streamSvc, svcBackendPort)
-		}
-
-		if err != nil {
-			return err
+			if err := s.UpdateSvc(svc); err != nil {
+				return err
+			}
 		}
 	}
 
+	return nil
+}
+
+func (s *SvcServiceImpl) ingressSvc() error {
 	config, err := s.generic.GetUpstreamConfig()
 	if err != nil {
 		return err
@@ -135,36 +143,47 @@ func (s *SvcServiceImpl) CheckSvc() error {
 
 	for _, b1 := range config {
 		for _, b2 := range b1.Services {
-			key := types.NamespacedName{Name: b2.Name, Namespace: s.generic.GetNameSpace()}
-			labels := b2.Name + "-" + s.generic.GetNameSpace() + "-app"
-			_, err := s.GetSvc(key)
-			if errors.IsNotFound(err) {
-
-				data := &buildSvcData{
-					key:    key,
-					sbp:    b1.Services,
-					labels: map[string]string{"app": labels},
-				}
-				if len(streamSvc) > 0 {
-					for _, sv := range streamSvc {
-						data.sbp = append(data.sbp, sv)
-					}
-				}
-
-				if err := s.CreateSvc(data); err != nil {
-					err = cuerr.Join(err)
-				}
-				continue
-			}
-
+			svcKey := types.NamespacedName{Name: b2.Name, Namespace: s.generic.GetNameSpace()}
+			svc, err := s.generic.GetService(svcKey)
 			if err != nil {
-				err = cuerr.Join(err)
-				continue
+				if errors.IsNotFound(err) {
+					//deployKey := types.NamespacedName{Name: s.generic.GetName(), Namespace: s.generic.GetNameSpace()}
+					data := &buildSvcData{
+						key:    svcKey,
+						sbp:    b1.Services,
+						labels: map[string]string{"app": s.generic.GetDeployNameLabel()},
+					}
+					if err := s.CreateSvc(data); err != nil {
+						return err
+					}
+
+					continue
+				}
+
+				return err
 			}
+
+			if err := s.UpdateSvc(svc); err != nil {
+				return err
+			}
+
 		}
 	}
 
-	if err != nil {
+	return nil
+}
+
+func (s *SvcServiceImpl) CheckSvc() error {
+	//var err error
+	//if err1, err2 := s.streamSvc(), s.ingressSvc(); err1 != nil || err2 != nil {
+	//	err = cuerr.Join(err1, err2)
+	//}
+	//
+	//if err != nil {
+	//	return err
+	//}
+
+	if err := s.ingressSvc(); err != nil {
 		return err
 	}
 

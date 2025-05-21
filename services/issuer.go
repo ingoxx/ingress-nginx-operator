@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -47,9 +48,15 @@ func (i *IssuerServiceImpl) issuerUnstructuredData() *unstructured.Unstructured 
 
 func (i *IssuerServiceImpl) GetIssuer(ctx context.Context, namespace, name string) error {
 	if _, err := i.ing.GetDynamicClientSet().Resource(i.issuerGVR()).Namespace(i.ing.GetNameSpace()).Get(ctx, i.cert.IssuerObjectKey(), metav1.GetOptions{}); err != nil {
-		if err := i.CreateIssuer(ctx, namespace, name); err != nil {
-			return err
+		if errors.IsNotFound(err) {
+			if err := i.CreateIssuer(ctx, namespace, name); err != nil {
+				return err
+			}
+
+			return nil
 		}
+
+		return err
 	}
 
 	return nil

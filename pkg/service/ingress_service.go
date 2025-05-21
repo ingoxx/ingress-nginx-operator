@@ -14,7 +14,7 @@ type K8sResourcesIngress interface {
 	GetHosts() []string
 	GetBackend(name string) (*v1.ServiceBackendPort, error)
 	GetDefaultBackend() (*v1.ServiceBackendPort, error)
-	GetService(name string) (*corev1.Service, error)
+	GetService(client.ObjectKey) (*corev1.Service, error)
 	GetBackendPort(svc *corev1.Service) int32
 	GetDefaultBackendPort(svc *corev1.Service) int32
 	GetUpstreamConfig() ([]*ingress.Backends, error)
@@ -33,4 +33,6 @@ type K8sResourcesIngress interface {
 	GetPaths() []string
 	GetPathType(string) (string, error)
 	GetAnyBackendName(name *v1.ServiceBackendPort, ns string) string
+	GetDaemonSetNameLabel() string
+	GetDeployNameLabel() string
 }

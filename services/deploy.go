@@ -24,16 +24,8 @@ func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, con
 	return &DeploymentServiceImpl{ctx: ctx, generic: clientSet, config: config}
 }
 
-func (d *DeploymentServiceImpl) deployName() string {
-	return d.generic.GetName() + "-" + d.generic.GetNameSpace() + "-" + "deploy"
-}
-
-func (d *DeploymentServiceImpl) deployLabelsName() string {
-	return d.generic.GetName() + "-" + d.generic.GetNameSpace() + "-" + "nginx"
-}
-
 func (d *DeploymentServiceImpl) GetDeployKey() types.NamespacedName {
-	return types.NamespacedName{Name: d.deployName(), Namespace: d.generic.GetNameSpace()}
+	return types.NamespacedName{Name: d.generic.GetDeployNameLabel(), Namespace: d.generic.GetNameSpace()}
 }
 
 func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
@@ -46,8 +38,7 @@ func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
 }
 
 func (d *DeploymentServiceImpl) CreateDeploy() error {
-	dp := d.buildDeployData()
-	if err := d.generic.GetClient().Create(d.ctx, dp); err != nil {
+	if err := d.generic.GetClient().Create(d.ctx, d.buildDeployData()); err != nil {
 		return err
 	}
 
@@ -85,9 +76,9 @@ func (d *DeploymentServiceImpl) buildDeployData() *v1.Deployment {
 }
 
 func (d *DeploymentServiceImpl) deployMeta() v12.ObjectMeta {
-	labels := map[string]string{"app": d.deployLabelsName()}
+	labels := map[string]string{"app": d.generic.GetDeployNameLabel()}
 	om := v12.ObjectMeta{
-		Name:      d.deployLabelsName(),
+		Name:      d.generic.GetDeployNameLabel(),
 		Namespace: d.generic.GetNameSpace(),
 		Labels:    labels,
 	}
@@ -96,7 +87,7 @@ func (d *DeploymentServiceImpl) deployMeta() v12.ObjectMeta {
 }
 
 func (d *DeploymentServiceImpl) deploySpec() v1.DeploymentSpec {
-	labels := map[string]string{"app": d.deployLabelsName()}
+	labels := map[string]string{"app": d.generic.GetDeployNameLabel()}
 	var replicas = new(int32)
 	var revisionHistoryLimit = new(int32)
 	*replicas = 2
@@ -116,7 +107,7 @@ func (d *DeploymentServiceImpl) deploySpec() v1.DeploymentSpec {
 }
 
 func (d *DeploymentServiceImpl) deployPodTemplate() v13.PodTemplateSpec {
-	labels := map[string]string{"app": d.deployLabelsName()}
+	labels := map[string]string{"app": d.generic.GetDeployNameLabel()}
 	dc := v13.PodTemplateSpec{
 		ObjectMeta: v12.ObjectMeta{
 			Labels: labels,
@@ -143,6 +134,11 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 		}
 	}
 
+	cp := v13.ContainerPort{
+		ContainerPort: 9092,
+	}
+	cps = append(cps, cp)
+
 	readinessProbe := &v13.Probe{
 		ProbeHandler: v13.ProbeHandler{
 			HTTPGet: &v13.HTTPGetAction{
@@ -166,7 +162,7 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	}
 
 	c := v13.Container{
-		Name:  d.deployLabelsName(),
+		Name:  d.generic.GetDeployNameLabel(),
 		Image: constants.NginxImages,
 		Ports: cps,
 		Resources: v13.ResourceRequirements{
