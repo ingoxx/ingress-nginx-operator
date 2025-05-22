@@ -12,8 +12,8 @@ events {
 }
 
 ### stream
-{{ if .Annotations.Stream.UseStream }}
-{{ range $bk := .Annotations.Stream.Backend }}
+{{ if .Annotations.Stream.EnableStream }}
+{{ range $bk := .Annotations.Stream.StreamBackendList }}
 stream {
     server {
         listen $bk.Port;

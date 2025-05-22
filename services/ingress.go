@@ -11,7 +11,6 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -145,7 +144,7 @@ func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, er
 	var rs = i.GetRules()
 	key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
 	svc, err := i.GetService(key)
-	if err != nil && !kerr.IsNotFound(err) {
+	if err != nil {
 		return bk, err
 	}
 
@@ -181,7 +180,7 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	if i.ingress.Spec.DefaultBackend != nil {
 		key := types.NamespacedName{Name: i.ingress.Spec.DefaultBackend.Service.Name, Namespace: i.GetNameSpace()}
 		svc, err := i.GetService(key)
-		if err != nil && !kerr.IsNotFound(err) {
+		if err != nil {
 			return bk, err
 		}
 
@@ -210,14 +209,12 @@ func (i *IngressServiceImpl) GetService(key client.ObjectKey) (*corev1.Service, 
 
 func (i *IngressServiceImpl) GetBackendPort(svc *corev1.Service) int32 {
 	var port int32
-	if len(i.ingress.Spec.Rules) > 0 {
-		for _, r := range i.ingress.Spec.Rules {
-			for _, p := range r.HTTP.Paths {
-				if p.Backend.Service.Name == svc.Name {
-					for _, sp := range i.GetSvcPort(svc) {
-						if p.Backend.Service.Port.Number == sp {
-							return sp
-						}
+	for _, r := range i.ingress.Spec.Rules {
+		for _, p := range r.HTTP.Paths {
+			if p.Backend.Service.Name == svc.Name {
+				for _, sp := range i.GetSvcPort(svc) {
+					if p.Backend.Service.Port.Number == sp {
+						return sp
 					}
 				}
 			}
@@ -225,6 +222,24 @@ func (i *IngressServiceImpl) GetBackendPort(svc *corev1.Service) int32 {
 	}
 
 	return port
+}
+
+func (i *IngressServiceImpl) GetBackendPorts(key client.ObjectKey) ([]*v1.ServiceBackendPort, error) {
+	var ports = make([]*v1.ServiceBackendPort, 0, 5)
+	service, err := i.GetService(key)
+	if err != nil {
+		return ports, err
+	}
+
+	for _, p := range service.Spec.Ports {
+		bk := &v1.ServiceBackendPort{
+			Name:   key.Name,
+			Number: p.Port,
+		}
+		ports = append(ports, bk)
+	}
+
+	return ports, nil
 }
 
 func (i *IngressServiceImpl) GetDefaultBackendPort(svc *corev1.Service) int32 {
@@ -396,7 +411,7 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 
 		key := types.NamespacedName{Name: p.Backend.Service.Name, Namespace: i.GetNameSpace()}
 		svc, err := i.GetService(key)
-		if err != nil && !kerr.IsNotFound(err) {
+		if err != nil {
 			return err
 		}
 
@@ -431,7 +446,7 @@ func (i *IngressServiceImpl) checkDefaultBackend() error {
 	if i.ingress.Spec.DefaultBackend != nil {
 		key := types.NamespacedName{Namespace: i.GetNameSpace(), Name: i.ingress.Spec.DefaultBackend.Service.Name}
 		svc, err := i.GetService(key)
-		if err != nil && !kerr.IsNotFound(err) {
+		if err != nil {
 			return err
 		}
 

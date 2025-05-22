@@ -35,4 +35,5 @@ type K8sResourcesIngress interface {
 	GetAnyBackendName(name *v1.ServiceBackendPort, ns string) string
 	GetDaemonSetNameLabel() string
 	GetDeployNameLabel() string
+	GetBackendPorts(key client.ObjectKey) ([]*v1.ServiceBackendPort, error)
 }

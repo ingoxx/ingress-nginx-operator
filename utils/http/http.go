@@ -1,4 +1,4 @@
-package http
+package main
 
 import (
 	"encoding/json"
@@ -9,12 +9,13 @@ import (
 	"time"
 )
 
-func startHttp() {
-	klog.Info("httpserver start")
+func main() {
+	StartHttp()
+}
 
-	go func() {
-		httpServer()
-	}()
+func StartHttp() {
+	klog.Info("httpserver start")
+	httpServer()
 }
 
 func httpServer() {

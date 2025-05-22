@@ -1,8 +1,10 @@
 package services
 
 import (
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"golang.org/x/net/context"
 	v13 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -38,8 +40,8 @@ func (s *SvcServiceImpl) GetSvc(key client.ObjectKey) (*v13.Service, error) {
 	return svc, nil
 }
 
-func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service) error {
-	return s.generic.GetClient().Update(s.ctx, svc)
+func (s *SvcServiceImpl) UpdateSvc(data *buildSvcData) error {
+	return s.generic.GetClient().Update(s.ctx, s.buildSvcData(data))
 }
 
 func (s *SvcServiceImpl) DeleteSvc(svc *v13.Service) error {
@@ -83,39 +85,80 @@ func (s *SvcServiceImpl) svcServiceSpec(data *buildSvcData) v13.ServiceSpec {
 }
 
 func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.ServicePort {
-	var sps = make([]v13.ServicePort, 0, 2)
+	var sps = make([]v13.ServicePort, 0, len(sbp)+1)
+
+	usedNames := make(map[string]bool)
+
 	for _, v := range sbp {
+		var name string
+		switch v.Number {
+		case 80:
+			name = "http"
+		case 443:
+			name = "https"
+		default:
+			name = fmt.Sprintf("port-%d", v.Number)
+		}
+
+		// 确保 name 唯一
+		original := name
+		i := 1
+		for usedNames[name] {
+			name = fmt.Sprintf("%s-%d", original, i)
+			i++
+		}
+		usedNames[name] = true
+
 		sp := v13.ServicePort{
+			Name: name,
 			Port: v.Number,
 			TargetPort: intstr.IntOrString{
 				IntVal: v.Number,
 			},
+			Protocol: v13.ProtocolTCP, // 建议显式指定
 		}
 
 		sps = append(sps, sp)
 	}
+
+	// 额外添加固定端口（如 9092）
+	extraPort := 9092
+	name := "http"
+	if usedNames[name] {
+		name = fmt.Sprintf("port-%d", extraPort)
+	}
+	sps = append(sps, v13.ServicePort{
+		Name: name,
+		Port: int32(extraPort),
+		TargetPort: intstr.IntOrString{
+			IntVal: int32(extraPort),
+		},
+		Protocol: v13.ProtocolTCP,
+	})
+
 	return sps
 }
 
 func (s *SvcServiceImpl) streamSvc() error {
 	if s.config.EnableStream.EnableStream {
-		var streamSvc = make([]*v1.ServiceBackendPort, 0, len(s.config.EnableStream.StreamBackendList))
 		for _, s1 := range s.config.EnableStream.StreamBackendList {
-			daemonSetKey := types.NamespacedName{Name: s1.Name, Namespace: s1.Namespace}
-			svc, err := s.GetSvc(daemonSetKey)
+			ingressSvcKey := types.NamespacedName{Name: s1.Name, Namespace: s1.Namespace}
+			ports, err := s.generic.GetBackendPorts(ingressSvcKey)
+			if err != nil {
+				return err
+			}
+
+			// controller的data plane
+			ctlSvcKey := types.NamespacedName{Name: constants.DaemonSetSvcName, Namespace: s1.Namespace}
+
+			data := &buildSvcData{
+				key:    ctlSvcKey,
+				sbp:    ports,
+				labels: map[string]string{"app": constants.DaemonSetLabel},
+			}
+			_, err = s.generic.GetService(ctlSvcKey)
 			if err != nil {
 				if errors.IsNotFound(err) {
-					port := s.generic.GetBackendPort(svc)
-					svcBackendPort := &v1.ServiceBackendPort{
-						Name:   svc.Name,
-						Number: port,
-					}
-					streamSvc = append(streamSvc, svcBackendPort)
-					data := &buildSvcData{
-						key:    daemonSetKey,
-						sbp:    streamSvc,
-						labels: map[string]string{"app": s.generic.GetDaemonSetNameLabel()},
-					}
 					if err := s.CreateSvc(data); err != nil {
 						return err
 					}
@@ -126,48 +169,50 @@ func (s *SvcServiceImpl) streamSvc() error {
 				return err
 			}
 
-			if err := s.UpdateSvc(svc); err != nil {
+			if err := s.UpdateSvc(data); err != nil {
 				return err
 			}
+
 		}
+
 	}
 
 	return nil
 }
 
 func (s *SvcServiceImpl) ingressSvc() error {
+	var bks = make([]*v1.ServiceBackendPort, 0, 6)
 	config, err := s.generic.GetUpstreamConfig()
 	if err != nil {
 		return err
 	}
 
+	// 获取ingress配置文件中的所有svc
 	for _, b1 := range config {
 		for _, b2 := range b1.Services {
-			svcKey := types.NamespacedName{Name: b2.Name, Namespace: s.generic.GetNameSpace()}
-			svc, err := s.generic.GetService(svcKey)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					//deployKey := types.NamespacedName{Name: s.generic.GetName(), Namespace: s.generic.GetNameSpace()}
-					data := &buildSvcData{
-						key:    svcKey,
-						sbp:    b1.Services,
-						labels: map[string]string{"app": s.generic.GetDeployNameLabel()},
-					}
-					if err := s.CreateSvc(data); err != nil {
-						return err
-					}
-
-					continue
-				}
-
-				return err
-			}
-
-			if err := s.UpdateSvc(svc); err != nil {
-				return err
-			}
-
+			bks = append(bks, b2)
 		}
+	}
+
+	// controller的data plane
+	ctlSvcKey := types.NamespacedName{Name: constants.DeploySvcName, Namespace: s.generic.GetNameSpace()}
+	data := &buildSvcData{
+		key:    ctlSvcKey,
+		sbp:    bks,
+		labels: map[string]string{"app": constants.DeployLabel},
+	}
+	_, err = s.generic.GetService(ctlSvcKey)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err := s.CreateSvc(data); err != nil {
+				return err
+			}
+		}
+		return err
+	}
+
+	if err := s.UpdateSvc(data); err != nil {
+		return err
 	}
 
 	return nil

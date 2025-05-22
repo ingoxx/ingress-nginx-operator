@@ -31,4 +31,5 @@ type ResourcesMth interface {
 	GetAnyBackendName(*v1.ServiceBackendPort, string) string
 	GetDaemonSetNameLabel() string
 	GetDeployNameLabel() string
+	GetBackendPorts(key client.ObjectKey) ([]*v1.ServiceBackendPort, error)
 }

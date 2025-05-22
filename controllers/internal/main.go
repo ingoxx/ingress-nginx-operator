@@ -25,6 +25,7 @@ func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, oper
 }
 
 func (nc *CrdNginxController) Start(req ctrl.Request) error {
+
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
 	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); err != nil {

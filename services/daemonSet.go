@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/apps/v1"
 	v13 "k8s.io/api/core/v1"
@@ -32,6 +33,10 @@ func (ds *DaemonSetServiceImpl) GetDaemonSetKey(key client.ObjectKey) types.Name
 	return types.NamespacedName{Name: ds.generic.GetDaemonSetNameLabel(), Namespace: key.Namespace}
 }
 
+func (ds *DaemonSetServiceImpl) daemonSetLabels() map[string]string {
+	return map[string]string{"app": constants.DaemonSetLabel}
+}
+
 func (ds *DaemonSetServiceImpl) GetDaemonSet(data *buildDaemonSetData) (*v1.DaemonSet, error) {
 	var dp = new(v1.DaemonSet)
 	if err := ds.generic.GetClient().Get(ds.ctx, ds.GetDaemonSetKey(data.key), dp); err != nil {
@@ -41,8 +46,8 @@ func (ds *DaemonSetServiceImpl) GetDaemonSet(data *buildDaemonSetData) (*v1.Daem
 	return dp, nil
 }
 
-func (ds *DaemonSetServiceImpl) UpdateDaemonSet(data *v1.DaemonSet) error {
-	return ds.generic.GetClient().Update(ds.ctx, data)
+func (ds *DaemonSetServiceImpl) UpdateDaemonSet(data *buildDaemonSetData) error {
+	return ds.generic.GetClient().Update(ds.ctx, ds.buildDaemonSet(data))
 }
 
 func (ds *DaemonSetServiceImpl) DeleteDaemonSet(data *v1.DaemonSet) error {
@@ -59,29 +64,27 @@ func (ds *DaemonSetServiceImpl) CreateDaemonSet(data *buildDaemonSetData) error 
 
 func (ds *DaemonSetServiceImpl) buildDaemonSet(data *buildDaemonSetData) *v1.DaemonSet {
 	var dp = &v1.DaemonSet{
-		ObjectMeta: ds.daemonSetMeta(),
+		ObjectMeta: ds.daemonSetMeta(data),
 		Spec:       ds.daemonSetSpec(data),
 	}
 
 	return dp
 }
 
-func (ds *DaemonSetServiceImpl) daemonSetMeta() v12.ObjectMeta {
-	labels := map[string]string{"app": ds.generic.GetDaemonSetNameLabel()}
+func (ds *DaemonSetServiceImpl) daemonSetMeta(data *buildDaemonSetData) v12.ObjectMeta {
 	om := v12.ObjectMeta{
-		Name:      ds.generic.GetDaemonSetNameLabel(),
-		Namespace: ds.generic.GetNameSpace(),
-		Labels:    labels,
+		Name:      constants.DaemonSetName,
+		Namespace: data.key.Namespace,
+		Labels:    ds.daemonSetLabels(),
 	}
 
 	return om
 }
 
 func (ds *DaemonSetServiceImpl) daemonSetSpec(data *buildDaemonSetData) v1.DaemonSetSpec {
-	labels := map[string]string{"app": ds.generic.GetDaemonSetNameLabel()}
 	dss := v1.DaemonSetSpec{
 		Selector: &v12.LabelSelector{
-			MatchLabels: labels,
+			MatchLabels: ds.daemonSetLabels(),
 		},
 		Template: ds.daemonSetTemplate(data),
 		UpdateStrategy: v1.DaemonSetUpdateStrategy{
@@ -93,10 +96,9 @@ func (ds *DaemonSetServiceImpl) daemonSetSpec(data *buildDaemonSetData) v1.Daemo
 }
 
 func (ds *DaemonSetServiceImpl) daemonSetTemplate(data *buildDaemonSetData) v13.PodTemplateSpec {
-	labels := map[string]string{"app": ds.generic.GetDaemonSetNameLabel()}
 	dc := v13.PodTemplateSpec{
 		ObjectMeta: v12.ObjectMeta{
-			Labels: labels,
+			Labels: ds.daemonSetLabels(),
 		},
 		Spec: v13.PodSpec{
 			Containers: ds.daemonSetPodContainer(data),
@@ -120,6 +122,7 @@ func (ds *DaemonSetServiceImpl) daemonSetPodContainer(data *buildDaemonSetData) 
 	cp := v13.ContainerPort{
 		ContainerPort: 9092,
 	}
+
 	cps = append(cps, cp)
 
 	return cs
@@ -127,30 +130,28 @@ func (ds *DaemonSetServiceImpl) daemonSetPodContainer(data *buildDaemonSetData) 
 
 func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 	if ds.config.EnableStream.EnableStream {
-		var svcPorts = make([]*v14.ServiceBackendPort, 0, 4)
 		streamData := ds.config.EnableStream.StreamBackendList
 		for _, v := range streamData {
 			key := types.NamespacedName{Name: v.Name, Namespace: v.Namespace}
-			svc, err := ds.generic.GetService(key)
+			_, err := ds.generic.GetService(key)
 			if err != nil {
 				return err
 			}
-			for _, vd2 := range svc.Spec.Ports {
-				svcPort := &v14.ServiceBackendPort{
-					Name:   svc.Name,
-					Number: vd2.Port,
-				}
-				svcPorts = append(svcPorts, svcPort)
+
+			ports, err := ds.generic.GetBackendPorts(key)
+			if err != nil {
+				return err
 			}
 
-			b := &buildDaemonSetData{
-				sbp: svcPorts,
+			data := &buildDaemonSetData{
+				sbp: ports,
 				key: key,
 			}
-			set, err := ds.GetDaemonSet(b)
+
+			_, err = ds.GetDaemonSet(data)
 			if err != nil {
 				if errors.IsNotFound(err) {
-					if err := ds.CreateDaemonSet(b); err != nil {
+					if err := ds.CreateDaemonSet(data); err != nil {
 						return err
 					}
 					continue
@@ -159,7 +160,7 @@ func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 				return err
 			}
 
-			if err := ds.UpdateDaemonSet(set); err != nil {
+			if err := ds.UpdateDaemonSet(data); err != nil {
 				return err
 			}
 		}

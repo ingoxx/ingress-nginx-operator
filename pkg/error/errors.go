@@ -270,3 +270,17 @@ func NewKubernetesResourcesNotFoundError(resource, name, namespace string) error
 		errMsg: fmt.Sprintf("%s '%s' resource not found  not found, namespace '%s'", resource, name, namespace),
 	}
 }
+
+type DuplicateValueErrorError struct {
+	errMsg string
+}
+
+func (e DuplicateValueErrorError) Error() string {
+	return e.errMsg
+}
+
+func NewDuplicateValueErrorError(resource, name, namespace string) error {
+	return DuplicateValueErrorError{
+		errMsg: fmt.Sprintf("duplicate service resource '%s', ingress '%s', namespace '%s'", resource, name, namespace),
+	}
+}

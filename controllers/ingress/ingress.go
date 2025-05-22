@@ -27,5 +27,6 @@ type StreamBackendList struct {
 
 type StreamBackend struct {
 	Name      string
+	Port      int32
 	Namespace string
 }

@@ -12,7 +12,7 @@ metadata:
     ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {
-        "backends": [ {"name": "svc-1", "namespace": "web"}, {"name": "svc-2", "namespace": "api"} ]
+        "backends": [ {"name": "svc-1", "namespace": "web", "port": 8080}, {"name": "svc-2", "namespace": "api", "port": 8081} ]
       }
     ingress.nginx.k8s.io/allow-ip-list: "192.168.3.11,192.168.3.12"
     ingress.nginx.k8s.io/deny-ip-list: "192.168.3.11,192.168.3.12"

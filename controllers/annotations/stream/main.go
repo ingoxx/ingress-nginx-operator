@@ -40,7 +40,7 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setStreamConfigAnnotations: {
-		Doc: "nginx stream, support cross namespace, example: \"backends\": [ {\"name\": \"svc-1\", \"namespace\": \"web\"}, {\"name\": \"svc-2\", \"namespace\": \"api\"} ]",
+		Doc: "nginx stream, support cross namespace, example: \"backends\": [ {\"name\": \"svc-1\", \"namespace\": \"web\", \"port\": 8080}, {\"name\": \"svc-2\", \"namespace\": \"api\", \"port\": 8081} ]",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			var bks = new(ingress.StreamBackendList)
 			if s != "" {
@@ -48,10 +48,36 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
+				var isExistsSvc string
+
 				for _, v := range bks.Backends {
+					if isExistsSvc == v.Name {
+						return cerr.NewDuplicateValueErrorError(v.Name, ing.GetName(), ing.GetNameSpace())
+					}
+
+					if isExistsSvc == "" {
+						isExistsSvc = v.Name
+					}
+
+					var isExistsPort bool
 					key := types.NamespacedName{Name: v.Name, Namespace: v.Namespace}
 					if _, err := ing.GetService(key); err != nil {
 						return err
+					}
+
+					ports, err := ing.GetBackendPorts(key)
+					if err != nil {
+						return err
+					}
+
+					for _, p := range ports {
+						if p.Number == v.Port {
+							isExistsPort = true
+						}
+					}
+
+					if !isExistsPort {
+						return cerr.NewInvalidSvcPortError(v.Name, ing.GetName(), ing.GetNameSpace())
 					}
 				}
 			}

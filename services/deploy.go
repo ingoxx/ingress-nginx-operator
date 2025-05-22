@@ -12,6 +12,12 @@ import (
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
+)
+
+const (
+	healthUrl  = "/api/v1/health"
+	healthPort = 9092
 )
 
 type DeploymentServiceImpl struct {
@@ -25,7 +31,11 @@ func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, con
 }
 
 func (d *DeploymentServiceImpl) GetDeployKey() types.NamespacedName {
-	return types.NamespacedName{Name: d.generic.GetDeployNameLabel(), Namespace: d.generic.GetNameSpace()}
+	return types.NamespacedName{Name: constants.DeployName, Namespace: d.generic.GetNameSpace()}
+}
+
+func (d *DeploymentServiceImpl) deployLabels() map[string]string {
+	return map[string]string{"app": constants.DeployLabel}
 }
 
 func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
@@ -35,14 +45,6 @@ func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
 	}
 
 	return dp, nil
-}
-
-func (d *DeploymentServiceImpl) CreateDeploy() error {
-	if err := d.generic.GetClient().Create(d.ctx, d.buildDeployData()); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (d *DeploymentServiceImpl) UpdateDeploy(deploy *v1.Deployment) error {
@@ -66,6 +68,13 @@ func (d *DeploymentServiceImpl) DeleteDeploy() error {
 	return nil
 }
 
+func (d *DeploymentServiceImpl) CreateDeploy() error {
+	if err := d.generic.GetClient().Create(d.ctx, d.buildDeployData()); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *DeploymentServiceImpl) buildDeployData() *v1.Deployment {
 	var dp = &v1.Deployment{
 		ObjectMeta: d.deployMeta(),
@@ -76,18 +85,16 @@ func (d *DeploymentServiceImpl) buildDeployData() *v1.Deployment {
 }
 
 func (d *DeploymentServiceImpl) deployMeta() v12.ObjectMeta {
-	labels := map[string]string{"app": d.generic.GetDeployNameLabel()}
 	om := v12.ObjectMeta{
-		Name:      d.generic.GetDeployNameLabel(),
+		Name:      constants.DeployName,
 		Namespace: d.generic.GetNameSpace(),
-		Labels:    labels,
+		Labels:    d.deployLabels(),
 	}
 
 	return om
 }
 
 func (d *DeploymentServiceImpl) deploySpec() v1.DeploymentSpec {
-	labels := map[string]string{"app": d.generic.GetDeployNameLabel()}
 	var replicas = new(int32)
 	var revisionHistoryLimit = new(int32)
 	*replicas = 2
@@ -95,7 +102,7 @@ func (d *DeploymentServiceImpl) deploySpec() v1.DeploymentSpec {
 
 	ds := v1.DeploymentSpec{
 		Selector: &v12.LabelSelector{
-			MatchLabels: labels,
+			MatchLabels: d.deployLabels(),
 		},
 		Replicas:             replicas,
 		Strategy:             d.deployStrategy(),
@@ -107,13 +114,15 @@ func (d *DeploymentServiceImpl) deploySpec() v1.DeploymentSpec {
 }
 
 func (d *DeploymentServiceImpl) deployPodTemplate() v13.PodTemplateSpec {
-	labels := map[string]string{"app": d.generic.GetDeployNameLabel()}
 	dc := v13.PodTemplateSpec{
 		ObjectMeta: v12.ObjectMeta{
-			Labels: labels,
+			Labels: d.deployLabels(),
 		},
 		Spec: v13.PodSpec{
-			Containers: d.deployPodContainer(),
+			Containers:                    d.deployPodContainer(),
+			TerminationGracePeriodSeconds: pointer.Int64(30),
+			DNSPolicy:                     v13.DNSClusterFirst,
+			RestartPolicy:                 v13.RestartPolicyAlways,
 		},
 	}
 
@@ -142,8 +151,8 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	readinessProbe := &v13.Probe{
 		ProbeHandler: v13.ProbeHandler{
 			HTTPGet: &v13.HTTPGetAction{
-				Path: "/v1/api/health",
-				Port: intstr.FromInt(9092),
+				Path: healthUrl,
+				Port: intstr.FromInt(healthPort),
 			},
 		},
 		InitialDelaySeconds: 5,
@@ -153,8 +162,8 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	livenessProbe := &v13.Probe{
 		ProbeHandler: v13.ProbeHandler{
 			HTTPGet: &v13.HTTPGetAction{
-				Path: "/v1/api/health",
-				Port: intstr.FromInt(9092),
+				Path: healthUrl,
+				Port: intstr.FromInt(healthPort),
 			},
 		},
 		InitialDelaySeconds: 10,
@@ -162,9 +171,10 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	}
 
 	c := v13.Container{
-		Name:  d.generic.GetDeployNameLabel(),
-		Image: constants.NginxImages,
-		Ports: cps,
+		Command: []string{"/http"},
+		Name:    constants.DeployName,
+		Image:   constants.NginxImages,
+		Ports:   cps,
 		Resources: v13.ResourceRequirements{
 			Requests: v13.ResourceList{
 				v13.ResourceCPU:    resource.MustParse("100m"),
@@ -186,20 +196,21 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 }
 
 func (d *DeploymentServiceImpl) deployStrategy() v1.DeploymentStrategy {
-	var dsg = v1.DeploymentStrategy{
+	var strategy = v1.DeploymentStrategy{
 		Type: v1.RollingUpdateDeploymentStrategyType,
 		RollingUpdate: &v1.RollingUpdateDeployment{
 			MaxUnavailable: &intstr.IntOrString{
-				Type:   intstr.String,
+				Type:   intstr.Int,
 				IntVal: 0,
 			},
 			MaxSurge: &intstr.IntOrString{
-				Type:   intstr.String,
+				Type:   intstr.Int,
 				IntVal: 1,
 			},
 		},
 	}
-	return dsg
+
+	return strategy
 }
 
 func (d *DeploymentServiceImpl) CheckDeploy() error {

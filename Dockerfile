@@ -27,7 +27,8 @@ COPY services/ services/
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager main.go && \
+    go build -a -o http utils/http/http.go
 
 FROM nginx:latest AS chroot
 
@@ -35,9 +36,11 @@ WORKDIR /
 
 COPY --from=builder /workspace/rootfs /rootfs
 COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/http .
 RUN chown -R www-data:www-data /rootfs manager && \
     chmod +x rootfs/etc/nginx/shell/start.sh && \
-    chmod +x /manager
+    chmod +x /manager && \
+    chmod +x /http
 
 
 # Use distroless as minimal base image to package the manager binary
