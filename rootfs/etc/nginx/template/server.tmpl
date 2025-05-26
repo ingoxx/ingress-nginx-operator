@@ -38,7 +38,7 @@ server {
     {{ end }}
 
     # allow cos
-    {{ if $annotations.AllowCos.AllowCos }}
+    {{ if $annotations.EnableCos.EnableCos }}
     add_header 'Access-Control-Allow-Origin' '*';
     add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
     add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,xfilecategory,xfilename,xfilesize';

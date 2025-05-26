@@ -15,9 +15,11 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-const (
+var (
 	healthUrl  = "/api/v1/health"
 	healthPort = 9092
+	command    = []string{"/httpserver"}
+	images     = "gotec007/ingress-nginx"
 )
 
 type DeploymentServiceImpl struct {
@@ -123,10 +125,38 @@ func (d *DeploymentServiceImpl) deployPodTemplate() v13.PodTemplateSpec {
 			TerminationGracePeriodSeconds: pointer.Int64(30),
 			DNSPolicy:                     v13.DNSClusterFirst,
 			RestartPolicy:                 v13.RestartPolicyAlways,
+			Affinity:                      d.nodeAffinity(),
 		},
 	}
 
 	return dc
+}
+
+func (d *DeploymentServiceImpl) nodeAffinity() *v13.Affinity {
+	return &v13.Affinity{
+		NodeAffinity: &v13.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &v13.NodeSelector{
+				NodeSelectorTerms: []v13.NodeSelectorTerm{
+					{
+						MatchExpressions: []v13.NodeSelectorRequirement{
+							{
+								Key:      "kubernetes.io/arch",
+								Operator: v13.NodeSelectorOpIn,
+								Values: []string{
+									"amd64", "arm64", "ppc64le", "s390x",
+								},
+							},
+							{
+								Key:      "kubernetes.io/os",
+								Operator: v13.NodeSelectorOpIn,
+								Values:   []string{"linux"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
@@ -171,9 +201,9 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	}
 
 	c := v13.Container{
-		Command: []string{"/http"},
+		Command: command,
 		Name:    constants.DeployName,
-		Image:   constants.NginxImages,
+		Image:   images,
 		Ports:   cps,
 		Resources: v13.ResourceRequirements{
 			Requests: v13.ResourceList{

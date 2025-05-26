@@ -116,3 +116,19 @@ func (r ResourceAdapter) GetDeployNameLabel() string {
 func (r ResourceAdapter) GetBackendPorts(key client.ObjectKey) ([]*v1.ServiceBackendPort, error) {
 	return r.Ingress.GetBackendPorts(key)
 }
+
+func (r ResourceAdapter) GetDaemonSvcName() string {
+	return r.Ingress.GetDaemonSvcName()
+}
+
+func (r ResourceAdapter) GetDeploySvcName() string {
+	return r.Ingress.GetDeploySvcName()
+}
+
+func (r ResourceAdapter) GetDaemonSetLabel() string {
+	return r.Ingress.GetDaemonSetLabel()
+}
+
+func (r ResourceAdapter) GetDeployLabel() string {
+	return r.Ingress.GetDeployLabel()
+}

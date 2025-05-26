@@ -331,6 +331,22 @@ func (i *IngressServiceImpl) GetDeployNameLabel() string {
 	return "deploy-manager"
 }
 
+func (i *IngressServiceImpl) GetDaemonSetLabel() string {
+	return "daemonset-manager-app"
+}
+
+func (i *IngressServiceImpl) GetDeployLabel() string {
+	return "deploy-manager-app"
+}
+
+func (i *IngressServiceImpl) GetDaemonSvcName() string {
+	return "daemonset-manager-svc"
+}
+
+func (i *IngressServiceImpl) GetDeploySvcName() string {
+	return "deploy-manager-svc"
+}
+
 func (i *IngressServiceImpl) CheckService() error {
 	var err error
 	if err1, err2 := i.checkDefaultBackend(), i.checkBackend(); err1 != nil && err2 != nil {

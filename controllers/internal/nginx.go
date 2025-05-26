@@ -8,6 +8,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"k8s.io/klog/v2"
 	"os"
+	"sync"
 	"text/template"
 )
 
@@ -22,37 +23,45 @@ type Config struct {
 type NginxController struct {
 	resData service.ResourcesMth
 	config  *annotations.IngressAnnotationsConfig
+	mux     *sync.Mutex
 }
 
 func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
 	return &NginxController{
 		resData: data,
 		config:  config,
+		mux:     new(sync.Mutex),
 	}
 }
 
 func (nc *NginxController) Run() error {
-	return nc.generateBackendCfg()
-}
-
-func (nc *NginxController) updateBackendCfg() (*annotations.IngressAnnotationsConfig, error) {
-	tls, err := nc.resData.GetTlsFile()
-	if err != nil {
-		return nil, err
+	nc.mux.Lock()
+	defer nc.mux.Unlock()
+	if err := nc.generateBackendCfg(); err != nil {
+		return err
 	}
 
-	lbConfig := nc.config.LoadBalance.LbConfig
-	for _, v := range lbConfig {
-		for h := range tls {
-			if v.Host == h {
-				v.Cert = tls[h]
-				break
-			}
-		}
-	}
-
-	return nc.config, nil
+	return nil
 }
+
+//func (nc *NginxController) updateBackendCfg() (*annotations.IngressAnnotationsConfig, error) {
+//	tls, err := nc.resData.GetTlsFile()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	lbConfig := nc.config.LoadBalance.LbConfig
+//	for _, v := range lbConfig {
+//		for h := range tls {
+//			if v.Host == h {
+//				v.Cert = tls[h]
+//				break
+//			}
+//		}
+//	}
+//
+//	return nc.config, nil
+//}
 
 func (nc *NginxController) generateBackendCfg() error {
 	//cfg, err := nc.updateBackendCfg()
@@ -67,9 +76,9 @@ func (nc *NginxController) generateBackendCfg() error {
 		ConfName:      constants.NginxConfDir,
 	}
 
-	if err := nc.generateNgxConfTmpl(c); err != nil {
-		return err
-	}
+	//if err := nc.generateNgxConfTmpl(c); err != nil {
+	//	return err
+	//}
 
 	if err := nc.generateServerTmpl(c); err != nil {
 		return err
@@ -123,6 +132,10 @@ func (nc *NginxController) renderTemplateData(file string) (*template.Template, 
 	}
 
 	return tmp, nil
+}
+
+func (nc *NginxController) updateNginxConfig() error {
+	return nil
 }
 
 func (nc *NginxController) generateDefaultBackendTmpl() error {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"golang.org/x/net/context"
 	v13 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -149,12 +148,12 @@ func (s *SvcServiceImpl) streamSvc() error {
 			}
 
 			// controller的data plane
-			ctlSvcKey := types.NamespacedName{Name: constants.DaemonSetSvcName, Namespace: s1.Namespace}
+			ctlSvcKey := types.NamespacedName{Name: s.generic.GetDaemonSvcName(), Namespace: s1.Namespace}
 
 			data := &buildSvcData{
 				key:    ctlSvcKey,
 				sbp:    ports,
-				labels: map[string]string{"app": constants.DaemonSetLabel},
+				labels: map[string]string{"app": s.generic.GetDaemonSetLabel()},
 			}
 			_, err = s.generic.GetService(ctlSvcKey)
 			if err != nil {
@@ -195,11 +194,11 @@ func (s *SvcServiceImpl) ingressSvc() error {
 	}
 
 	// controller的data plane
-	ctlSvcKey := types.NamespacedName{Name: constants.DeploySvcName, Namespace: s.generic.GetNameSpace()}
+	ctlSvcKey := types.NamespacedName{Name: s.generic.GetDeploySvcName(), Namespace: s.generic.GetNameSpace()}
 	data := &buildSvcData{
 		key:    ctlSvcKey,
 		sbp:    bks,
-		labels: map[string]string{"app": constants.DeployLabel},
+		labels: map[string]string{"app": s.generic.GetDeployLabel()},
 	}
 	_, err = s.generic.GetService(ctlSvcKey)
 	if err != nil {

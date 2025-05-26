@@ -28,7 +28,7 @@ COPY services/ services/
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager main.go && \
-    go build -a -o http utils/http/http.go
+    go build -a -o httpserver utils/http/http.go
 
 FROM nginx:latest AS chroot
 
@@ -36,11 +36,11 @@ WORKDIR /
 
 COPY --from=builder /workspace/rootfs /rootfs
 COPY --from=builder /workspace/manager .
-COPY --from=builder /workspace/http .
+COPY --from=builder /workspace/httpserver .
 RUN chown -R www-data:www-data /rootfs manager && \
     chmod +x rootfs/etc/nginx/shell/start.sh && \
     chmod +x /manager && \
-    chmod +x /http
+    chmod +x /httpserver
 
 
 # Use distroless as minimal base image to package the manager binary
@@ -51,6 +51,7 @@ FROM gotec007/nginx:noroot5.3
 WORKDIR /
 
 COPY --from=chroot /manager .
+COPY --from=chroot /httpserver .
 COPY --from=chroot /rootfs /rootfs
 
 USER 33:33

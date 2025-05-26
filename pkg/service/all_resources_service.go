@@ -32,4 +32,8 @@ type ResourcesMth interface {
 	GetDaemonSetNameLabel() string
 	GetDeployNameLabel() string
 	GetBackendPorts(key client.ObjectKey) ([]*v1.ServiceBackendPort, error)
+	GetDeploySvcName() string
+	GetDaemonSvcName() string
+	GetDaemonSetLabel() string
+	GetDeployLabel() string
 }
