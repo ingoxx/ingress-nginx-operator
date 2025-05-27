@@ -39,8 +39,9 @@ func (s *SvcServiceImpl) GetSvc(key client.ObjectKey) (*v13.Service, error) {
 	return svc, nil
 }
 
-func (s *SvcServiceImpl) UpdateSvc(data *buildSvcData) error {
-	return s.generic.GetClient().Update(s.ctx, s.buildSvcData(data))
+func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service, data *buildSvcData) error {
+	svc.Spec.Ports = s.svcServicePort(data.sbp)
+	return s.generic.GetClient().Update(s.ctx, svc)
 }
 
 func (s *SvcServiceImpl) DeleteSvc(svc *v13.Service) error {
@@ -84,12 +85,11 @@ func (s *SvcServiceImpl) svcServiceSpec(data *buildSvcData) v13.ServiceSpec {
 }
 
 func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.ServicePort {
-	var sps = make([]v13.ServicePort, 0, len(sbp)+1)
+	var sps = make([]v13.ServicePort, 0, len(sbp))
+	fmt.Println("svc >>> ", sbp)
 
-	usedNames := make(map[string]bool)
-
+	var name string
 	for _, v := range sbp {
-		var name string
 		switch v.Number {
 		case 80:
 			name = "http"
@@ -99,41 +99,29 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 			name = fmt.Sprintf("port-%d", v.Number)
 		}
 
-		// 确保 name 唯一
-		original := name
-		i := 1
-		for usedNames[name] {
-			name = fmt.Sprintf("%s-%d", original, i)
-			i++
-		}
-		usedNames[name] = true
-
 		sp := v13.ServicePort{
 			Name: name,
 			Port: v.Number,
 			TargetPort: intstr.IntOrString{
 				IntVal: v.Number,
 			},
-			Protocol: v13.ProtocolTCP, // 建议显式指定
+			Protocol: v13.ProtocolTCP,
 		}
 
 		sps = append(sps, sp)
 	}
 
-	// 额外添加固定端口（如 9092）
-	extraPort := 9092
-	name := "http"
-	if usedNames[name] {
-		name = fmt.Sprintf("port-%d", extraPort)
-	}
+	extraPort := int32(9092)
 	sps = append(sps, v13.ServicePort{
-		Name: name,
-		Port: int32(extraPort),
+		Name: fmt.Sprintf("port-%d", extraPort),
+		Port: extraPort,
 		TargetPort: intstr.IntOrString{
-			IntVal: int32(extraPort),
+			IntVal: extraPort,
 		},
 		Protocol: v13.ProtocolTCP,
 	})
+
+	fmt.Println("svc update >>> ", sps)
 
 	return sps
 }
@@ -155,7 +143,7 @@ func (s *SvcServiceImpl) streamSvc() error {
 				sbp:    ports,
 				labels: map[string]string{"app": s.generic.GetDaemonSetLabel()},
 			}
-			_, err = s.generic.GetService(ctlSvcKey)
+			svc, err := s.generic.GetService(ctlSvcKey)
 			if err != nil {
 				if errors.IsNotFound(err) {
 					if err := s.CreateSvc(data); err != nil {
@@ -168,7 +156,7 @@ func (s *SvcServiceImpl) streamSvc() error {
 				return err
 			}
 
-			if err := s.UpdateSvc(data); err != nil {
+			if err := s.UpdateSvc(svc, data); err != nil {
 				return err
 			}
 
@@ -200,7 +188,7 @@ func (s *SvcServiceImpl) ingressSvc() error {
 		sbp:    bks,
 		labels: map[string]string{"app": s.generic.GetDeployLabel()},
 	}
-	_, err = s.generic.GetService(ctlSvcKey)
+	svc, err := s.generic.GetService(ctlSvcKey)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if err := s.CreateSvc(data); err != nil {
@@ -210,7 +198,7 @@ func (s *SvcServiceImpl) ingressSvc() error {
 		return err
 	}
 
-	if err := s.UpdateSvc(data); err != nil {
+	if err := s.UpdateSvc(svc, data); err != nil {
 		return err
 	}
 

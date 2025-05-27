@@ -76,10 +76,12 @@ func (nc *NginxController) generateBackendCfg() error {
 		ConfName:      constants.NginxConfDir,
 	}
 
-	//if err := nc.generateNgxConfTmpl(c); err != nil {
-	//	return err
-	//}
+	// 生成nginx.conf配置
+	if err := nc.generateNgxConfTmpl(c); err != nil {
+		return err
+	}
 
+	// 生成conf.d/下的各个子配置
 	if err := nc.generateServerTmpl(c); err != nil {
 		return err
 	}

@@ -13,13 +13,23 @@ metadata:
   namespace: web
 spec:
   rules:
-    - host: "api.a.com"
+    - host: "api.web22.com"
       http:
         paths:
-          - path: "/aa"
+          - path: "/bb"
             pathType: Prefix
             backend:
               service:
                 name: nginx-service-a
                 port:
-                  number: 9092
+                  number: 9094
+    - host: "api.web33.com"
+      http:
+        paths:
+          - path: "/dd"
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-service-e
+                port:
+                  number: 9093

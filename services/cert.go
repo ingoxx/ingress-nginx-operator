@@ -110,10 +110,16 @@ func (c *CertServiceImpl) UpdateCert(cert *unstructured.Unstructured) error {
 		return slices.Equal(aCopy, bCopy)
 	}
 
-	if !hp(oh, nh) {
-		if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Update(c.ctx, c.certUnstructuredData(), metav1.UpdateOptions{}); err != nil {
-			return err
-		}
+	if hp(oh, nh) {
+		return nil
+	}
+
+	if err := unstructured.SetNestedStringSlice(cert.Object, nh, "spec", "dnsNames"); err != nil {
+		return fmt.Errorf("failed to set new dnsNames: %v", err)
+	}
+
+	if _, err := c.ing.GetDynamicClientSet().Resource(c.certGVR()).Namespace(c.ing.GetNameSpace()).Update(c.ctx, cert, metav1.UpdateOptions{}); err != nil {
+		return err
 	}
 
 	return nil

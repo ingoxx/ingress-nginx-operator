@@ -46,20 +46,13 @@ func (i *IssuerServiceImpl) issuerUnstructuredData() *unstructured.Unstructured 
 	return issuer
 }
 
-func (i *IssuerServiceImpl) GetIssuer(ctx context.Context, namespace, name string) error {
-	if _, err := i.ing.GetDynamicClientSet().Resource(i.issuerGVR()).Namespace(i.ing.GetNameSpace()).Get(ctx, i.cert.IssuerObjectKey(), metav1.GetOptions{}); err != nil {
-		if errors.IsNotFound(err) {
-			if err := i.CreateIssuer(ctx, namespace, name); err != nil {
-				return err
-			}
-
-			return nil
-		}
-
-		return err
+func (i *IssuerServiceImpl) GetIssuer(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error) {
+	issuer, err := i.ing.GetDynamicClientSet().Resource(i.issuerGVR()).Namespace(i.ing.GetNameSpace()).Get(ctx, i.cert.IssuerObjectKey(), metav1.GetOptions{})
+	if err != nil {
+		return issuer, err
 	}
 
-	return nil
+	return issuer, nil
 }
 
 func (i *IssuerServiceImpl) CreateIssuer(ctx context.Context, namespace, name string) error {
@@ -79,8 +72,17 @@ func (i *IssuerServiceImpl) DeleteIssuer(ctx context.Context, namespace, name st
 	return nil
 }
 
-func (i *IssuerServiceImpl) UpdateIssuer(ctx context.Context, namespace, name string) error {
-	if _, err := i.ing.GetDynamicClientSet().Resource(i.issuerGVR()).Namespace(i.ing.GetNameSpace()).Update(ctx, i.issuerUnstructuredData(), metav1.UpdateOptions{}); err != nil {
+func (i *IssuerServiceImpl) UpdateIssuer(ctx context.Context, issuer *unstructured.Unstructured) error {
+	originalSpec, found, err := unstructured.NestedMap(issuer.Object, "spec")
+	if err != nil || !found {
+		return fmt.Errorf("failed to get spec from issuer: %v", err)
+	}
+
+	if err := unstructured.SetNestedMap(issuer.Object, originalSpec, "spec"); err != nil {
+		return fmt.Errorf("failed to set updated spec: %v", err)
+	}
+
+	if _, err := i.ing.GetDynamicClientSet().Resource(i.issuerGVR()).Namespace(i.ing.GetNameSpace()).Update(ctx, issuer, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
 
@@ -88,5 +90,21 @@ func (i *IssuerServiceImpl) UpdateIssuer(ctx context.Context, namespace, name st
 }
 
 func (i *IssuerServiceImpl) CheckIssuer() error {
-	return i.GetIssuer(i.ctx, i.ing.GetNameSpace(), i.ing.GetName())
+	issuer, err := i.GetIssuer(i.ctx, i.ing.GetNameSpace(), i.ing.GetName())
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err := i.CreateIssuer(i.ctx, i.ing.GetNameSpace(), i.ing.GetName()); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		return err
+	}
+
+	if err := i.UpdateIssuer(i.ctx, issuer); err != nil {
+		return err
+	}
+
+	return nil
 }

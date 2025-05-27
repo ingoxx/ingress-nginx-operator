@@ -50,6 +50,7 @@ func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
 }
 
 func (d *DeploymentServiceImpl) UpdateDeploy(deploy *v1.Deployment) error {
+	deploy.Spec.Template.Spec.Containers = d.deployPodContainer()
 	if err := d.generic.GetClient().Update(d.ctx, deploy); err != nil {
 		return err
 	}

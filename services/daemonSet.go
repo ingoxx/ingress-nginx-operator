@@ -46,8 +46,9 @@ func (ds *DaemonSetServiceImpl) GetDaemonSet(data *buildDaemonSetData) (*v1.Daem
 	return dp, nil
 }
 
-func (ds *DaemonSetServiceImpl) UpdateDaemonSet(data *buildDaemonSetData) error {
-	return ds.generic.GetClient().Update(ds.ctx, ds.buildDaemonSet(data))
+func (ds *DaemonSetServiceImpl) UpdateDaemonSet(daemonSet *v1.DaemonSet, data *buildDaemonSetData) error {
+	daemonSet.Spec.Template.Spec.Containers = ds.daemonSetPodContainer(data)
+	return ds.generic.GetClient().Update(ds.ctx, daemonSet)
 }
 
 func (ds *DaemonSetServiceImpl) DeleteDaemonSet(data *v1.DaemonSet) error {
@@ -148,7 +149,7 @@ func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 				key: key,
 			}
 
-			_, err = ds.GetDaemonSet(data)
+			daemonSet, err := ds.GetDaemonSet(data)
 			if err != nil {
 				if errors.IsNotFound(err) {
 					if err := ds.CreateDaemonSet(data); err != nil {
@@ -160,7 +161,7 @@ func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 				return err
 			}
 
-			if err := ds.UpdateDaemonSet(data); err != nil {
+			if err := ds.UpdateDaemonSet(daemonSet, data); err != nil {
 				return err
 			}
 		}
