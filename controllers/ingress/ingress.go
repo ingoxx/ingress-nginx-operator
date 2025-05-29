@@ -11,14 +11,21 @@ type Tls struct {
 	TlsCrt string `json:"tls_crt"`
 }
 
+type IngBackends struct {
+	Services *v1.ServiceBackendPort `json:"services"`
+	Path     string                 `json:"path"`
+	PathType string                 `json:"path_type"`
+}
+
 type Backends struct {
-	Services             []*v1.ServiceBackendPort `json:"services"`
-	IngAnnotationsConfig IngConfig                `json:"ing_annotations_config"`
-	Cert                 Tls                      `json:"cert"`
-	Host                 string                   `json:"host"`
-	Upstream             string                   `json:"upstream"`
-	Path                 string                   `json:"path"`
-	PathType             string                   `json:"path_type"`
+	ServiceBackend []*IngBackends `json:"service_backend"`
+	//Services             *v1.ServiceBackendPort `json:"services"`
+	IngAnnotationsConfig IngConfig `json:"ing_annotations_config"`
+	Cert                 Tls       `json:"cert"`
+	Host                 string    `json:"host"`
+	Upstream             string    `json:"upstream"`
+	//Path                 string                 `json:"path"`
+	//PathType             string                 `json:"path_type"`
 }
 
 type StreamBackendList struct {

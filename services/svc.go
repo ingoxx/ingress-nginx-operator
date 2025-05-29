@@ -14,6 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	svcPort = 9092
+)
+
 type buildSvcData struct {
 	sbp    []*v1.ServiceBackendPort
 	labels map[string]string
@@ -86,7 +90,6 @@ func (s *SvcServiceImpl) svcServiceSpec(data *buildSvcData) v13.ServiceSpec {
 
 func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.ServicePort {
 	var sps = make([]v13.ServicePort, 0, len(sbp))
-	fmt.Println("svc >>> ", sbp)
 
 	var name string
 	for _, v := range sbp {
@@ -111,7 +114,7 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 		sps = append(sps, sp)
 	}
 
-	extraPort := int32(9092)
+	extraPort := int32(svcPort)
 	sps = append(sps, v13.ServicePort{
 		Name: fmt.Sprintf("port-%d", extraPort),
 		Port: extraPort,
@@ -120,8 +123,6 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 		},
 		Protocol: v13.ProtocolTCP,
 	})
-
-	fmt.Println("svc update >>> ", sps)
 
 	return sps
 }
@@ -176,8 +177,8 @@ func (s *SvcServiceImpl) ingressSvc() error {
 
 	// 获取ingress配置文件中的所有svc
 	for _, b1 := range config {
-		for _, b2 := range b1.Services {
-			bks = append(bks, b2)
+		for _, b2 := range b1.ServiceBackend {
+			bks = append(bks, b2.Services)
 		}
 	}
 

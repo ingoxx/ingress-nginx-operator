@@ -263,33 +263,36 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 }
 
 func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
-	var upStreamConfig = new(ingress.Backends)
-	var upStreamConfigList = make([]*ingress.Backends, 0, 4)
 	var rs = i.GetRules()
+	var upStreamConfigList = make([]*ingress.Backends, 0, len(rs))
 
 	for _, r := range rs {
-		var svcList = make([]*v1.ServiceBackendPort, 0, len(r.HTTP.Paths))
-		upStreamConfig.Host = r.Host
-		upStreamConfig.Upstream = i.getUpstreamName(r.Host)
+		var backends = make([]*ingress.IngBackends, 0, len(r.HTTP.Paths))
 
 		for _, p := range r.HTTP.Paths {
 			backend, err := i.GetBackend(p.Backend.Service.Name)
 			if err != nil {
 				return nil, err
 			}
-			svcList = append(svcList, backend)
-			upStreamConfig.Path = p.Path
-			upStreamConfig.PathType = string(*p.PathType)
 			// 使用正则表达式时pathType字段必须为：ImplementationSpecific
 			imp := v1.PathTypeImplementationSpecific
 			if (parser.IsRegex(p.Path) && *p.PathType != imp) || (*p.PathType == imp && !parser.IsRegex(p.Path)) {
 				return upStreamConfigList, cerr.NewSetPathTypeError(i.GetName(), i.GetNameSpace())
 			}
-
-			upStreamConfig.Services = svcList
+			bk := &ingress.IngBackends{
+				Services: backend,
+				Path:     p.Path,
+				PathType: string(*p.PathType),
+			}
+			backends = append(backends, bk)
 		}
 
-		upStreamConfigList = append(upStreamConfigList, upStreamConfig)
+		uc := &ingress.Backends{
+			Host:           r.Host,
+			Upstream:       i.getUpstreamName(r.Host),
+			ServiceBackend: backends,
+		}
+		upStreamConfigList = append(upStreamConfigList, uc)
 	}
 
 	return upStreamConfigList, nil

@@ -166,16 +166,16 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 
 	bks := d.config.LoadBalance.LbConfig
 	for _, b := range bks {
-		for _, s := range b.Services {
+		for _, b2 := range b.ServiceBackend {
 			cp := v13.ContainerPort{
-				ContainerPort: s.Number,
+				ContainerPort: b2.Services.Number,
 			}
 			cps = append(cps, cp)
 		}
 	}
 
 	cp := v13.ContainerPort{
-		ContainerPort: 9092,
+		ContainerPort: int32(healthPort),
 	}
 	cps = append(cps, cp)
 

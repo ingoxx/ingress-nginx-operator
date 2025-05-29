@@ -6,7 +6,7 @@ upstream {{ $ut.Upstream }} {
     {{ if ne $annotations.LoadBalance.LbPolicy "" }}
     {{ .Annotations.LoadBalance.LbPolicy }};
     {{ end }}
-    {{ range $backend := $ut.Services }}
+    {{ range $backend := $ut.ServiceBackend }}
     server {{ $backend.Name }};
     {{ end }}
 }
@@ -49,16 +49,16 @@ server {
     {{ end }}
 
     ### backend
-    {{ range $path := $ut.Services }}
-	{{ if and ($annotations.Rewrite.EnableRegex) (eq $ut.PathType "ImplementationSpecific") }}
-    location ~ ^{{ $ut.Path }} {
-	{{ else if eq $ut.PathType "Exact" }}
-	location = {{ $ut.Path }} {
+    {{ range $path := $ut.ServiceBackend }}
+	{{ if and ($annotations.Rewrite.EnableRegex) (eq $path.PathType "ImplementationSpecific") }}
+    location ~ ^{{ $path.Path }} {
+	{{ else if eq $path.PathType "Exact" }}
+	location = {{ $path.Path }} {
 	{{  else }}
-	location {{ $ut.Path }} {
+	location {{ $path.Path }} {
 	{{ end }}
         {{ if ne $annotations.Rewrite.RewriteTarget  "" }}
-        rewrite ^{{ $ut.Path }} {{ $annotations.Rewrite.RewriteTarget }} {{ $annotations.Rewrite.RewriteFlag }};
+        rewrite ^{{ $path.Path }} {{ $annotations.Rewrite.RewriteTarget }} {{ $annotations.Rewrite.RewriteFlag }};
         {{ end }}
 
         set $best_http_host      $http_host;

@@ -109,9 +109,13 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		for av := range data {
 			for _, uv := range upstreamConfig {
 				uv.Cert = tls[uv.Host]
-				for _, sv := range uv.Services {
-					if av == sv.Name {
-						sv.Name = fmt.Sprintf("%s %s", r.ingress.GetBackendName(sv), data[av])
+				//if av == uv.Services.Name {
+				//	uv.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(uv.Services), data[av])
+				//}
+
+				for _, sv := range uv.ServiceBackend {
+					if av == sv.Services.Name {
+						sv.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(sv.Services), data[av])
 					}
 				}
 			}
@@ -119,8 +123,9 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	} else {
 		for _, uv := range upstreamConfig {
 			uv.Cert = tls[uv.Host]
-			for _, sv := range uv.Services {
-				sv.Name = r.resources.GetBackendName(sv)
+			//uv.Services.Name = r.resources.GetBackendName(uv.Services)
+			for _, sv := range uv.ServiceBackend {
+				sv.Services.Name = r.resources.GetBackendName(sv.Services)
 			}
 		}
 
