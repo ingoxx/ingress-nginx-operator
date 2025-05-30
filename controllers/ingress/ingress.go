@@ -18,14 +18,11 @@ type IngBackends struct {
 }
 
 type Backends struct {
-	ServiceBackend []*IngBackends `json:"service_backend"`
-	//Services             *v1.ServiceBackendPort `json:"services"`
-	IngAnnotationsConfig IngConfig `json:"ing_annotations_config"`
-	Cert                 Tls       `json:"cert"`
-	Host                 string    `json:"host"`
-	Upstream             string    `json:"upstream"`
-	//Path                 string                 `json:"path"`
-	//PathType             string                 `json:"path_type"`
+	ServiceBackend       []*IngBackends `json:"service_backend"`
+	IngAnnotationsConfig IngConfig      `json:"ing_annotations_config"`
+	Cert                 Tls            `json:"cert"`
+	Host                 string         `json:"host"`
+	Upstream             string         `json:"upstream"`
 }
 
 type StreamBackendList struct {

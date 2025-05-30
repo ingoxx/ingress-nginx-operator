@@ -52,10 +52,14 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"svc-name\": \"max_fails=3 fail_timeout=30s weight=80;...\"}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
+				fmt.Println("lbconfig >>> ", s)
 				data, err := jsonParser.JSONToMap(s)
 				if err != nil {
+
 					return err
 				}
+
+				fmt.Println("lbconfig err >>> ", err)
 
 				for k := range data {
 					if _, err := ing.GetBackend(k); err != nil {
@@ -109,10 +113,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		for av := range data {
 			for _, uv := range upstreamConfig {
 				uv.Cert = tls[uv.Host]
-				//if av == uv.Services.Name {
-				//	uv.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(uv.Services), data[av])
-				//}
-
 				for _, sv := range uv.ServiceBackend {
 					if av == sv.Services.Name {
 						sv.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(sv.Services), data[av])
@@ -123,7 +123,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	} else {
 		for _, uv := range upstreamConfig {
 			uv.Cert = tls[uv.Host]
-			//uv.Services.Name = r.resources.GetBackendName(uv.Services)
 			for _, sv := range uv.ServiceBackend {
 				sv.Services.Name = r.resources.GetBackendName(sv.Services)
 			}

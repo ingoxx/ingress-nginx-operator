@@ -2,9 +2,11 @@ package parser
 
 import (
 	"errors"
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"k8s.io/klog/v2"
 	"regexp"
 )
 
@@ -26,11 +28,14 @@ func CheckAnnotations(annotations map[string]string, config AnnotationsContents,
 		if !IsSpecificPrefix(annotation) {
 			continue
 		}
-
+		fmt.Println("anns >>> ", annotation)
 		annKey := GetAnnotationSuffix(annotation)
 		annVal := ing.GetAnnotations()[annotation]
-		if cfg, ok := config[annKey]; ok && cfg.Validator(annVal, ing) != nil {
-			err = errors.Join(cerr.NewAnnotationValidationFailedError(annKey, ing.GetName(), ing.GetNameSpace()))
+		if cfg, ok := config[annKey]; ok {
+			if err := cfg.Validator(annVal, ing); err != nil {
+				klog.Info(cfg.Doc)
+				err = errors.Join(cerr.NewAnnotationValidationFailedError(annKey, err.Error(), ing.GetName(), ing.GetNameSpace()))
+			}
 		}
 	}
 

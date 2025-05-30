@@ -3,6 +3,13 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
+    ingress.nginx.k8s.io/lb-config: |
+      {
+        "nginx-service-a": "max_fails=3 fail_timeout=30s weight=80",
+        "nginx-service-f": "max_fails=3 fail_timeout=30s weight=20",
+        "nginx-service-e": "max_fails=3 fail_timeout=30s weight=50",
+        "nginx-service-g": "max_fails=3 fail_timeout=30s weight=50",
+      }
   labels:
     app.kubernetes.io/name: nginxingress
     app.kubernetes.io/instance: nginxingress-sample
@@ -23,6 +30,13 @@ spec:
                 name: nginx-service-a
                 port:
                   number: 9094
+          - path: "/ff"
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-service-f
+                port:
+                  number: 9098
     - host: "api.web33.com"
       http:
         paths:
@@ -33,3 +47,10 @@ spec:
                 name: nginx-service-e
                 port:
                   number: 9093
+          - path: "/gg"
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-service-g
+                port:
+                  number: 9096

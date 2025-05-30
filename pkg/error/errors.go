@@ -134,9 +134,9 @@ func IsAnnotationValidationFailedError(e error) bool {
 	return errors.As(e, &err)
 }
 
-func NewAnnotationValidationFailedError(ann, name, namespace string) error {
+func NewAnnotationValidationFailedError(ann, err, name, namespace string) error {
 	return AnnotationValidationFailedError{
-		errMsg: fmt.Sprintf("the value verification of the annotation for '%s' is invalid, ingress '%s' in namespace '%s'", ann, name, namespace),
+		errMsg: fmt.Sprintf("the value verification of the annotation for '%s' is invalid, error msg '%s', happened in ingress '%s' , namespace '%s'", ann, err, name, namespace),
 	}
 }
 
