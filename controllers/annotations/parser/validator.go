@@ -28,7 +28,6 @@ func CheckAnnotations(annotations map[string]string, config AnnotationsContents,
 		if !IsSpecificPrefix(annotation) {
 			continue
 		}
-		fmt.Println("anns >>> ", annotation)
 		annKey := GetAnnotationSuffix(annotation)
 		annVal := ing.GetAnnotations()[annotation]
 		if cfg, ok := config[annKey]; ok {
@@ -49,12 +48,19 @@ func CheckAnnotationsKeyVal(name string, ing service.K8sResourcesIngress, config
 
 	annotationFullName := GetAnnotationKey(name)
 	annotationValue, ok := ing.GetAnnotations()[annotationFullName]
+	fmt.Println("annotationFullName >>> ", annotationFullName, ing.GetAnnotations()[annotationFullName], annotationValue)
 	if !ok {
 		return "", cerr.NewMissIngressAnnotationsError(annotationFullName, ing.GetName(), ing.GetNameSpace())
 	}
 
-	if ok && (annotationValue == "" || config[name].Validator(annotationValue, ing) != nil) {
-		return "", cerr.NewInvalidIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
+	if ok {
+		if annotationValue == "" {
+			return "", cerr.NewInvalidIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
+		}
+
+		if config[name].Validator(annotationValue, ing) != nil {
+			return "", cerr.NewInvalidIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
+		}
 	}
 
 	return annotationFullName, nil

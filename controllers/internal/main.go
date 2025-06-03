@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -25,7 +26,6 @@ func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, oper
 }
 
 func (nc *CrdNginxController) Start(req ctrl.Request) error {
-
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
 	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); err != nil {
@@ -62,6 +62,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	extract, err := annotations.NewExtractor(ing, ar).Extract()
+	fmt.Printf("extract >>> %v, err >>> %v\n", extract, err)
 	if err != nil {
 		klog.Error(err)
 		return err

@@ -164,7 +164,10 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	cs := make([]v13.Container, 0, 3)
 	cps := make([]v13.ContainerPort, 0, 10)
 
-	bks := d.config.LoadBalance.LbConfig
+	bks, err := d.generic.GetUpstreamConfig()
+	if err != nil {
+		return cs
+	}
 	for _, b := range bks {
 		for _, b2 := range b.ServiceBackend {
 			cp := v13.ContainerPort{

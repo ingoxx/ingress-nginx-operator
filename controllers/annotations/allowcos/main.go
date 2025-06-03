@@ -47,11 +47,11 @@ func (s *enableCosIng) Parse() (interface{}, error) {
 	config := &Config{}
 
 	config.EnableCos, err = parser.GetBoolAnnotations(enableCosAnnotations, s.ingress, enableCosIngAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
-	return config, nil
+	return config, err
 }
 
 func (s *enableCosIng) Validate(ing map[string]string) error {

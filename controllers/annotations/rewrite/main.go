@@ -82,25 +82,25 @@ func (r *rewriteIng) Parse() (interface{}, error) {
 	var err error
 	config := &Config{}
 	config.RewriteTarget, err = parser.GetStringAnnotation(rewriteTargetAnnotation, r.ingress, rewriteAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
 	config.RewriteFlag, err = parser.GetStringAnnotation(rewriteFlagAnnotation, r.ingress, rewriteAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
 	config.EnableRegex, err = parser.GetBoolAnnotations(rewriteEnableRegexAnnotation, r.ingress, rewriteAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
-	if err = r.validate(config); err != nil {
-		return config, err
+	if verr := r.validate(config); verr != nil {
+		return config, verr
 	}
 
-	return config, nil
+	return config, err
 }
 
 func (r *rewriteIng) validate(config *Config) error {

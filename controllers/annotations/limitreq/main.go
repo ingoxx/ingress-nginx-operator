@@ -70,20 +70,20 @@ func (r *RequestLimitIng) Parse() (interface{}, error) {
 	config := &Config{}
 
 	config.EnableRequestLimit, err = parser.GetBoolAnnotations(enableLimitReqAnnotations, r.ingress, RequestLimitIngAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
 	config.SetLimitConfig, err = parser.GetStringAnnotation(setLimitConfigAnnotations, r.ingress, RequestLimitIngAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
-	if err = r.validate(config); err != nil {
-		return config, err
+	if verr := r.validate(config); verr != nil {
+		return config, verr
 	}
 
-	return config, nil
+	return config, err
 }
 
 func (r *RequestLimitIng) validate(config *Config) error {

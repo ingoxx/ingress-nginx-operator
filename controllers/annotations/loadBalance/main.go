@@ -52,14 +52,10 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"svc-name\": \"max_fails=3 fail_timeout=30s weight=80;...\"}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
-				fmt.Println("lbconfig >>> ", s)
 				data, err := jsonParser.JSONToMap(s)
 				if err != nil {
-
 					return err
 				}
-
-				fmt.Println("lbconfig err >>> ", err)
 
 				for k := range data {
 					if _, err := ing.GetBackend(k); err != nil {
@@ -85,16 +81,18 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	var config = new(Config)
 
 	config.LbPolicy, err = parser.GetStringAnnotation(lbPolicyAnnotations, r.ingress, loadBalanceAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
 	lbConfig, err := parser.GetStringAnnotation(lbConfigAnnotations, r.ingress, loadBalanceAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
+		fmt.Printf("lbConfig Parse before >>> %v,  err >>> %v\n", lbConfig, err)
 		return config, err
 	}
 
 	upstreamConfig, err := r.resources.GetUpstreamConfig()
+	fmt.Println("Parse before >>> ", upstreamConfig)
 	if err != nil {
 		return config, err
 	}
@@ -132,7 +130,9 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 
 	config.LbConfig = upstreamConfig
 
-	return config, nil
+	fmt.Println("Parse after >>> ", config.LbConfig)
+
+	return config, err
 }
 
 func (r *loadBalanceIng) Validate(ing map[string]string) error {

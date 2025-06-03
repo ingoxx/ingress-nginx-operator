@@ -73,20 +73,24 @@ func (s *sslIng) Parse() (interface{}, error) {
 	config := &Config{}
 
 	config.SSllStaplingVerify, err = parser.GetBoolAnnotations(sslStaplingVerifyAnnotations, s.ingress, sslAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 	config.SSlStapling, err = parser.GetBoolAnnotations(sslStaplingAnnotations, s.ingress, sslAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
 	config.SSLTrustedCMName, err = parser.GetStringAnnotation(sslStaplingConfigMapAnnotations, s.ingress, sslAnnotations)
-	if !cerr.IsMissIngressAnnotationsError(err) {
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
 
-	return config, nil
+	if verr := s.validate(config); verr != nil {
+		return config, verr
+	}
+
+	return config, err
 }
 
 func (s *sslIng) validate(config *Config) error {

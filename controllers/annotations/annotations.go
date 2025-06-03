@@ -2,7 +2,6 @@ package annotations
 
 import (
 	"fmt"
-	"github.com/imdario/mergo"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowcos"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/loadBalance"
@@ -12,6 +11,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"github.com/mitchellh/mapstructure"
 	"k8s.io/klog/v2"
 )
 
@@ -59,6 +59,7 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 		}
 
 		val, err := annotationParser.Parse()
+		fmt.Printf("name >>> %v, val >>> %v, err >>> %v\n", name, val, err)
 		if err != nil {
 			if cerr.IsMissIngressAnnotationsError(err) {
 				continue
@@ -72,10 +73,18 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 		}
 	}
 
-	if err := mergo.MapWithOverwrite(iak, ia); err != nil {
+	if err := mapstructure.Decode(ia, iak); err != nil {
 		klog.ErrorS(err, fmt.Sprintf("unexpected error merging extracted annotations, ingress '%s', namespace '%s'", e.ingress.GetName(), e.ingress.GetNameSpace()))
 		return nil, err
 	}
+
+	//if err := mergo.MapWithOverwrite(iak, ia); err != nil {
+	//	klog.ErrorS(err, fmt.Sprintf("unexpected error merging extracted annotations, ingress '%s', namespace '%s'", e.ingress.GetName(), e.ingress.GetNameSpace()))
+	//	return nil, err
+	//}
+
+	fmt.Println("iak >>> ", iak.LoadBalance.LbConfig)
+	fmt.Println("ia >>> ", ia)
 
 	return iak, nil
 }

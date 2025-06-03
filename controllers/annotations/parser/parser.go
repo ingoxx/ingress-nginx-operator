@@ -28,6 +28,7 @@ type GetAnnotationVal map[string]string
 
 func (g GetAnnotationVal) parseString(name string, ing service.K8sResourcesIngress) (string, error) {
 	val, ok := g[name]
+	fmt.Printf("parseString >>> val: %v, ok: %v\n", val, ok)
 	if ok {
 		if val == "" {
 			return "", cerr.NewInvalidIngressAnnotationsError(name, ing.GetName(), ing.GetNameSpace())
@@ -69,6 +70,7 @@ func GetStringAnnotation(name string, ing service.K8sResourcesIngress, config An
 	if err != nil {
 		return "", err
 	}
+	fmt.Println("GetStringAnnotation >>> ", key)
 	return GetAnnotationVal(ing.GetAnnotations()).parseString(key, ing)
 }
 

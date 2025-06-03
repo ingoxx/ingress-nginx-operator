@@ -13,11 +13,10 @@ import (
 )
 
 type Config struct {
-	ServersBuffer bytes.Buffer
 	Annotations   *annotations.IngressAnnotationsConfig
 	ServerTmpl    string
 	NginxConfTmpl string
-	ConfName      string
+	ConfDir       string
 }
 
 type NginxController struct {
@@ -44,36 +43,12 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
-//func (nc *NginxController) updateBackendCfg() (*annotations.IngressAnnotationsConfig, error) {
-//	tls, err := nc.resData.GetTlsFile()
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	lbConfig := nc.config.LoadBalance.LbConfig
-//	for _, v := range lbConfig {
-//		for h := range tls {
-//			if v.Host == h {
-//				v.Cert = tls[h]
-//				break
-//			}
-//		}
-//	}
-//
-//	return nc.config, nil
-//}
-
 func (nc *NginxController) generateBackendCfg() error {
-	//cfg, err := nc.updateBackendCfg()
-	//if err != nil {
-	//	return err
-	//}
-
 	c := &Config{
 		ServerTmpl:    constants.NginxServerTmpl,
 		NginxConfTmpl: constants.NginxTmpl,
 		Annotations:   nc.config,
-		ConfName:      constants.NginxConfDir,
+		ConfDir:       constants.NginxConfDir,
 	}
 
 	// 生成nginx.conf配置
@@ -90,31 +65,37 @@ func (nc *NginxController) generateBackendCfg() error {
 }
 
 func (nc *NginxController) generateServerTmpl(cfg *Config) error {
+	var buffer bytes.Buffer
+
 	serverTemp, err := nc.renderTemplateData(cfg.ServerTmpl)
 	if err != nil {
 		return err
 	}
 
-	if err := serverTemp.Execute(&cfg.ServersBuffer, cfg); err != nil {
+	fmt.Println("ServerTmpl >>> ", cfg.ServerTmpl)
+
+	if err := serverTemp.Execute(&buffer, cfg); err != nil {
 		return err
 	}
 
-	fmt.Println("server.conf >>> ", cfg.ServersBuffer.String())
+	fmt.Println("server.conf >>> ", buffer.String())
 
 	return nil
 }
 
 func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
+	var buffer bytes.Buffer
+
 	serverTemp, err := nc.renderTemplateData(cfg.NginxConfTmpl)
 	if err != nil {
 		return err
 	}
 
-	if err := serverTemp.Execute(&cfg.ServersBuffer, cfg); err != nil {
+	if err := serverTemp.Execute(&buffer, cfg); err != nil {
 		return err
 	}
 
-	fmt.Println("nginx.conf >>> ", cfg.ServersBuffer.String())
+	fmt.Println("nginx.conf >>> ", buffer.String())
 
 	return nil
 }
