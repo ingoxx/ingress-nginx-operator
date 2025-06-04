@@ -72,8 +72,6 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 		return err
 	}
 
-	fmt.Println("ServerTmpl >>> ", cfg.ServerTmpl)
-
 	if err := serverTemp.Execute(&buffer, cfg); err != nil {
 		return err
 	}

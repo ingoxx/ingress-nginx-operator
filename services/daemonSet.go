@@ -9,8 +9,11 @@ import (
 	v13 "k8s.io/api/core/v1"
 	v14 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -83,6 +86,9 @@ func (ds *DaemonSetServiceImpl) daemonSetMeta(data *buildDaemonSetData) v12.Obje
 }
 
 func (ds *DaemonSetServiceImpl) daemonSetSpec(data *buildDaemonSetData) v1.DaemonSetSpec {
+	var revisionHistoryLimit = new(int32)
+	*revisionHistoryLimit = 10
+
 	dss := v1.DaemonSetSpec{
 		Selector: &v12.LabelSelector{
 			MatchLabels: ds.daemonSetLabels(),
@@ -91,6 +97,7 @@ func (ds *DaemonSetServiceImpl) daemonSetSpec(data *buildDaemonSetData) v1.Daemo
 		UpdateStrategy: v1.DaemonSetUpdateStrategy{
 			Type: v1.RollingUpdateDaemonSetStrategyType,
 		},
+		RevisionHistoryLimit: revisionHistoryLimit,
 	}
 
 	return dss
@@ -102,7 +109,11 @@ func (ds *DaemonSetServiceImpl) daemonSetTemplate(data *buildDaemonSetData) v13.
 			Labels: ds.daemonSetLabels(),
 		},
 		Spec: v13.PodSpec{
-			Containers: ds.daemonSetPodContainer(data),
+			Containers:                    ds.daemonSetPodContainer(data),
+			TerminationGracePeriodSeconds: pointer.Int64(30),
+			DNSPolicy:                     v13.DNSClusterFirst,
+			RestartPolicy:                 v13.RestartPolicyAlways,
+			Affinity:                      ds.nodeAffinity(),
 		},
 	}
 
@@ -126,7 +137,78 @@ func (ds *DaemonSetServiceImpl) daemonSetPodContainer(data *buildDaemonSetData) 
 
 	cps = append(cps, cp)
 
+	readinessProbe := &v13.Probe{
+		ProbeHandler: v13.ProbeHandler{
+			HTTPGet: &v13.HTTPGetAction{
+				Path: constants.HealthUrl,
+				Port: intstr.FromInt(constants.HealthPort),
+			},
+		},
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
+	}
+
+	livenessProbe := &v13.Probe{
+		ProbeHandler: v13.ProbeHandler{
+			HTTPGet: &v13.HTTPGetAction{
+				Path: constants.HealthUrl,
+				Port: intstr.FromInt(constants.HealthPort),
+			},
+		},
+		InitialDelaySeconds: 10,
+		PeriodSeconds:       30,
+	}
+
+	c := v13.Container{
+		Command: constants.Command,
+		Name:    constants.DeployName,
+		Image:   constants.Images,
+		Ports:   cps,
+		Resources: v13.ResourceRequirements{
+			Requests: v13.ResourceList{
+				v13.ResourceCPU:    resource.MustParse("100m"),
+				v13.ResourceMemory: resource.MustParse("128Mi"),
+			},
+			Limits: v13.ResourceList{
+				v13.ResourceCPU:    resource.MustParse("500m"),
+				v13.ResourceMemory: resource.MustParse("256Mi"),
+			},
+		},
+
+		ReadinessProbe: readinessProbe,
+		LivenessProbe:  livenessProbe,
+	}
+
+	cs = append(cs, c)
+
 	return cs
+}
+
+func (ds *DaemonSetServiceImpl) nodeAffinity() *v13.Affinity {
+	return &v13.Affinity{
+		NodeAffinity: &v13.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &v13.NodeSelector{
+				NodeSelectorTerms: []v13.NodeSelectorTerm{
+					{
+						MatchExpressions: []v13.NodeSelectorRequirement{
+							{
+								Key:      "kubernetes.io/arch",
+								Operator: v13.NodeSelectorOpIn,
+								Values: []string{
+									"amd64", "arm64", "ppc64le", "s390x",
+								},
+							},
+							{
+								Key:      "kubernetes.io/os",
+								Operator: v13.NodeSelectorOpIn,
+								Values:   []string{"linux"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {

@@ -49,16 +49,20 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 		},
 	},
 	lbConfigAnnotations: {
-		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"svc-name\": \"max_fails=3 fail_timeout=30s weight=80;...\"}",
+		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"backends\": [{\"name\": \"svcName-1\", \"config\": \"max_fails=3 fail_timeout=30s weight=80\"}... ]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
-				data, err := jsonParser.JSONToMap(s)
-				if err != nil {
+				var bks = new(ingress.LbConfigList)
+				if err := jsonParser.JSONToStruct(s, bks); err != nil {
 					return err
 				}
 
-				for k := range data {
-					if _, err := ing.GetBackend(k); err != nil {
+				if len(bks.Backends) == 0 {
+					return cerr.NewInvalidFieldError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
+
+				for _, v := range bks.Backends {
+					if _, err := ing.GetBackend(v.Name); err != nil {
 						return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 					}
 				}
@@ -87,12 +91,10 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 
 	lbConfig, err := parser.GetStringAnnotation(lbConfigAnnotations, r.ingress, loadBalanceAnnotations)
 	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
-		fmt.Printf("lbConfig Parse before >>> %v,  err >>> %v\n", lbConfig, err)
 		return config, err
 	}
 
 	upstreamConfig, err := r.resources.GetUpstreamConfig()
-	fmt.Println("Parse before >>> ", upstreamConfig)
 	if err != nil {
 		return config, err
 	}
@@ -103,17 +105,22 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	}
 
 	if lbConfig != "" {
-		data, err := jsonParser.JSONToMap(lbConfig)
-		if err != nil {
+		//data, err := jsonParser.JSONToMap(lbConfig)
+		//if err != nil {
+		//	return config, err
+		//}
+
+		var bks = new(ingress.LbConfigList)
+		if err := jsonParser.JSONToStruct(lbConfig, bks); err != nil {
 			return config, err
 		}
 
-		for av := range data {
+		for _, v1 := range bks.Backends {
 			for _, uv := range upstreamConfig {
 				uv.Cert = tls[uv.Host]
 				for _, sv := range uv.ServiceBackend {
-					if av == sv.Services.Name {
-						sv.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(sv.Services), data[av])
+					if v1.Name == sv.Services.Name {
+						sv.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(sv.Services), v1.Config)
 					}
 				}
 			}
@@ -129,8 +136,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	}
 
 	config.LbConfig = upstreamConfig
-
-	fmt.Println("Parse after >>> ", config.LbConfig)
 
 	return config, err
 }

@@ -59,7 +59,6 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 		}
 
 		val, err := annotationParser.Parse()
-		fmt.Printf("name >>> %v, val >>> %v, err >>> %v\n", name, val, err)
 		if err != nil {
 			if cerr.IsMissIngressAnnotationsError(err) {
 				continue
@@ -82,9 +81,6 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 	//	klog.ErrorS(err, fmt.Sprintf("unexpected error merging extracted annotations, ingress '%s', namespace '%s'", e.ingress.GetName(), e.ingress.GetNameSpace()))
 	//	return nil, err
 	//}
-
-	fmt.Println("iak >>> ", iak.LoadBalance.LbConfig)
-	fmt.Println("ia >>> ", ia)
 
 	return iak, nil
 }

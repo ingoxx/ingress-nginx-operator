@@ -1,6 +1,7 @@
 package services
 
 import (
+	cuerr "errors"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -207,18 +208,18 @@ func (s *SvcServiceImpl) ingressSvc() error {
 }
 
 func (s *SvcServiceImpl) CheckSvc() error {
-	//var err error
-	//if err1, err2 := s.streamSvc(), s.ingressSvc(); err1 != nil || err2 != nil {
-	//	err = cuerr.Join(err1, err2)
-	//}
-	//
-	//if err != nil {
-	//	return err
-	//}
+	var err error
+	if err1, err2 := s.streamSvc(), s.ingressSvc(); err1 != nil || err2 != nil {
+		err = cuerr.Join(err1, err2)
+	}
 
-	if err := s.ingressSvc(); err != nil {
+	if err != nil {
 		return err
 	}
+
+	//if err := s.ingressSvc(); err != nil {
+	//	return err
+	//}
 
 	return nil
 }

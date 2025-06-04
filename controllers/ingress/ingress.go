@@ -6,6 +6,7 @@ type IngConfig interface {
 	GetIngAnnConfig()
 }
 
+// Tls nginx证书配置
 type Tls struct {
 	TlsKey string `json:"tls_key"`
 	TlsCrt string `json:"tls_crt"`
@@ -17,6 +18,7 @@ type IngBackends struct {
 	PathType string                 `json:"path_type"`
 }
 
+// Backends nginx配置结构，会生成对应的nginx配置
 type Backends struct {
 	ServiceBackend       []*IngBackends `json:"service_backend"`
 	IngAnnotationsConfig IngConfig      `json:"ing_annotations_config"`
@@ -25,12 +27,24 @@ type Backends struct {
 	Upstream             string         `json:"upstream"`
 }
 
+// StreamBackendList annotations中的序列化结构
 type StreamBackendList struct {
 	Backends []*StreamBackend
 }
 
 type StreamBackend struct {
-	Name      string
-	Port      int32
-	Namespace string
+	Name              string
+	Namespace         string
+	StreamBackendName string
+	Port              int32
+}
+
+// LbConfigList annotations中的序列化结构
+type LbConfigList struct {
+	Backends []*LbConfig // 负载均衡后端列表
+}
+
+type LbConfig struct {
+	Name   string // svc的name
+	Config string // 负载均衡的参数配置，如：max_fails=3 fail_timeout=30s weight=20
 }

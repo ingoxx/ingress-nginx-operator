@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -62,15 +61,19 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	extract, err := annotations.NewExtractor(ing, ar).Extract()
-	fmt.Printf("extract >>> %v, err >>> %v\n", extract, err)
 	if err != nil {
 		klog.Error(err)
 		return err
 	}
 
-	//daemonSet := services.NewDaemonSetServiceImpl(nc.ctx, ing, extract)
 	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
 	if err := deployment.CheckDeploy(); err != nil {
+		klog.Error(err)
+		return err
+	}
+
+	daemonSet := services.NewDaemonSetServiceImpl(nc.ctx, ing, extract)
+	if err := daemonSet.CheckDaemonSet(); err != nil {
 		klog.Error(err)
 		return err
 	}

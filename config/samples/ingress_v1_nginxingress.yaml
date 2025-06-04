@@ -9,10 +9,19 @@ metadata:
         "svc-2": "max_fails=3 fail_timeout=30s weight=20",
         "svc-3": "backup"
       }
+      {
+        "backends": [ 
+          {"name": "svc-1", "config": "max_fails=3 fail_timeout=30s weight=80"}, 
+          {"name": "svc-2", "config": "max_fails=3 fail_timeout=30s weight=20"} 
+        ]
+      }
     ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {
-        "backends": [ {"name": "svc-1", "namespace": "web", "port": 8080}, {"name": "svc-2", "namespace": "api", "port": 8081} ]
+        "backends": [ 
+          {"name": "svc-1", "namespace": "web", "port": 8080}, 
+          {"name": "svc-2", "namespace": "api", "port": 8081} 
+        ]
       }
     ingress.nginx.k8s.io/allow-ip-list: "192.168.3.11,192.168.3.12"
     ingress.nginx.k8s.io/deny-ip-list: "192.168.3.11,192.168.3.12"

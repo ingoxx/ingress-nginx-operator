@@ -15,13 +15,6 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var (
-	healthUrl  = "/api/v1/health"
-	healthPort = 9092
-	command    = []string{"/httpserver"}
-	images     = "gotec007/ingress-nginx"
-)
-
 type DeploymentServiceImpl struct {
 	ctx     context.Context
 	generic common.Generic
@@ -178,15 +171,15 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	}
 
 	cp := v13.ContainerPort{
-		ContainerPort: int32(healthPort),
+		ContainerPort: int32(constants.HealthPort),
 	}
 	cps = append(cps, cp)
 
 	readinessProbe := &v13.Probe{
 		ProbeHandler: v13.ProbeHandler{
 			HTTPGet: &v13.HTTPGetAction{
-				Path: healthUrl,
-				Port: intstr.FromInt(healthPort),
+				Path: constants.HealthUrl,
+				Port: intstr.FromInt(constants.HealthPort),
 			},
 		},
 		InitialDelaySeconds: 5,
@@ -196,8 +189,8 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	livenessProbe := &v13.Probe{
 		ProbeHandler: v13.ProbeHandler{
 			HTTPGet: &v13.HTTPGetAction{
-				Path: healthUrl,
-				Port: intstr.FromInt(healthPort),
+				Path: constants.HealthUrl,
+				Port: intstr.FromInt(constants.HealthPort),
 			},
 		},
 		InitialDelaySeconds: 10,
@@ -205,9 +198,9 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	}
 
 	c := v13.Container{
-		Command: command,
+		Command: constants.Command,
 		Name:    constants.DeployName,
-		Image:   images,
+		Image:   constants.Images,
 		Ports:   cps,
 		Resources: v13.ResourceRequirements{
 			Requests: v13.ResourceList{

@@ -271,16 +271,44 @@ func NewKubernetesResourcesNotFoundError(resource, name, namespace string) error
 	}
 }
 
-type DuplicateValueErrorError struct {
+type DuplicateValueError struct {
 	errMsg string
 }
 
-func (e DuplicateValueErrorError) Error() string {
+func (e DuplicateValueError) Error() string {
 	return e.errMsg
 }
 
-func NewDuplicateValueErrorError(resource, name, namespace string) error {
-	return DuplicateValueErrorError{
+func NewDuplicateValueError(resource, name, namespace string) error {
+	return DuplicateValueError{
 		errMsg: fmt.Sprintf("duplicate service resource '%s', ingress '%s', namespace '%s'", resource, name, namespace),
+	}
+}
+
+type JsonSerError struct {
+	errMsg string
+}
+
+func (e JsonSerError) Error() string {
+	return e.errMsg
+}
+
+func NewJsonSerError(field, name, namespace string) error {
+	return JsonSerError{
+		errMsg: fmt.Sprintf("%s value json serialization failed, ingress '%s', namespace '%s'", field, name, namespace),
+	}
+}
+
+type InvalidFieldError struct {
+	errMsg string
+}
+
+func (e InvalidFieldError) Error() string {
+	return e.errMsg
+}
+
+func NewInvalidFieldError(field, name, namespace string) error {
+	return InvalidFieldError{
+		errMsg: fmt.Sprintf("%s invalid field, ingress '%s', namespace '%s'", field, name, namespace),
 	}
 }

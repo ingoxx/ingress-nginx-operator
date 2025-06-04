@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
@@ -40,7 +41,7 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setStreamConfigAnnotations: {
-		Doc: "nginx stream, support cross namespace, example: \"backends\": [ {\"name\": \"svc-1\", \"namespace\": \"web\", \"port\": 8080}, {\"name\": \"svc-2\", \"namespace\": \"api\", \"port\": 8081} ]",
+		Doc: "nginx stream, support cross namespace, must be in JSON format, example: {\"backends\": [ {\"name\": \"svcName-1\", \"namespace\": \"web\", \"port\": 8080}, {\"name\": \"svcName-2\", \"namespace\": \"api\", \"port\": 8081}... ]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var bks = new(ingress.StreamBackendList)
@@ -48,11 +49,15 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
+				if len(bks.Backends) == 0 {
+					return cerr.NewInvalidFieldError(setStreamConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
+
 				var isExistsSvc string
 
 				for _, v := range bks.Backends {
 					if isExistsSvc == v.Name {
-						return cerr.NewDuplicateValueErrorError(v.Name, ing.GetName(), ing.GetNameSpace())
+						return cerr.NewDuplicateValueError(v.Name, ing.GetName(), ing.GetNameSpace())
 					}
 
 					if isExistsSvc == "" {
@@ -116,14 +121,19 @@ func (r *enableStreamIng) Parse() (interface{}, error) {
 }
 
 func (r *enableStreamIng) validate(config *Config) error {
-	var bks = new(ingress.StreamBackendList)
 	if config.EnableStream {
+		var bks = new(ingress.StreamBackendList)
+
 		if config.SetStreamConfig == "" {
 			return cerr.NewInvalidIngressAnnotationsError(enableStreamAnnotations+","+setStreamConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 
 		if err := jsonParser.JSONToStruct(config.SetStreamConfig, bks); err != nil {
 			return err
+		}
+
+		for _, v := range bks.Backends {
+			v.StreamBackendName = fmt.Sprintf("%s.%s.svc:%d", v.Name, v.Namespace, v.Port)
 		}
 
 		config.StreamBackendList = bks.Backends
