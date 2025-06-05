@@ -56,9 +56,9 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 					return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 
-				if lq.LimitReq == "" || lq.LimitReqZone == "" {
-					return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-				}
+				//if lq.LimitReq == "" || lq.LimitReqZone == "" || len(lq.Path) == 0 {
+				//	return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				//}
 			}
 
 			return nil
