@@ -4,7 +4,7 @@
 ### start {{ $ut.Host }}
 upstream {{ $ut.Upstream }} {
     {{ if ne $annotations.LoadBalance.LbPolicy "" }}
-    {{ .Annotations.LoadBalance.LbPolicy }};
+    {{ $annotations.LoadBalance.LbPolicy }};
     {{ end }}
     {{ range $backend := $ut.ServiceBackend }}
     server {{ $backend.Services.Name }};
@@ -37,7 +37,7 @@ server {
     ssl_trusted_certificate {{ $annotations.SSLStapling.SSLTrustCertFile }};
     {{ end }}
 
-    # allow cos
+    ### allow cos
     {{ if $annotations.EnableCos.EnableCos }}
     add_header 'Access-Control-Allow-Origin' '*';
     add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
@@ -59,6 +59,17 @@ server {
 	{{ end }}
         {{ if ne $annotations.Rewrite.RewriteTarget  "" }}
         rewrite ^{{ $path.Path }} {{ $annotations.Rewrite.RewriteTarget }} {{ $annotations.Rewrite.RewriteFlag }};
+        {{ end }}
+
+        ### limit_req
+        {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
+        {{ range $path := $ut.ServiceBackend }}
+        {{ range $lmpath := $annotations.EnableReqLimit.Path }}
+        {{ if eq $lmpath == $path.Path }}
+        limit_req {{ $annotations.EnableReqLimit.LimitReq }}
+        {{ end }}
+        {{ end }}
+        {{ end }}
         {{ end }}
 
         set $best_http_host      $http_host;
@@ -105,7 +116,7 @@ server {
         proxy_next_upstream_timeout             0;
         proxy_next_upstream_tries               3;
 		
-		# proxy backend
+		### proxy backend
         proxy_pass http://{{ $ut.Upstream }};
       
         proxy_redirect                         off;

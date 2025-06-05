@@ -5,6 +5,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"k8s.io/klog/v2"
+	"reflect"
 	"regexp"
 )
 
@@ -62,4 +63,26 @@ func CheckAnnotationsKeyVal(name string, ing service.K8sResourcesIngress, config
 	}
 
 	return annotationFullName, nil
+}
+
+// IsZeroStruct 判断一个 struct 中所有字段是否都为零值
+func IsZeroStruct(s interface{}) bool {
+	v := reflect.ValueOf(s)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return false
+	}
+
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		if !field.IsZero() {
+			return false
+		}
+	}
+
+	// 都为零值返回true
+	return true
 }

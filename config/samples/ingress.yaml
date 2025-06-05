@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
+    ingress.nginx.k8s.io/lb-policy: "least_conn"
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [ 
@@ -16,6 +17,13 @@ metadata:
         "backends": [ 
           {"name": "nginx-service-h", "namespace": "server", "port": 9096}
         ]
+      }
+    ingress.nginx.k8s.io/enable-limit-req: "true"
+    ingress.nginx.k8s.io/set-limit-config: |
+      {
+        "limit_req_zone": "$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s",
+        "limit_req": "limit_req zone=per_ip_uri burst=5 nodelay;",
+        "path": ["/bb"]
       }
   labels:
     app.kubernetes.io/name: nginxingress
@@ -37,7 +45,7 @@ spec:
                 name: nginx-service-a
                 port:
                   number: 9094
-          - path: "/ff"
+          - path: "/ff/(.*)"
             pathType: Prefix
             backend:
               service:

@@ -18,9 +18,16 @@ type RequestLimitIng struct {
 	resources service.ResourcesMth
 }
 
+type ReqLimitConfig struct {
+	LimitReqZone string   `json:"limit_req_zone"`
+	LimitReq     string   `json:"limit_req"`
+	Path         []string `json:"path"`
+}
+
 type Config struct {
 	EnableRequestLimit bool   `json:"enable-request-limit"`
 	SetLimitConfig     string `json:"set-limit-config"`
+	ReqLimitConfig
 }
 
 var RequestLimitIngAnnotations = parser.AnnotationsContents{
@@ -37,19 +44,20 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setLimitConfigAnnotations: {
-		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format, example: {\"limit_req_zone\": \"$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s;\"}.",
+		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format, example: {\"path\": [\"/api\"], \"limit_req_zone\": \"$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s;\"}. /api is the value of ingress filed 'path'.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
-				data, err := jsonParser.JSONToMap(s)
-				if err != nil {
+				var lq = new(ReqLimitConfig)
+				if err := jsonParser.JSONToStruct(s, lq); err != nil {
 					return err
 				}
 
-				for k := range data {
-					v, ok := data[k]
-					if !ok || v == nil {
-						return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-					}
+				if isZero := parser.IsZeroStruct(lq); isZero {
+					return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
+
+				if lq.LimitReq == "" || lq.LimitReqZone == "" {
+					return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 			}
 
@@ -87,8 +95,22 @@ func (r *RequestLimitIng) Parse() (interface{}, error) {
 }
 
 func (r *RequestLimitIng) validate(config *Config) error {
-	if config.EnableRequestLimit && config.SetLimitConfig == "" {
-		return cerr.NewMissIngressFieldValueError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+	if config.EnableRequestLimit {
+		if config.SetLimitConfig == "" {
+			return cerr.NewMissIngressFieldValueError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+		}
+		var lq = new(ReqLimitConfig)
+		if err := jsonParser.JSONToStruct(config.SetLimitConfig, lq); err != nil {
+			return err
+		}
+
+		if lq.LimitReq == "" || lq.LimitReqZone == "" {
+			return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+		}
+
+		config.LimitReqZone = lq.LimitReqZone
+		config.LimitReq = lq.LimitReq
+		config.Path = lq.Path
 	}
 
 	return nil

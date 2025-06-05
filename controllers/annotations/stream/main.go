@@ -49,6 +49,10 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
+				if isZero := parser.IsZeroStruct(bks); isZero {
+					return cerr.NewInvalidIngressAnnotationsError(setStreamConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
+
 				if len(bks.Backends) == 0 {
 					return cerr.NewInvalidFieldError(setStreamConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}

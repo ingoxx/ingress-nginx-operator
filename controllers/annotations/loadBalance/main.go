@@ -57,6 +57,10 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
+				if isZero := parser.IsZeroStruct(bks); isZero {
+					return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
+
 				if len(bks.Backends) == 0 {
 					return cerr.NewInvalidFieldError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
@@ -105,11 +109,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	}
 
 	if lbConfig != "" {
-		//data, err := jsonParser.JSONToMap(lbConfig)
-		//if err != nil {
-		//	return config, err
-		//}
-
 		var bks = new(ingress.LbConfigList)
 		if err := jsonParser.JSONToStruct(lbConfig, bks); err != nil {
 			return config, err
