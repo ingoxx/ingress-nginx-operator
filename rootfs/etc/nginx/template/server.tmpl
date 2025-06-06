@@ -64,8 +64,10 @@ server {
         ### limit_req
         {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
         {{ range $path := $ut.ServiceBackend }}
-        {{ range $lmpath := $annotations.EnableReqLimit.Path }}
-        {{ if eq $lmpath == $path.Path }}
+        {{ range $lmpath := $annotations.EnableReqLimit.Backend }}
+        backend : {{ $path.SvcName }}
+        path : {{ $lmpath }}
+        {{ if and $lmpath $path.SvcName (eq $lmpath $path.SvcName) }}
         limit_req {{ $annotations.EnableReqLimit.LimitReq }}
         {{ end }}
         {{ end }}

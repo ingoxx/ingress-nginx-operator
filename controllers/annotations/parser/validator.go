@@ -65,24 +65,44 @@ func CheckAnnotationsKeyVal(name string, ing service.K8sResourcesIngress, config
 	return annotationFullName, nil
 }
 
-// IsZeroStruct 判断一个 struct 中所有字段是否都为零值
-func IsZeroStruct(s interface{}) bool {
-	v := reflect.ValueOf(s)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
+func IsZeroStruct(v interface{}) bool {
+	return hasZeroOrNilField(reflect.ValueOf(v))
+}
+
+func hasZeroOrNilField(val reflect.Value) bool {
+	// 如果是指针，解引用
+	if val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return true
+		}
+		val = val.Elem()
 	}
 
-	if v.Kind() != reflect.Struct {
-		return false
-	}
-
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		if !field.IsZero() {
-			return false
+	switch val.Kind() {
+	case reflect.Struct:
+		for i := 0; i < val.NumField(); i++ {
+			field := val.Field(i)
+			if hasZeroOrNilField(field) {
+				return true
+			}
+		}
+	case reflect.Slice, reflect.Array, reflect.Map:
+		if val.IsNil() || val.Len() == 0 {
+			return true
+		}
+	case reflect.Interface:
+		if val.IsNil() {
+			return true
+		}
+		return hasZeroOrNilField(val.Elem())
+	default:
+		zero := reflect.Zero(val.Type()).Interface()
+		current := val.Interface()
+		// 基础类型判断零值
+		if reflect.DeepEqual(current, zero) {
+			return true
 		}
 	}
 
-	// 都为零值返回true
-	return true
+	return false
 }

@@ -283,6 +283,7 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 				Services: backend,
 				Path:     p.Path,
 				PathType: string(*p.PathType),
+				SvcName:  backend.Name,
 			}
 			backends = append(backends, bk)
 		}

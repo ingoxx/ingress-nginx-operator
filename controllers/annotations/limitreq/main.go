@@ -21,7 +21,7 @@ type RequestLimitIng struct {
 type ReqLimitConfig struct {
 	LimitReqZone string   `json:"limit_req_zone"`
 	LimitReq     string   `json:"limit_req"`
-	Path         []string `json:"path"`
+	Backend      []string `json:"backend"`
 }
 
 type Config struct {
@@ -44,7 +44,7 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setLimitConfigAnnotations: {
-		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format, example: {\"path\": [\"/api\"], \"limit_req_zone\": \"$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s;\"}. /api is the value of ingress filed 'path'.",
+		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format, example: {\"path\": [\"svc_name\"], \"limit_req_zone\": \"$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s;\"}.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var lq = new(ReqLimitConfig)
@@ -52,11 +52,11 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
-				if isZero := parser.IsZeroStruct(lq); isZero {
+				if parser.IsZeroStruct(lq) {
 					return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 
-				//if lq.LimitReq == "" || lq.LimitReqZone == "" || len(lq.Path) == 0 {
+				//if lq.LimitReq == "" || lq.LimitReqZone == "" || len(lq.Backend) == 0 {
 				//	return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				//}
 			}
@@ -104,13 +104,13 @@ func (r *RequestLimitIng) validate(config *Config) error {
 			return err
 		}
 
-		if lq.LimitReq == "" || lq.LimitReqZone == "" {
+		if parser.IsZeroStruct(lq) {
 			return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 
 		config.LimitReqZone = lq.LimitReqZone
 		config.LimitReq = lq.LimitReq
-		config.Path = lq.Path
+		config.Backend = lq.Backend
 	}
 
 	return nil

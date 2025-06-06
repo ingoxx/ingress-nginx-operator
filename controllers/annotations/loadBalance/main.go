@@ -57,13 +57,13 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
-				if isZero := parser.IsZeroStruct(bks); isZero {
+				if parser.IsZeroStruct(bks) {
 					return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 
-				if len(bks.Backends) == 0 {
-					return cerr.NewInvalidFieldError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-				}
+				//if len(bks.Backends) == 0 {
+				//	return cerr.NewInvalidFieldError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				//}
 
 				for _, v := range bks.Backends {
 					if _, err := ing.GetBackend(v.Name); err != nil {

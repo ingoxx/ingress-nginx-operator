@@ -49,12 +49,8 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 					return err
 				}
 
-				if isZero := parser.IsZeroStruct(bks); isZero {
+				if parser.IsZeroStruct(bks) {
 					return cerr.NewInvalidIngressAnnotationsError(setStreamConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-				}
-
-				if len(bks.Backends) == 0 {
-					return cerr.NewInvalidFieldError(setStreamConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 
 				var isExistsSvc string
@@ -134,6 +130,10 @@ func (r *enableStreamIng) validate(config *Config) error {
 
 		if err := jsonParser.JSONToStruct(config.SetStreamConfig, bks); err != nil {
 			return err
+		}
+
+		if parser.IsZeroStruct(bks) {
+			return cerr.NewInvalidIngressAnnotationsError(setStreamConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 
 		for _, v := range bks.Backends {

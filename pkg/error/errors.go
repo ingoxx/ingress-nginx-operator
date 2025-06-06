@@ -253,7 +253,7 @@ func (e SetPathTypeError) Error() string {
 
 func NewSetPathTypeError(name, namespace string) error {
 	return SetPathTypeError{
-		errMsg: fmt.Sprintf("'pathType' field setting error, how to make the path field a regular expression, pathType should be set to: %v, ingress '%s' in namespace '%s'", v1.PathTypeImplementationSpecific, name, namespace),
+		errMsg: fmt.Sprintf("'pathType' field setting error, when the value of the path field is a regular expression, pathType should be set to: %v, ingress '%s' in namespace '%s'", v1.PathTypeImplementationSpecific, name, namespace),
 	}
 }
 
