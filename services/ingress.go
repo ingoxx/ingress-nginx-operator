@@ -279,11 +279,13 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 			if (parser.IsRegex(p.Path) && *p.PathType != imp) || (*p.PathType == imp && !parser.IsRegex(p.Path)) {
 				return upStreamConfigList, cerr.NewSetPathTypeError(i.GetName(), i.GetNameSpace())
 			}
+
 			bk := &ingress.IngBackends{
-				Services: backend,
-				Path:     p.Path,
-				PathType: string(*p.PathType),
-				SvcName:  backend.Name,
+				Services:      backend,
+				Path:          p.Path,
+				PathType:      string(*p.PathType),
+				SvcName:       backend.Name,
+				IsPathIsRegex: parser.IsRegex(p.Path),
 			}
 			backends = append(backends, bk)
 		}

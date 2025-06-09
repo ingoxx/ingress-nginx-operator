@@ -50,26 +50,22 @@ server {
 
     ### backend
     {{ range $path := $ut.ServiceBackend }}
-	{{ if and ($annotations.Rewrite.EnableRegex) (eq $path.PathType "ImplementationSpecific") }}
+	{{ if and ($path.IsPathIsRegex) (eq $path.PathType "ImplementationSpecific") }}
     location ~ ^{{ $path.Path }} {
 	{{ else if eq $path.PathType "Exact" }}
 	location = {{ $path.Path }} {
 	{{  else }}
 	location {{ $path.Path }} {
 	{{ end }}
-        {{ if ne $annotations.Rewrite.RewriteTarget  "" }}
+        {{ if and ($path.IsPathIsRegex) (ne $annotations.Rewrite.RewriteTarget  "") }}
         rewrite ^{{ $path.Path }} {{ $annotations.Rewrite.RewriteTarget }} {{ $annotations.Rewrite.RewriteFlag }};
         {{ end }}
 
         ### limit_req
         {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
-        {{ range $path := $ut.ServiceBackend }}
         {{ range $lmpath := $annotations.EnableReqLimit.Backend }}
-        backend : {{ $path.SvcName }}
-        path : {{ $lmpath }}
         {{ if and $lmpath $path.SvcName (eq $lmpath $path.SvcName) }}
         limit_req {{ $annotations.EnableReqLimit.LimitReq }}
-        {{ end }}
         {{ end }}
         {{ end }}
         {{ end }}

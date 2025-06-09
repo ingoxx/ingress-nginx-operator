@@ -13,10 +13,11 @@ type Tls struct {
 }
 
 type IngBackends struct {
-	Services *v1.ServiceBackendPort `json:"services"`
-	Path     string                 `json:"path"`
-	PathType string                 `json:"path_type"`
-	SvcName  string                 `json:"svc_name"`
+	Services      *v1.ServiceBackendPort `json:"services"`
+	Path          string                 `json:"path"`
+	PathType      string                 `json:"path_type"`
+	SvcName       string                 `json:"svc_name"`
+	IsPathIsRegex bool                   `json:"is_path_is_regex"`
 }
 
 // Backends nginx配置结构，会生成对应的nginx配置

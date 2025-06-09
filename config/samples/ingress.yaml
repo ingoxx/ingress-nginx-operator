@@ -23,7 +23,22 @@ metadata:
       {
         "limit_req_zone": "$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s",
         "limit_req": "limit_req zone=per_ip_uri burst=5 nodelay;",
-        "path": ["nginx-service-a"]
+        "backend": ["nginx-service-a"]
+      }
+    ingress.nginx.k8s.io/rewrite-target: "$2"
+    ingress.nginx.k8s.io/rewrite-flag: "break"
+    ingress.nginx.k8s.io/enable-regex: "true"
+    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
+    ingress.nginx.k8s.io/set-ip-whitelist: |
+      {
+        "ip": ["1.1.1.1"],
+        "backend": ["nginx-service-a"]
+      }
+    ingress.nginx.k8s.io/enable-ip-blacklist: "true"
+    ingress.nginx.k8s.io/set-ip-blacklist: |
+      {
+        "ip": ["2.2.2.2"],
+        "backend": ["nginx-service-a"]
       }
   labels:
     app.kubernetes.io/name: nginxingress
@@ -45,8 +60,8 @@ spec:
                 name: nginx-service-a
                 port:
                   number: 9094
-          - path: "/ff"
-            pathType: Prefix
+          - path: "/ff/(p1|p2)(/.*)$"
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: nginx-service-f

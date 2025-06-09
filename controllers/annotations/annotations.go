@@ -3,6 +3,7 @@ package annotations
 import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowcos"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowiplist"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/loadBalance"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
@@ -16,12 +17,13 @@ import (
 )
 
 type IngressAnnotationsConfig struct {
-	Rewrite        rewrite.Config
-	LoadBalance    loadBalance.Config
-	SSLStapling    ssl.Config
-	EnableCos      allowcos.Config
-	EnableReqLimit limitreq.Config
-	EnableStream   stream.Config
+	Rewrite           rewrite.Config
+	LoadBalance       loadBalance.Config
+	SSLStapling       ssl.Config
+	EnableCos         allowcos.Config
+	EnableReqLimit    limitreq.Config
+	EnableStream      stream.Config
+	EnableIpWhileList allowiplist.Config
 }
 
 func (iac *IngressAnnotationsConfig) GetIngAnnConfig() {}
@@ -35,12 +37,13 @@ type Extractor struct {
 func NewExtractor(ing service.K8sResourcesIngress, resources service.ResourcesMth) *Extractor {
 	return &Extractor{
 		annotations: map[string]parser.IngressAnnotationsParser{
-			"Rewrite":        rewrite.NewRewrite(ing, resources),
-			"LoadBalance":    loadBalance.NewLoadBalanceIng(ing, resources),
-			"SSLStapling":    ssl.NewSSL(ing, resources),
-			"EnableCos":      allowcos.NewEnableCosIng(ing, resources),
-			"EnableReqLimit": limitreq.NewRequestLimitIng(ing, resources),
-			"EnableStream":   stream.NewEnableStreamIng(ing, resources),
+			"Rewrite":           rewrite.NewRewrite(ing, resources),
+			"LoadBalance":       loadBalance.NewLoadBalanceIng(ing, resources),
+			"SSLStapling":       ssl.NewSSL(ing, resources),
+			"EnableCos":         allowcos.NewEnableCosIng(ing, resources),
+			"EnableReqLimit":    limitreq.NewRequestLimitIng(ing, resources),
+			"EnableStream":      stream.NewEnableStreamIng(ing, resources),
+			"EnableIpWhileList": allowiplist.NewEnableIpWhiteListIng(ing, resources),
 		},
 		ingress:   ing,
 		resources: resources,
