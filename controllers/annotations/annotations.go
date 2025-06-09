@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowcos"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowiplist"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/denyiplist"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/loadBalance"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
@@ -24,6 +25,7 @@ type IngressAnnotationsConfig struct {
 	EnableReqLimit    limitreq.Config
 	EnableStream      stream.Config
 	EnableIpWhileList allowiplist.Config
+	EnableIpBlackList denyiplist.Config
 }
 
 func (iac *IngressAnnotationsConfig) GetIngAnnConfig() {}
@@ -44,6 +46,7 @@ func NewExtractor(ing service.K8sResourcesIngress, resources service.ResourcesMt
 			"EnableReqLimit":    limitreq.NewRequestLimitIng(ing, resources),
 			"EnableStream":      stream.NewEnableStreamIng(ing, resources),
 			"EnableIpWhileList": allowiplist.NewEnableIpWhiteListIng(ing, resources),
+			"EnableIpBlackList": denyiplist.NewEnableIpBlackListIng(ing, resources),
 		},
 		ingress:   ing,
 		resources: resources,
