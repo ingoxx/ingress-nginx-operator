@@ -4,12 +4,13 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
 	"strconv"
 )
 
 const (
 	enableIpWhiteListAnnotations = "enable-ip-whitelist"
-	setIpWhiteListAnnotations    = "set-ip-whitelist"
+	setIpWhiteConfigAnnotations  = "set-ip-white-config"
 )
 
 type enableIpWhiteListIng struct {
@@ -17,10 +18,15 @@ type enableIpWhiteListIng struct {
 	resources service.ResourcesMth
 }
 
+type IpWhiteConfig struct {
+	Backend []string `json:"backend"`
+	Ip      []string `json:"ip"`
+}
+
 type Config struct {
-	EnableIpWhiteList bool     `json:"enable-ip-whitelist"`
-	SetIpWhiteList    string   `json:"set-ip-whitelist"`
-	Backend           []string `json:"backend"`
+	EnableIpWhiteList bool   `json:"enable-ip-whitelist"`
+	SetIpWhiteConfig  string `json:"set-ip-white-config"`
+	AllowIpConfig     IpWhiteConfig
 }
 
 var enableIpWhiteListIngAnnotations = parser.AnnotationsContents{
@@ -36,11 +42,18 @@ var enableIpWhiteListIngAnnotations = parser.AnnotationsContents{
 			return nil
 		},
 	},
-	setIpWhiteListAnnotations: {
-		Doc: "nginx stream, support cross namespace, must be in JSON format, example: {\"backends\": [ {\"name\": \"svcName-1\", \"namespace\": \"web\", \"port\": 8080}, {\"name\": \"svcName-2\", \"namespace\": \"api\", \"port\": 8081}... ]}",
+	setIpWhiteConfigAnnotations: {
+		Doc: "nginx allow ip access, must be in JSON format, example: {\"ip\": [\"2.2.2.2\"], \"backend\": [\"svc-name\"]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
+				var lq = new(IpWhiteConfig)
+				if err := jsonParser.JSONToStruct(s, lq); err != nil {
+					return err
+				}
 
+				if parser.IsZeroStruct(lq) {
+					return cerr.NewInvalidIngressAnnotationsError(setIpWhiteConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
 			}
 
 			return nil
@@ -56,7 +69,44 @@ func NewEnableIpWhiteListIng(ingress service.K8sResourcesIngress, resources serv
 }
 
 func (r *enableIpWhiteListIng) Parse() (interface{}, error) {
-	return nil, nil
+	var err error
+	config := &Config{}
+	config.EnableIpWhiteList, err = parser.GetBoolAnnotations(enableIpWhiteListAnnotations, r.ingress, enableIpWhiteListIngAnnotations)
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
+		return config, err
+	}
+
+	config.SetIpWhiteConfig, err = parser.GetStringAnnotation(setIpWhiteConfigAnnotations, r.ingress, enableIpWhiteListIngAnnotations)
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
+		return config, err
+	}
+
+	if err := r.validate(config); err != nil {
+		return config, err
+	}
+
+	return config, err
+}
+
+func (r *enableIpWhiteListIng) validate(config *Config) error {
+	if config.EnableIpWhiteList {
+		if config.SetIpWhiteConfig == "" {
+			return cerr.NewMissIngressFieldValueError(setIpWhiteConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+		}
+
+		var lq = new(IpWhiteConfig)
+		if err := jsonParser.JSONToStruct(config.SetIpWhiteConfig, lq); err != nil {
+			return err
+		}
+
+		if parser.IsZeroStruct(lq) {
+			return cerr.NewInvalidIngressAnnotationsError(setIpWhiteConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+		}
+
+		config.AllowIpConfig = *lq
+	}
+
+	return nil
 }
 
 func (r *enableIpWhiteListIng) Validate(ing map[string]string) error {

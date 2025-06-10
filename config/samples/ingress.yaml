@@ -11,6 +11,7 @@ metadata:
           {"name": "nginx-service-f", "config": "max_fails=3 fail_timeout=30s weight=20"}
         ]
       }
+
     ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {
@@ -18,6 +19,7 @@ metadata:
           {"name": "nginx-service-h", "namespace": "server", "port": 9096}
         ]
       }
+
     ingress.nginx.k8s.io/enable-limit-req: "true"
     ingress.nginx.k8s.io/set-limit-config: |
       {
@@ -25,20 +27,23 @@ metadata:
         "limit_req": "limit_req zone=per_ip_uri burst=5 nodelay;",
         "backend": ["nginx-service-a"]
       }
+
     ingress.nginx.k8s.io/rewrite-target: "$2"
     ingress.nginx.k8s.io/rewrite-flag: "break"
     ingress.nginx.k8s.io/enable-regex: "true"
-    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
-    ingress.nginx.k8s.io/set-ip-whitelist: |
-      {
-        "ip": ["1.1.1.1"],
-        "backend": ["nginx-service-a"]
-      }
+
+#    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
+#    ingress.nginx.k8s.io/set-ip-white-config: |
+#      {
+#        "ip": ["3.3.3.3", "3.3.3.4"],
+#        "backend": ["nginx-service-a"]
+#      }
+
     ingress.nginx.k8s.io/enable-ip-blacklist: "true"
-    ingress.nginx.k8s.io/set-ip-blacklist: |
+    ingress.nginx.k8s.io/set-ip-black-config: |
       {
-        "ip": ["2.2.2.2"],
-        "backend": ["nginx-service-a"]
+        "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.4"],
+        "backends": ["nginx-service-a"]
       }
   labels:
     app.kubernetes.io/name: nginxingress

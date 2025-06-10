@@ -61,6 +61,30 @@ server {
         rewrite ^{{ $path.Path }} {{ $annotations.Rewrite.RewriteTarget }} {{ $annotations.Rewrite.RewriteFlag }};
         {{ end }}
 
+        ### ip allow
+        {{ if $annotations.EnableIpWhileList.EnableIpWhiteList }}
+        {{ range $tbk := $annotations.EnableIpWhileList.AllowIpConfig.Backend }}
+        {{ if and $tbk $path.SvcName (eq $tbk $path.SvcName) }}
+        {{ range $ips := $annotations.EnableIpWhileList.AllowIpConfig.Ip }}
+        allow {{ $ips }};
+        {{ end }}
+        {{ end }}
+        {{ end }}
+        deny all;
+        {{ end }}
+
+        ### ip deny
+        {{ if $annotations.EnableIpBlackList.EnableIpBlackList }}
+        {{ range $tbk := $annotations.EnableIpBlackList.DenyIpConfig.Backend }}
+        {{ if and $tbk $path.SvcName (eq $tbk $path.SvcName) }}
+        {{ range $ips := $annotations.EnableIpBlackList.DenyIpConfig.Ip }}
+        deny {{ $ips }};
+        {{ end }}
+        {{ end }}
+        {{ end }}
+        allow all;
+        {{ end }}
+
         ### limit_req
         {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
         {{ range $lmpath := $annotations.EnableReqLimit.Backend }}
