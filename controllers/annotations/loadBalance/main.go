@@ -61,10 +61,6 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 
-				//if len(bks.Backends) == 0 {
-				//	return cerr.NewInvalidFieldError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-				//}
-
 				for _, v := range bks.Backends {
 					if _, err := ing.GetBackend(v.Name); err != nil {
 						return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
@@ -113,13 +109,19 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		if err := jsonParser.JSONToStruct(lbConfig, bks); err != nil {
 			return config, err
 		}
-
+		var isFind = make(map[string]string)
 		for _, v1 := range bks.Backends {
-			for _, uv := range upstreamConfig {
-				uv.Cert = tls[uv.Host]
-				for _, sv := range uv.ServiceBackend {
-					if v1.Name == sv.Services.Name {
-						sv.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(sv.Services), v1.Config)
+			for _, v2 := range upstreamConfig {
+				v2.Cert = tls[v2.Host]
+				for _, v3 := range v2.ServiceBackend {
+					bk1 := r.resources.GetBackendName(v3.Services)
+					if _, ok := isFind[v3.Services.Name]; !ok {
+						isFind[v3.Services.Name] = bk1
+					}
+					if v1.Name == v3.Services.Name {
+						bk2 := fmt.Sprintf("%s %s", r.resources.GetBackendName(v3.Services), v1.Config)
+						isFind[v3.Services.Name] = bk2
+						v3.Services.Name = bk2
 					}
 				}
 			}
