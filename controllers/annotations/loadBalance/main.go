@@ -104,37 +104,48 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	if lbConfig != "" {
-		var bks = new(ingress.LbConfigList)
-		if err := jsonParser.JSONToStruct(lbConfig, bks); err != nil {
-			return config, err
-		}
-		var isFind = make(map[string]string)
-		for _, v1 := range bks.Backends {
-			for _, v2 := range upstreamConfig {
-				v2.Cert = tls[v2.Host]
-				for _, v3 := range v2.ServiceBackend {
-					bk1 := r.resources.GetBackendName(v3.Services)
-					if _, ok := isFind[v3.Services.Name]; !ok {
-						isFind[v3.Services.Name] = bk1
-					}
-					if v1.Name == v3.Services.Name {
-						bk2 := fmt.Sprintf("%s %s", r.resources.GetBackendName(v3.Services), v1.Config)
-						isFind[v3.Services.Name] = bk2
-						v3.Services.Name = bk2
-					}
+	var bks = new(ingress.LbConfigList)
+	if err := jsonParser.JSONToStruct(lbConfig, bks); err != nil {
+		return config, err
+	}
+
+	for _, v1 := range upstreamConfig {
+		v1.Cert = tls[v1.Host]
+		for _, svc := range v1.ServiceBackend {
+			updated := false
+			for _, v3 := range bks.Backends {
+				if svc.Services.Name == v3.Name {
+					svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
+					updated = true
+					break // 找到后就退出
 				}
 			}
-		}
-	} else {
-		for _, uv := range upstreamConfig {
-			uv.Cert = tls[uv.Host]
-			for _, sv := range uv.ServiceBackend {
-				sv.Services.Name = r.resources.GetBackendName(sv.Services)
+			if !updated {
+				svc.Services.Name = r.resources.GetBackendName(svc.Services)
 			}
 		}
-
 	}
+
+	//if len(bks.Backends) > 0 {
+	//	for _, v1 := range bks.Backends {
+	//		for _, v2 := range upstreamConfig {
+	//			v2.Cert = tls[v2.Host]
+	//			for _, v3 := range v2.ServiceBackend {
+	//				if v1.Name == v3.Services.Name {
+	//					v3.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(v3.Services), v1.Config)
+	//				}
+	//			}
+	//		}
+	//	}
+	//} else {
+	//	for _, uv := range upstreamConfig {
+	//		uv.Cert = tls[uv.Host]
+	//		for _, sv := range uv.ServiceBackend {
+	//			sv.Services.Name = r.resources.GetBackendName(sv.Services)
+	//		}
+	//	}
+	//
+	//}
 
 	config.LbConfig = upstreamConfig
 

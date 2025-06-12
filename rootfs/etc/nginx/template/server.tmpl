@@ -1,7 +1,7 @@
 {{ $annotations := .Annotations }}
 {{ range $ut := $annotations.LoadBalance.LbConfig }}
 
-### start {{ $ut.Host }}
+### start {{ $ut.Host }} ###
 upstream {{ $ut.Upstream }} {
     {{ if ne $annotations.LoadBalance.LbPolicy "" }}
     {{ $annotations.LoadBalance.LbPolicy }};
@@ -145,5 +145,5 @@ server {
     }
 	{{ end }}
 }
-### end {{ $ut.Host }}
+### end {{ $ut.Host }}  ###
 {{ end }}
