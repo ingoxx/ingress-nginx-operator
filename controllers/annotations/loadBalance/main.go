@@ -126,27 +126,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		}
 	}
 
-	//if len(bks.Backends) > 0 {
-	//	for _, v1 := range bks.Backends {
-	//		for _, v2 := range upstreamConfig {
-	//			v2.Cert = tls[v2.Host]
-	//			for _, v3 := range v2.ServiceBackend {
-	//				if v1.Name == v3.Services.Name {
-	//					v3.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(v3.Services), v1.Config)
-	//				}
-	//			}
-	//		}
-	//	}
-	//} else {
-	//	for _, uv := range upstreamConfig {
-	//		uv.Cert = tls[uv.Host]
-	//		for _, sv := range uv.ServiceBackend {
-	//			sv.Services.Name = r.resources.GetBackendName(sv.Services)
-	//		}
-	//	}
-	//
-	//}
-
 	config.LbConfig = upstreamConfig
 
 	return config, err
