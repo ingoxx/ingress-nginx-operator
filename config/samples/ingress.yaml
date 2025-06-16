@@ -16,7 +16,8 @@ metadata:
     ingress.nginx.k8s.io/set-stream-config: |
       {
         "backends": [ 
-          {"name": "nginx-service-h", "namespace": "server", "port": 9096}
+          {"name": "nginx-service-h", "namespace": "server", "port": 9096},
+          {"name": "nginx-service-i", "namespace": "server", "port": 9097}
         ]
       }
 

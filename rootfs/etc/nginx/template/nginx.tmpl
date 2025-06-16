@@ -15,14 +15,14 @@ events {
 
 ### stream
 {{ if $annotations.EnableStream.EnableStream }}
-{{ range $bk := $annotations.EnableStream.StreamBackendList }}
 stream {
+{{ range $bk := $annotations.EnableStream.StreamBackendList }}
     server {
         listen {{ $bk.Port }};
         proxy_pass {{ $bk.StreamBackendName }};
     }
-}
 {{ end }}
+}
 {{ end }}
 
 http {
