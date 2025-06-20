@@ -26,11 +26,11 @@ func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, con
 }
 
 func (d *DeploymentServiceImpl) GetDeployKey() types.NamespacedName {
-	return types.NamespacedName{Name: constants.DeployName, Namespace: d.generic.GetNameSpace()}
+	return types.NamespacedName{Name: d.generic.GetDeployNameLabel(), Namespace: d.generic.GetNameSpace()}
 }
 
 func (d *DeploymentServiceImpl) deployLabels() map[string]string {
-	return map[string]string{"app": constants.DeployLabel}
+	return map[string]string{"app": d.generic.GetDeployLabel()}
 }
 
 func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
@@ -82,7 +82,7 @@ func (d *DeploymentServiceImpl) buildDeployData() *v1.Deployment {
 
 func (d *DeploymentServiceImpl) deployMeta() v12.ObjectMeta {
 	om := v12.ObjectMeta{
-		Name:      constants.DeployName,
+		Name:      d.generic.GetDeployNameLabel(),
 		Namespace: d.generic.GetNameSpace(),
 		Labels:    d.deployLabels(),
 	}
@@ -199,7 +199,7 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 
 	c := v13.Container{
 		Command: constants.Command,
-		Name:    constants.DeployName,
+		Name:    d.generic.GetDeployNameLabel(),
 		Image:   constants.Images,
 		Ports:   cps,
 		Resources: v13.ResourceRequirements{

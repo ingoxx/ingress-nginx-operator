@@ -11,7 +11,6 @@ metadata:
           {"name": "nginx-service-f", "config": "max_fails=3 fail_timeout=30s weight=20"}
         ]
       }
-
     ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {
@@ -20,7 +19,6 @@ metadata:
           {"name": "nginx-service-i", "namespace": "server", "port": 9097}
         ]
       }
-
     ingress.nginx.k8s.io/enable-limit-req: "true"
     ingress.nginx.k8s.io/set-limit-config: |
       {

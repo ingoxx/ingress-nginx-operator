@@ -37,7 +37,7 @@ func (ds *DaemonSetServiceImpl) GetDaemonSetKey(key client.ObjectKey) types.Name
 }
 
 func (ds *DaemonSetServiceImpl) daemonSetLabels() map[string]string {
-	return map[string]string{"app": constants.DaemonSetLabel}
+	return map[string]string{"app": ds.generic.GetDaemonSetLabel()}
 }
 
 func (ds *DaemonSetServiceImpl) GetDaemonSet(data *buildDaemonSetData) (*v1.DaemonSet, error) {
@@ -77,7 +77,7 @@ func (ds *DaemonSetServiceImpl) buildDaemonSet(data *buildDaemonSetData) *v1.Dae
 
 func (ds *DaemonSetServiceImpl) daemonSetMeta(data *buildDaemonSetData) v12.ObjectMeta {
 	om := v12.ObjectMeta{
-		Name:      constants.DaemonSetName,
+		Name:      ds.generic.GetDaemonSetNameLabel(),
 		Namespace: data.key.Namespace,
 		Labels:    ds.daemonSetLabels(),
 	}
@@ -161,7 +161,7 @@ func (ds *DaemonSetServiceImpl) daemonSetPodContainer(data *buildDaemonSetData) 
 
 	c := v13.Container{
 		Command: constants.Command,
-		Name:    constants.DeployName,
+		Name:    ds.generic.GetDaemonSetNameLabel(),
 		Image:   constants.Images,
 		Ports:   cps,
 		Resources: v13.ResourceRequirements{
@@ -214,21 +214,35 @@ func (ds *DaemonSetServiceImpl) nodeAffinity() *v13.Affinity {
 func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 	if ds.config.EnableStream.EnableStream {
 		streamData := ds.config.EnableStream.StreamBackendList
+		var nss = make(map[string]*buildDaemonSetData)
 		for _, v := range streamData {
 			key := types.NamespacedName{Name: v.Name, Namespace: v.Namespace}
-			_, err := ds.generic.GetService(key)
-			if err != nil {
-				return err
-			}
-
 			ports, err := ds.generic.GetBackendPorts(key)
 			if err != nil {
 				return err
 			}
 
+			d, ok := nss[v.Namespace]
+			if ok {
+				sameKey := &buildDaemonSetData{
+					key: key,
+				}
+				sameKey.sbp = append(sameKey.sbp, ports...)
+				d.sbp = sameKey.sbp
+				nss[v.Namespace] = d
+			} else {
+				diffKey := &buildDaemonSetData{
+					key: key,
+				}
+				diffKey.sbp = append(diffKey.sbp, ports...)
+				nss[v.Namespace] = diffKey
+			}
+		}
+
+		for v := range nss {
 			data := &buildDaemonSetData{
-				sbp: ports,
-				key: key,
+				sbp: nss[v].sbp,
+				key: nss[v].key,
 			}
 
 			daemonSet, err := ds.GetDaemonSet(data)

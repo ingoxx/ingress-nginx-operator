@@ -330,27 +330,27 @@ func (i *IngressServiceImpl) GetTls() []v1.IngressTLS {
 }
 
 func (i *IngressServiceImpl) GetDaemonSetNameLabel() string {
-	return "daemonset-manager"
+	return constants.DaemonSetName
 }
 
 func (i *IngressServiceImpl) GetDeployNameLabel() string {
-	return "deploy-manager"
+	return constants.DeployName
 }
 
 func (i *IngressServiceImpl) GetDaemonSetLabel() string {
-	return "daemonset-manager-app"
+	return constants.DaemonSetLabel
 }
 
 func (i *IngressServiceImpl) GetDeployLabel() string {
-	return "deploy-manager-app"
+	return constants.DeployLabel
 }
 
 func (i *IngressServiceImpl) GetDaemonSvcName() string {
-	return "daemonset-manager-svc"
+	return constants.DaemonSetSvcName
 }
 
 func (i *IngressServiceImpl) GetDeploySvcName() string {
-	return "deploy-manager-svc"
+	return constants.DeploySvcName
 }
 
 func (i *IngressServiceImpl) CheckService() error {
