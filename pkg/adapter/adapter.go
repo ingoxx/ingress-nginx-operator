@@ -132,3 +132,11 @@ func (r ResourceAdapter) GetDaemonSetLabel() string {
 func (r ResourceAdapter) GetDeployLabel() string {
 	return r.Ingress.GetDeployLabel()
 }
+
+func (r ResourceAdapter) GetDefaultBackend() (*v1.ServiceBackendPort, error) {
+	return r.Ingress.GetDefaultBackend()
+}
+
+func (r ResourceAdapter) CheckDefaultBackend() error {
+	return r.Ingress.CheckDefaultBackend()
+}

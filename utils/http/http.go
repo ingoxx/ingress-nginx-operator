@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/ingoxx/ingress-nginx-operator/utils/http/file"
 	"io"
 	"k8s.io/klog/v2"
 	"net/http"
@@ -10,6 +11,11 @@ import (
 )
 
 func main() {
+	if err := file.StartWatch(); err != nil {
+		klog.Fatalf("fail to start file watch process, error msg '%s'", err.Error())
+		return
+	}
+
 	StartHttp()
 }
 
@@ -21,7 +27,7 @@ func StartHttp() {
 func httpServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/health", healthCheck)
-	mux.HandleFunc("/api/v1/nginx/config", updateNginxCfg)
+	mux.HandleFunc("/api/v1/nginx/config/update", updateNginxCfg)
 
 	listen := &http.Server{
 		Addr:              ":9092",
@@ -48,8 +54,8 @@ func healthCheck(resp http.ResponseWriter, req *http.Request) {
 }
 
 type NginxCfgParams struct {
-	Type string `json:"type"`
-	File []byte `json:"file"`
+	FileName  string `json:"file_name"`
+	FileBytes []byte `json:"file_bytes"`
 }
 
 func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
@@ -69,13 +75,13 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if ncp.Type == "" {
-		http.Error(resp, "missing or empty 'type' parameter", http.StatusBadRequest)
+	if len(ncp.FileBytes) == 0 {
+		http.Error(resp, "missing or empty 'file_bytes' parameter", http.StatusBadRequest)
 		return
 	}
 
-	if len(ncp.File) == 0 {
-		http.Error(resp, "missing or empty 'file' parameter", http.StatusBadRequest)
+	if ncp.FileName == "" {
+		http.Error(resp, "missing or empty 'file_name' parameter", http.StatusBadRequest)
 		return
 	}
 

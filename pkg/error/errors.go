@@ -187,6 +187,11 @@ func NewMissIngressFieldValueError(field, name, namespace string) error {
 	}
 }
 
+func IsNewMissIngressFieldValueError(e error) bool {
+	var err MissIngressFieldError
+	return errors.As(e, &err)
+}
+
 type NotFoundTlsHostError struct {
 	errMsg string
 }

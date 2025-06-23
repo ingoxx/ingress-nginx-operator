@@ -15,7 +15,7 @@ type ResourcesMth interface {
 	GetBackendPort(*corev1.Service) int32
 	GetUpstreamConfig() ([]*ingress.Backends, error)
 	GetSecret(client.ObjectKey) (*corev1.Secret, error)
-	GetDefaultBackendPort(svc *corev1.Service) int32
+	GetDefaultBackendPort(*corev1.Service) int32
 	GetRules() []v1.IngressRule
 	CertObjectKey() string
 	SecretObjectKey() string
@@ -31,9 +31,11 @@ type ResourcesMth interface {
 	GetAnyBackendName(*v1.ServiceBackendPort, string) string
 	GetDaemonSetNameLabel() string
 	GetDeployNameLabel() string
-	GetBackendPorts(key client.ObjectKey) ([]*v1.ServiceBackendPort, error)
+	GetBackendPorts(client.ObjectKey) ([]*v1.ServiceBackendPort, error)
 	GetDeploySvcName() string
 	GetDaemonSvcName() string
 	GetDaemonSetLabel() string
 	GetDeployLabel() string
+	GetDefaultBackend() (*v1.ServiceBackendPort, error)
+	CheckDefaultBackend() error
 }

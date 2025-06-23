@@ -12,11 +12,11 @@ import (
 type K8sResourcesIngress interface {
 	GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error)
 	GetHosts() []string
-	GetBackend(name string) (*v1.ServiceBackendPort, error)
+	GetBackend(string) (*v1.ServiceBackendPort, error)
 	GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	GetService(client.ObjectKey) (*corev1.Service, error)
-	GetBackendPort(svc *corev1.Service) int32
-	GetDefaultBackendPort(svc *corev1.Service) int32
+	GetBackendPort(*corev1.Service) int32
+	GetDefaultBackendPort(*corev1.Service) int32
 	GetUpstreamConfig() ([]*ingress.Backends, error)
 	CheckController() error
 	GetAnnotations() map[string]string
@@ -32,12 +32,13 @@ type K8sResourcesIngress interface {
 	GetBackendName(*v1.ServiceBackendPort) string
 	GetPaths() []string
 	GetPathType(string) (string, error)
-	GetAnyBackendName(name *v1.ServiceBackendPort, ns string) string
+	GetAnyBackendName(*v1.ServiceBackendPort, string) string
 	GetDaemonSetNameLabel() string
 	GetDeployNameLabel() string
-	GetBackendPorts(key client.ObjectKey) ([]*v1.ServiceBackendPort, error)
+	GetBackendPorts(client.ObjectKey) ([]*v1.ServiceBackendPort, error)
 	GetDaemonSvcName() string
 	GetDeploySvcName() string
 	GetDaemonSetLabel() string
 	GetDeployLabel() string
+	CheckDefaultBackend() error
 }

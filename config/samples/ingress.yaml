@@ -53,6 +53,11 @@ metadata:
   name: api
   namespace: web
 spec:
+  defaultBackend:
+    service:
+      name: nginx-service-i
+      port:
+        number: 9097
   rules:
     - host: "api.web22.com"
       http:

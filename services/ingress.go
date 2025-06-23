@@ -355,7 +355,7 @@ func (i *IngressServiceImpl) GetDeploySvcName() string {
 
 func (i *IngressServiceImpl) CheckService() error {
 	var err error
-	if err1, err2 := i.checkDefaultBackend(), i.checkBackend(); err1 != nil && err2 != nil {
+	if err1, err2 := i.CheckDefaultBackend(), i.checkBackend(); err1 != nil && err2 != nil {
 		err = errors.Join(err1, err2)
 		return err
 	}
@@ -460,7 +460,7 @@ func (i *IngressServiceImpl) CheckPathType(path v1.HTTPIngressPath) error {
 	return nil
 }
 
-func (i *IngressServiceImpl) checkDefaultBackend() error {
+func (i *IngressServiceImpl) CheckDefaultBackend() error {
 	if i.ingress.Spec.DefaultBackend == nil {
 		return cerr.NewMissIngressFieldValueError("defaultBackend", i.GetName(), i.GetNameSpace())
 	}

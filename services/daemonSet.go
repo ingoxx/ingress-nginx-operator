@@ -224,12 +224,7 @@ func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 
 			d, ok := nss[v.Namespace]
 			if ok {
-				sameKey := &buildDaemonSetData{
-					key: key,
-				}
-				sameKey.sbp = append(sameKey.sbp, ports...)
-				d.sbp = sameKey.sbp
-				nss[v.Namespace] = d
+				d.sbp = append(d.sbp, ports...)
 			} else {
 				diffKey := &buildDaemonSetData{
 					key: key,

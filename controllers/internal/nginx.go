@@ -6,6 +6,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/klog/v2"
 	"os"
 	"sync"
@@ -13,23 +14,31 @@ import (
 )
 
 type Config struct {
-	Annotations   *annotations.IngressAnnotationsConfig
-	ServerTmpl    string
-	NginxConfTmpl string
-	ConfDir       string
+	Annotations      *annotations.IngressAnnotationsConfig
+	DefaultBackend   *v1.ServiceBackendPort
+	DefaultBackendAd string
+	ServerTmpl       string
+	NginxConfTmpl    string
+	DefaultConfTmpl  string
+	ConfDir          string
+}
+
+type NginxConfig struct {
+	FileName string
+	FileByte []byte
 }
 
 type NginxController struct {
-	resData service.ResourcesMth
-	config  *annotations.IngressAnnotationsConfig
-	mux     *sync.Mutex
+	allResourcesData service.ResourcesMth
+	config           *annotations.IngressAnnotationsConfig
+	mux              *sync.Mutex
 }
 
 func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
 	return &NginxController{
-		resData: data,
-		config:  config,
-		mux:     new(sync.Mutex),
+		allResourcesData: data,
+		config:           config,
+		mux:              new(sync.Mutex),
 	}
 }
 
@@ -76,13 +85,28 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 		return err
 	}
 
-	fmt.Println("server.conf >>> ", buffer.String())
+	file := NginxConfig{
+		FileName: fmt.Sprintf("%s_%s.conf", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
+		FileByte: buffer.Bytes(),
+	}
+
+	fmt.Println("server.conf >>> ", buffer.String(), file)
 
 	return nil
 }
 
 func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 	var buffer bytes.Buffer
+
+	backend, err := nc.allResourcesData.GetDefaultBackend()
+	if err != nil {
+		return err
+	}
+
+	if backend.Name != "" && backend.Number > 0 {
+		cfg.DefaultBackend = backend
+		cfg.DefaultBackendAd = nc.allResourcesData.GetBackendName(backend)
+	}
 
 	serverTemp, err := nc.renderTemplateData(cfg.NginxConfTmpl)
 	if err != nil {
@@ -116,14 +140,6 @@ func (nc *NginxController) renderTemplateData(file string) (*template.Template, 
 }
 
 func (nc *NginxController) updateNginxConfig() error {
-	return nil
-}
-
-func (nc *NginxController) generateDefaultBackendTmpl() error {
-	return nil
-}
-
-func (nc *NginxController) getDefaultBackendCfg() error {
 
 	return nil
 }

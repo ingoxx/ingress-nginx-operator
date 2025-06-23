@@ -2,7 +2,7 @@ package file
 
 import (
 	"fmt"
-	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
+	"github.com/ingoxx/ingress-nginx-operator/utils/http/nginxpath"
 	"k8s.io/klog/v2"
 	"os"
 	"path/filepath"
@@ -43,7 +43,7 @@ func StartWatch() error {
 	}()
 
 	// 监控 nginx.conf 文件
-	nginxConfPath := constants.NginxMainConf
+	nginxConfPath := nginxpath.NginxMainConf
 	err = watcher.Add(nginxConfPath)
 	if err != nil {
 		klog.Error("无法监控 nginx.conf:", err)
@@ -52,7 +52,7 @@ func StartWatch() error {
 	klog.Info("已监听:", nginxConfPath)
 
 	// 监控 conf.d 目录及其文件
-	confDir := constants.NginxConfDir
+	confDir := nginxpath.NginxConfDir
 	err = watcher.Add(confDir)
 	if err != nil {
 		klog.Error("无法监控 conf.d 目录:", err)
