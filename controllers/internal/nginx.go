@@ -2,12 +2,16 @@ package internal
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"io"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/klog/v2"
+	"net/http"
 	"os"
 	"sync"
 	"text/template"
@@ -32,6 +36,9 @@ type NginxController struct {
 	allResourcesData service.ResourcesMth
 	config           *annotations.IngressAnnotationsConfig
 	mux              *sync.Mutex
+	httpReqChan      chan NginxConfig
+	limitReqChan     chan struct{}
+	errorChan        chan error
 }
 
 func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
@@ -39,6 +46,9 @@ func NewNginxController(data service.ResourcesMth, config *annotations.IngressAn
 		allResourcesData: data,
 		config:           config,
 		mux:              new(sync.Mutex),
+		httpReqChan:      make(chan NginxConfig),
+		limitReqChan:     make(chan struct{}, 10),
+		errorChan:        make(chan error),
 	}
 }
 
@@ -73,6 +83,7 @@ func (nc *NginxController) generateBackendCfg() error {
 	return nil
 }
 
+// generateServerTmpl 生成conf.d/下的各个子配置
 func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 	var buffer bytes.Buffer
 
@@ -86,15 +97,20 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 	}
 
 	file := NginxConfig{
-		FileName: fmt.Sprintf("%s_%s.conf", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
+		FileName: fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
 		FileByte: buffer.Bytes(),
 	}
 
 	fmt.Println("server.conf >>> ", buffer.String(), file)
 
+	if err := nc.updateNginxConfig(file); err != nil {
+		return err
+	}
+
 	return nil
 }
 
+// generateNgxConfTmpl 生成nginx.conf配置
 func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 	var buffer bytes.Buffer
 
@@ -117,7 +133,16 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 		return err
 	}
 
+	file := NginxConfig{
+		FileName: constants.NginxMainConf,
+		FileByte: buffer.Bytes(),
+	}
+
 	fmt.Println("nginx.conf >>> ", buffer.String())
+
+	if err := nc.updateNginxConfig(file); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -139,7 +164,32 @@ func (nc *NginxController) renderTemplateData(file string) (*template.Template, 
 	return tmp, nil
 }
 
-func (nc *NginxController) updateNginxConfig() error {
+func (nc *NginxController) updateNginxConfig(config NginxConfig) error {
+	var respData map[string]interface{}
+	b, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	data := bytes.NewBuffer(b)
+
+	url := fmt.Sprintf("%s/%s", constants.NginxConfUpUrl, constants.NginxConfUpUrl)
+	resp, err := http.Post(url, "application/json", data)
+	if err != nil {
+		return err
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(body, &respData); err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(respData["msg"].(string))
+	}
 
 	return nil
 }

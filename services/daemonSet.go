@@ -1,6 +1,8 @@
 package services
 
 import (
+	nke "errors"
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
@@ -211,6 +213,19 @@ func (ds *DaemonSetServiceImpl) nodeAffinity() *v13.Affinity {
 	}
 }
 
+func (ds *DaemonSetServiceImpl) daemonSetIsReady(data *buildDaemonSetData) bool {
+	dss, err := ds.GetDaemonSet(data)
+	if err != nil {
+		return false
+	}
+
+	status := dss.Status
+	return status.DesiredNumberScheduled > 0 &&
+		status.NumberReady == status.DesiredNumberScheduled &&
+		status.UpdatedNumberScheduled == status.DesiredNumberScheduled &&
+		status.NumberAvailable == status.DesiredNumberScheduled
+}
+
 func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 	if ds.config.EnableStream.EnableStream {
 		streamData := ds.config.EnableStream.StreamBackendList
@@ -234,6 +249,8 @@ func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 			}
 		}
 
+		var errs []error
+
 		for v := range nss {
 			data := &buildDaemonSetData{
 				sbp: nss[v].sbp,
@@ -252,9 +269,18 @@ func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 				return err
 			}
 
+			if !ds.daemonSetIsReady(data) {
+				errs = append(errs, fmt.Errorf("daemonSet not ready, name '%s', namespace '%s'", constants.DaemonSetName, data.key.Namespace))
+				continue
+			}
+
 			if err := ds.UpdateDaemonSet(daemonSet, data); err != nil {
 				return err
 			}
+		}
+
+		if len(errs) > 0 {
+			return nke.Join(errs...)
 		}
 
 	}

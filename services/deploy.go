@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
@@ -93,7 +94,7 @@ func (d *DeploymentServiceImpl) deployMeta() v12.ObjectMeta {
 func (d *DeploymentServiceImpl) deploySpec() v1.DeploymentSpec {
 	var replicas = new(int32)
 	var revisionHistoryLimit = new(int32)
-	*replicas = 2
+	*replicas = int32(constants.Replicas)
 	*revisionHistoryLimit = 10
 
 	ds := v1.DeploymentSpec{
@@ -240,6 +241,25 @@ func (d *DeploymentServiceImpl) deployStrategy() v1.DeploymentStrategy {
 	return strategy
 }
 
+func (d *DeploymentServiceImpl) deployIsReady() bool {
+	deploy, err := d.GetDeploy()
+	if err != nil {
+		return false
+	}
+
+	if deploy.Status.AvailableReplicas < *deploy.Spec.Replicas {
+		return false
+	}
+
+	for _, cond := range deploy.Status.Conditions {
+		if cond.Type == v1.DeploymentAvailable && cond.Status == "True" {
+			return true
+		}
+	}
+
+	return true
+}
+
 func (d *DeploymentServiceImpl) CheckDeploy() error {
 	deploy, err := d.GetDeploy()
 	if err != nil && errors.IsNotFound(err) {
@@ -252,6 +272,10 @@ func (d *DeploymentServiceImpl) CheckDeploy() error {
 
 	if err := d.UpdateDeploy(deploy); err != nil {
 		return err
+	}
+
+	if !d.deployIsReady() {
+		return fmt.Errorf("deployment not ready, name '%s', namespace '%s'", constants.DeployName, d.generic.GetNameSpace())
 	}
 
 	return nil

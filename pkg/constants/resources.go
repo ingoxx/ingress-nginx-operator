@@ -10,8 +10,10 @@ const (
 )
 
 var (
-	HealthUrl  = "/api/v1/health"
-	HealthPort = 9092
-	Command    = []string{"/httpserver"}
-	Images     = "gotec007/ingress-nginx"
+	HealthUrl      = "/api/v1/health"
+	NginxConfUpUrl = "/api/v1/nginx/config/update"
+	HealthPort     = 9092
+	Command        = []string{"/httpserver"}
+	Images         = "gotec007/manager-nginx"
+	Replicas       = 2
 )

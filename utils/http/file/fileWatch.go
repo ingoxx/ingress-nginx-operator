@@ -90,3 +90,20 @@ func addExistingFiles(watcher *fsnotify.Watcher, dir string) error {
 		return nil
 	})
 }
+
+// SaveToFile 将 content 内容写入到 filepath 指定的文件，自动创建目录。
+func SaveToFile(path string, content []byte) error {
+	dir := filepath.Dir(path)
+
+	// 自动创建目录（如果不存在）
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return fmt.Errorf("创建目录失败: %w", err)
+	}
+
+	// 写入文件（覆盖写入）
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		return fmt.Errorf("写入文件失败: %w", err)
+	}
+
+	return nil
+}
