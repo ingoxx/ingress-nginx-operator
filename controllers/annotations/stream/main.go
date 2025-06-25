@@ -1,12 +1,11 @@
 package stream
 
 import (
-	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
-	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"strconv"
 )
@@ -21,10 +20,21 @@ type enableStreamIng struct {
 	resources service.ResourcesMth
 }
 
+// BackendList annotations中的序列化结构
+type BackendList struct {
+	Backends []*Backend `json:"backends"`
+}
+
+type Backend struct {
+	Name              string `json:"name"`
+	StreamBackendName string `json:"-"`
+	Port              int32  `json:"port"`
+}
+
 type Config struct {
-	EnableStream      bool                     `json:"enable-stream"`
-	SetStreamConfig   string                   `json:"set-stream-config"`
-	StreamBackendList []*ingress.StreamBackend `json:"stream-backend"`
+	EnableStream      bool       `json:"enable-stream"`
+	SetStreamConfig   string     `json:"set-stream-config"`
+	StreamBackendList []*Backend `json:"stream-backend"`
 }
 
 var enableStreamIngAnnotations = parser.AnnotationsContents{
@@ -41,10 +51,10 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setStreamConfigAnnotations: {
-		Doc: "nginx stream, support cross namespace, must be in JSON format, example: {\"backends\": [ {\"name\": \"svcName-1\", \"namespace\": \"web\", \"port\": 8080}, {\"name\": \"svcName-2\", \"namespace\": \"api\", \"port\": 8081}... ]}",
+		Doc: "nginx stream, must be in JSON format, example: {\"backends\": [ {\"name\": \"svcName-1\", \"port\": 8080}, {\"name\": \"svcName-2\", \"port\": 8081}... ]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
-				var bks = new(ingress.StreamBackendList)
+				var bks = new(BackendList)
 				if err := jsonParser.JSONToStruct(s, bks); err != nil {
 					return err
 				}
@@ -54,7 +64,6 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 				}
 
 				var isExistsSvc string
-
 				for _, v := range bks.Backends {
 					if isExistsSvc == v.Name {
 						return cerr.NewDuplicateValueError(v.Name, ing.GetName(), ing.GetNameSpace())
@@ -65,7 +74,7 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 					}
 
 					var isExistsPort bool
-					key := types.NamespacedName{Name: v.Name, Namespace: v.Namespace}
+					key := types.NamespacedName{Name: v.Name, Namespace: ing.GetNameSpace()}
 					if _, err := ing.GetService(key); err != nil {
 						return err
 					}
@@ -122,7 +131,7 @@ func (r *enableStreamIng) Parse() (interface{}, error) {
 
 func (r *enableStreamIng) validate(config *Config) error {
 	if config.EnableStream {
-		var bks = new(ingress.StreamBackendList)
+		var bks = new(BackendList)
 
 		if config.SetStreamConfig == "" {
 			return cerr.NewInvalidIngressAnnotationsError(enableStreamAnnotations+","+setStreamConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
@@ -137,7 +146,13 @@ func (r *enableStreamIng) validate(config *Config) error {
 		}
 
 		for _, v := range bks.Backends {
-			v.StreamBackendName = fmt.Sprintf("%s.%s.svc:%d", v.Name, v.Namespace, v.Port)
+			sp := &v1.ServiceBackendPort{
+				Name:   v.Name,
+				Number: v.Port,
+			}
+
+			v.StreamBackendName = r.ingress.GetBackendName(sp)
+
 		}
 
 		config.StreamBackendList = bks.Backends

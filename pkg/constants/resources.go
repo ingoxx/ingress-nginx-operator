@@ -15,5 +15,5 @@ var (
 	HealthPort     = 9092
 	Command        = []string{"/httpserver"}
 	Images         = "gotec007/manager-nginx"
-	Replicas       = 2
+	Replicas       = 1
 )

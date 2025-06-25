@@ -29,18 +29,6 @@ type Backends struct {
 	Upstream             string         `json:"upstream"`
 }
 
-// StreamBackendList annotations中的序列化结构
-type StreamBackendList struct {
-	Backends []*StreamBackend
-}
-
-type StreamBackend struct {
-	Name              string
-	Namespace         string
-	StreamBackendName string
-	Port              int32
-}
-
 // LbConfigList annotations中的序列化结构
 type LbConfigList struct {
 	Backends []*LbConfig // 负载均衡后端列表

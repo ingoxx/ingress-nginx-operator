@@ -1,7 +1,6 @@
 package services
 
 import (
-	nke "errors"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -229,58 +228,37 @@ func (ds *DaemonSetServiceImpl) daemonSetIsReady(data *buildDaemonSetData) bool 
 func (ds *DaemonSetServiceImpl) CheckDaemonSet() error {
 	if ds.config.EnableStream.EnableStream {
 		streamData := ds.config.EnableStream.StreamBackendList
-		var nss = make(map[string]*buildDaemonSetData)
+		var bk = make([]*v14.ServiceBackendPort, 0, 10)
 		for _, v := range streamData {
-			key := types.NamespacedName{Name: v.Name, Namespace: v.Namespace}
-			ports, err := ds.generic.GetBackendPorts(key)
-			if err != nil {
-				return err
+			sp := &v14.ServiceBackendPort{
+				Name:   v.Name,
+				Number: v.Port,
 			}
-
-			d, ok := nss[v.Namespace]
-			if ok {
-				d.sbp = append(d.sbp, ports...)
-			} else {
-				diffKey := &buildDaemonSetData{
-					key: key,
-				}
-				diffKey.sbp = append(diffKey.sbp, ports...)
-				nss[v.Namespace] = diffKey
-			}
+			bk = append(bk, sp)
 		}
 
-		var errs []error
-
-		for v := range nss {
-			data := &buildDaemonSetData{
-				sbp: nss[v].sbp,
-				key: nss[v].key,
-			}
-
-			daemonSet, err := ds.GetDaemonSet(data)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					if err := ds.CreateDaemonSet(data); err != nil {
-						return err
-					}
-					continue
+		key := types.NamespacedName{Name: ds.generic.GetDaemonSvcName(), Namespace: ds.generic.GetNameSpace()}
+		data := &buildDaemonSetData{
+			sbp: bk,
+			key: key,
+		}
+		daemonSet, err := ds.GetDaemonSet(data)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				if err := ds.CreateDaemonSet(data); err != nil {
+					return err
 				}
-
-				return err
 			}
 
-			if !ds.daemonSetIsReady(data) {
-				errs = append(errs, fmt.Errorf("daemonSet not ready, name '%s', namespace '%s'", constants.DaemonSetName, data.key.Namespace))
-				continue
-			}
-
-			if err := ds.UpdateDaemonSet(daemonSet, data); err != nil {
-				return err
-			}
+			return err
 		}
 
-		if len(errs) > 0 {
-			return nke.Join(errs...)
+		if !ds.daemonSetIsReady(data) {
+			return fmt.Errorf("daemonSet not ready, name '%s', namespace '%s'", constants.DaemonSetName, data.key.Namespace)
+		}
+
+		if err := ds.UpdateDaemonSet(daemonSet, data); err != nil {
+			return err
 		}
 
 	}

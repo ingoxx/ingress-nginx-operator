@@ -130,50 +130,33 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 
 func (s *SvcServiceImpl) streamSvc() error {
 	if s.config.EnableStream.EnableStream {
-		var nss = make(map[string]*buildSvcData)
+		var bk = make([]*v1.ServiceBackendPort, 0, 10)
 		for _, s1 := range s.config.EnableStream.StreamBackendList {
-			ingressSvcKey := types.NamespacedName{Name: s1.Name, Namespace: s1.Namespace}
-			ports, err := s.generic.GetBackendPorts(ingressSvcKey)
-			if err != nil {
-				return err
+			sp := &v1.ServiceBackendPort{
+				Name:   s1.Name,
+				Number: s1.Port,
 			}
-
-			d, ok := nss[s1.Namespace]
-			if ok {
-				d.sbp = append(d.sbp, ports...)
-			} else {
-				diffKey := &buildSvcData{}
-				diffKey.sbp = append(diffKey.sbp, ports...)
-				nss[s1.Namespace] = diffKey
-			}
+			bk = append(bk, sp)
 		}
 
-		// controller的data plane
-		for v := range nss {
-			ctlSvcKey := types.NamespacedName{Name: s.generic.GetDaemonSvcName(), Namespace: v}
-			data := &buildSvcData{
-				key:    ctlSvcKey,
-				sbp:    nss[v].sbp,
-				labels: map[string]string{"app": s.generic.GetDaemonSetLabel()},
-			}
-			svc, err := s.generic.GetService(ctlSvcKey)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					if err := s.CreateSvc(data); err != nil {
-						return err
-					}
-
-					continue
+		ctlSvcKey := types.NamespacedName{Name: s.generic.GetDaemonSvcName(), Namespace: s.generic.GetNameSpace()}
+		data := &buildSvcData{
+			key:    ctlSvcKey,
+			sbp:    bk,
+			labels: map[string]string{"app": s.generic.GetDaemonSetLabel()},
+		}
+		svc, err := s.generic.GetService(ctlSvcKey)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				if err := s.CreateSvc(data); err != nil {
+					return err
 				}
-
-				return err
 			}
-
-			if err := s.UpdateSvc(svc, data); err != nil {
-				return err
-			}
+			return err
 		}
-
+		if err := s.UpdateSvc(svc, data); err != nil {
+			return err
+		}
 	}
 
 	return nil

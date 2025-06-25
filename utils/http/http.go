@@ -77,7 +77,7 @@ func (nc NginxCfgParams) H(respData map[string]interface{}) {
 
 func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 	var ncp = NginxCfgParams{resp: resp}
-	if req.Header.Get("X-Auth-Token") != "your-shared-secret-token" {
+	if req.Header.Get("X-Auth-Token") != "k8s" {
 		ncp.H(map[string]interface{}{
 			"code":   1001,
 			"msg":    "request unauthorized",
