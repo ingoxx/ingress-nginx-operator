@@ -140,15 +140,13 @@ func (i *IngressServiceImpl) CheckTlsHosts() bool {
 }
 
 func (i *IngressServiceImpl) isSvcInIngress(ps []v1.HTTPIngressPath, name string) bool {
-	var isFoundSvc bool
 	for _, p := range ps {
 		if p.Backend.Service.Name == name {
-			isFoundSvc = true
-			return isFoundSvc
+			return true
 		}
 	}
 
-	return isFoundSvc
+	return false
 }
 
 func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, error) {
@@ -222,7 +220,8 @@ func (i *IngressServiceImpl) GetService(key client.ObjectKey) (*corev1.Service, 
 
 func (i *IngressServiceImpl) GetBackendPort(svc *corev1.Service) int32 {
 	var port int32
-	for _, r := range i.ingress.Spec.Rules {
+	var rs = i.GetRules()
+	for _, r := range rs {
 		for _, p := range r.HTTP.Paths {
 			if p.Backend.Service.Name == svc.Name {
 				for _, sp := range i.GetSvcPort(svc) {
