@@ -141,7 +141,7 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 
 	fmt.Println("nginx.conf >>> ", buffer.String())
 
-	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DaemonSetSvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
+	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
 	file := NginxConfig{
 		FileName:  constants.NginxMainConf,
 		Url:       url,
@@ -185,7 +185,7 @@ func (nc *NginxController) updateNginxConfig(config NginxConfig) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Auth-Token", "k8s")
+	req.Header.Set("X-Auth-Token", constants.AuthToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -208,13 +208,18 @@ func (nc *NginxController) updateNginxConfig(config NginxConfig) error {
 		return errors.New(respData["msg"].(string))
 	}
 
+	if respData["code"].(int) != constants.HttpStatusOk {
+		return errors.New(respData["msg"].(string))
+	}
+
 	return nil
 }
 
 func (nc *NginxController) updateNginxTls(url string) error {
 	tls := []string{
-		filepath.Join(constants.NginxSSLDir, constants.NginxTlsCrt),
-		filepath.Join(constants.NginxSSLDir, constants.NginxTlsKey),
+		filepath.Join(constants.NginxSSLDir, fmt.Sprintf("%s-%s", nc.allResourcesData.SecretObjectKey(), constants.NginxTlsCrt)),
+		filepath.Join(constants.NginxSSLDir, fmt.Sprintf("%s-%s", nc.allResourcesData.SecretObjectKey(), constants.NginxTlsKey)),
+		filepath.Join(constants.NginxSSLDir, fmt.Sprintf("%s-%s", nc.allResourcesData.SecretObjectKey(), constants.NginxTlsCa)),
 	}
 	for _, v := range tls {
 		b, err := os.ReadFile(v)

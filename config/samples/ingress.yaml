@@ -7,8 +7,7 @@ metadata:
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [ 
-          {"name": "nginx-service-a", "config": "max_fails=3 fail_timeout=30s weight=80"},
-          {"name": "nginx-service-f", "config": "max_fails=3 fail_timeout=30s weight=20"}
+          {"name": "nginx-service-a", "config": "max_fails=3 fail_timeout=30s weight=80"}
         ]
       }
     ingress.nginx.k8s.io/enable-stream: "true"
@@ -73,9 +72,9 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: nginx-service-f
+                name: nginx-service-a
                 port:
-                  number: 9095
+                  number: 9094
     - host: "api.web88.com"
       http:
         paths:

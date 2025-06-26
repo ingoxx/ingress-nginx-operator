@@ -1,15 +1,16 @@
 package services
 
 import (
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"github.com/ingoxx/ingress-nginx-operator/utils/http/file"
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"os"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -88,15 +89,18 @@ func (s *SecretServiceImpl) selfSigned() (map[string]ingress.Tls, error) {
 
 	for _, v := range s.generic.GetHosts() {
 		for k, v2 := range data {
-			file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey()+"-"+k)
-			if err := os.WriteFile(file, v2, 0644); err != nil {
+			fileName := filepath.Join(constants.NginxSSLDir, fmt.Sprintf("%s-%s", s.cert.SecretObjectKey(), k))
+			if err := file.SaveToFile(fileName, v2); err != nil {
 				return ht, err
 			}
+			//if err := os.WriteFile(fileName, v2, 0644); err != nil {
+			//	return ht, err
+			//}
 
 			if k == constants.NginxTlsCrt {
-				ss.TlsCrt = file
+				ss.TlsCrt = fileName
 			} else if k == constants.NginxTlsKey {
-				ss.TlsKey = file
+				ss.TlsKey = fileName
 			}
 		}
 		ht[v] = ss
@@ -126,15 +130,18 @@ func (s *SecretServiceImpl) caSigned() (map[string]ingress.Tls, error) {
 		}
 		for _, h := range v.Hosts {
 			for k, v2 := range data {
-				file := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey())
-				if err := os.WriteFile(file, v2, 0644); err != nil {
-					return nil, err
+				fileName := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey())
+				if err := file.SaveToFile(fileName, v2); err != nil {
+					return ht, err
 				}
+				//if err := os.WriteFile(fileName, v2, 0644); err != nil {
+				//	return nil, err
+				//}
 
 				if k == constants.NginxTlsCrt {
-					ss.TlsCrt = file
+					ss.TlsCrt = fileName
 				} else if k == constants.NginxTlsKey {
-					ss.TlsKey = file
+					ss.TlsKey = fileName
 				}
 			}
 			ht[h] = ss

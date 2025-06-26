@@ -16,4 +16,6 @@ var (
 	Command        = []string{"/httpserver"}
 	Images         = "gotec007/manager-nginx"
 	Replicas       = 1
+	AuthToken      = "k8s"
+	HttpStatusOk   = 1000
 )

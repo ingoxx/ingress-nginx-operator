@@ -63,7 +63,8 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 
 				for _, v := range bks.Backends {
 					if _, err := ing.GetBackend(v.Name); err != nil {
-						return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+						//return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+						return err
 					}
 				}
 			}
@@ -112,10 +113,21 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	for _, v1 := range upstreamConfig {
 		v1.Cert = tls[v1.Host]
 		for _, svc := range v1.ServiceBackend {
+			if svc.Services.Name == "" {
+				continue
+			}
 			updated := false
 			for _, v3 := range bks.Backends {
+				if svc.Services.Name == "" {
+					continue
+				}
 				if svc.Services.Name == v3.Name {
-					svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
+					if len(bks.Backends) > 0 && len(bks.Backends) < 2 {
+						config.LbPolicy = ""
+						svc.Services.Name = r.resources.GetBackendName(svc.Services)
+					} else {
+						svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
+					}
 					updated = true
 					break // 找到后就退出
 				}

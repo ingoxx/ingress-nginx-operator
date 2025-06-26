@@ -7,7 +7,9 @@ upstream {{ $ut.Upstream }} {
     {{ $annotations.LoadBalance.LbPolicy }};
     {{ end }}
     {{ range $backend := $ut.ServiceBackend }}
+    {{ if ne $backend.Services.Name "" }}
     server {{ $backend.Services.Name }};
+    {{ end }}
     {{ end }}
 }
 

@@ -164,6 +164,9 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	}
 	for _, b := range bks {
 		for _, b2 := range b.ServiceBackend {
+			if b2.Services.Number == 0 {
+				continue
+			}
 			cp := v13.ContainerPort{
 				ContainerPort: b2.Services.Number,
 			}
