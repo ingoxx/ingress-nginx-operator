@@ -61,11 +61,17 @@ type NginxCfgParams struct {
 	FileName  string `json:"file_name"`
 }
 
-func (nc NginxCfgParams) H(respData map[string]interface{}) {
-	nc.resp.Header().Set("Content-Type", "application/json")
-	nc.resp.WriteHeader((respData["status"]).(int))
+type RespData struct {
+	Msg    string `json:"msg"`
+	Code   int    `json:"code"`
+	Status int    `json:"status"`
+}
 
-	b, err := json.Marshal(&respData)
+func (nc NginxCfgParams) H(rd RespData) {
+	nc.resp.Header().Set("Content-Type", "application/json")
+	nc.resp.WriteHeader(rd.Status)
+
+	b, err := json.Marshal(&rd)
 	if err != nil {
 		klog.Fatalf(fmt.Sprintf("json marshal failed, esg '%s'", err.Error()))
 	}
@@ -78,79 +84,76 @@ func (nc NginxCfgParams) H(respData map[string]interface{}) {
 func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 	var ncp = NginxCfgParams{resp: resp}
 	if req.Header.Get("X-Auth-Token") != "k8s" {
-		ncp.H(map[string]interface{}{
-			"code":   1001,
-			"msg":    "request unauthorized",
-			"status": http.StatusUnauthorized,
+		ncp.H(RespData{
+			Msg:    "request unauthorized",
+			Code:   1001,
+			Status: http.StatusUnauthorized,
 		})
 		return
 	}
 
 	if req.Header.Get("Content-Type") != "application/json" {
-		ncp.H(map[string]interface{}{
-			"code":   1002,
-			"msg":    "bad request header",
-			"status": http.StatusBadRequest,
+		ncp.H(RespData{
+			Code:   1002,
+			Msg:    "bad request header",
+			Status: http.StatusBadRequest,
 		})
 		return
 	}
 
 	if req.Method != http.MethodPost {
-		ncp.H(map[string]interface{}{
-			"code":   1003,
-			"msg":    "bad request method",
-			"status": http.StatusBadRequest,
+		ncp.H(RespData{
+			Code:   1003,
+			Msg:    "bad request method",
+			Status: http.StatusBadRequest,
 		})
 		return
 	}
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		ncp.H(map[string]interface{}{
-			"code":   1004,
-			"msg":    "invalid body",
-			"status": http.StatusBadRequest,
+		ncp.H(RespData{
+			Code:   1004,
+			Msg:    "invalid body",
+			Status: http.StatusBadRequest,
 		})
 		return
 	}
 
 	if err := json.Unmarshal(body, &ncp); err != nil {
-		ncp.H(map[string]interface{}{
-			"code":   1005,
-			"msg":    "json parsing failed",
-			"status": http.StatusBadRequest,
+		ncp.H(RespData{
+			Code:   1005,
+			Msg:    "json parsing failed",
+			Status: http.StatusBadRequest,
 		})
 		return
 	}
 
 	if len(ncp.FileBytes) == 0 {
-		ncp.H(map[string]interface{}{
-			"code":   1005,
-			"msg":    "missing or empty 'file_bytes' parameter",
-			"status": http.StatusBadRequest,
+		ncp.H(RespData{
+			Code:   1005,
+			Msg:    "missing or empty 'file_bytes' parameter",
+			Status: http.StatusBadRequest,
 		})
 		return
 	}
 
 	if ncp.FileName == "" {
-		ncp.H(map[string]interface{}{
-			"code":   1006,
-			"msg":    "missing or empty 'file_name' parameter",
-			"status": http.StatusBadRequest,
+		ncp.H(RespData{
+			Code:   1006,
+			Msg:    "missing or empty 'file_name' parameter",
+			Status: http.StatusBadRequest,
 		})
 		return
 	}
-
-	fmt.Println("file content >>> ", string(ncp.FileBytes))
-	fmt.Println("file name >>> ", ncp.FileName)
 
 	if err := file.SaveToFile(ncp.FileName, ncp.FileBytes); err != nil {
 		klog.Error(fmt.Sprintf("save to file failed, file name '%s'", ncp.FileName))
 	}
 
-	ncp.H(map[string]interface{}{
-		"code":   1000,
-		"msg":    "update nginx config ok",
-		"status": http.StatusOK,
+	ncp.H(RespData{
+		Code:   1000,
+		Msg:    "update nginx config ok",
+		Status: http.StatusOK,
 	})
 }

@@ -54,9 +54,9 @@ metadata:
 spec:
   defaultBackend:
     service:
-      name: nginx-service-i
+      name: nginx-service-k
       port:
-        number: 9097
+        number: 9099
   rules:
     - host: "api.web22.com"
       http:

@@ -102,6 +102,10 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 			name = fmt.Sprintf("port-%d", v.Number)
 		}
 
+		if v.Number == 0 {
+			continue
+		}
+
 		sp := v13.ServicePort{
 			Name: name,
 			Port: v.Number,
@@ -162,7 +166,7 @@ func (s *SvcServiceImpl) streamSvc() error {
 }
 
 func (s *SvcServiceImpl) ingressSvc() error {
-	var bks = make([]*v1.ServiceBackendPort, 0, 6)
+	var bks = make([]*v1.ServiceBackendPort, 0, 10)
 	config, err := s.generic.GetUpstreamConfig()
 	if err != nil {
 		return err
@@ -173,6 +177,25 @@ func (s *SvcServiceImpl) ingressSvc() error {
 		for _, b2 := range b1.ServiceBackend {
 			bks = append(bks, b2.Services)
 		}
+	}
+
+	if s.config.EnableStream.EnableStream {
+		for _, s1 := range s.config.EnableStream.StreamBackendList {
+			sp := &v1.ServiceBackendPort{
+				Name:   s1.Name,
+				Number: s1.Port,
+			}
+			bks = append(bks, sp)
+		}
+	}
+
+	backend, err := s.generic.GetDefaultBackend()
+	if err != nil {
+		return err
+	}
+
+	if backend.Name != "" && backend.Number > 0 {
+		bks = append(bks, backend)
 	}
 
 	// controller的data plane
@@ -200,15 +223,6 @@ func (s *SvcServiceImpl) ingressSvc() error {
 }
 
 func (s *SvcServiceImpl) CheckSvc() error {
-	//var err error
-	//if err1, err2 := s.streamSvc(), s.ingressSvc(); err1 != nil || err2 != nil {
-	//	err = cuerr.Join(err1, err2)
-	//}
-	//
-	//if err != nil {
-	//	return err
-	//}
-
 	if err := s.ingressSvc(); err != nil {
 		return err
 	}

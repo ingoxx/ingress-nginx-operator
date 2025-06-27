@@ -139,32 +139,25 @@ func (i *IngressServiceImpl) CheckTlsHosts() bool {
 	return true
 }
 
-func (i *IngressServiceImpl) isSvcInIngress(ps []v1.HTTPIngressPath, name string) bool {
-	for _, p := range ps {
-		if p.Backend.Service.Name == name {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, error) {
 	var bk = new(v1.ServiceBackendPort)
 	var rs = i.GetRules()
+	var port int32
 	key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
 	svc, err := i.GetService(key)
 	if err != nil {
 		return bk, err
 	}
 
+	port = i.GetBackendPort(svc)
+	if port == 0 {
+		return bk, fmt.Errorf("service '%s' not exists in ingress '%s' namespace '%s'", name, i.GetName(), i.GetNameSpace())
+	}
+
 	for _, r := range rs {
-		if !i.isSvcInIngress(r.HTTP.Paths, name) {
-			return bk, fmt.Errorf("service '%s' not exists in ingress '%s' namespace '%s'", name, i.GetName(), i.GetNameSpace())
-		}
 		for _, p := range r.HTTP.Paths {
 			if p.Backend.Service.Name == svc.Name {
-				port := i.GetBackendPort(svc)
+				//port := i.GetBackendPort(svc)
 				if port == 0 {
 					return bk, cerr.NewInvalidSvcPortError(svc.Name, i.GetName(), i.GetNameSpace())
 				}
@@ -173,6 +166,7 @@ func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, er
 				return bk, nil
 			}
 		}
+
 	}
 
 	return bk, nil
@@ -274,23 +268,10 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 	return ports
 }
 
-func (i *IngressServiceImpl) isSameBackend(ps []v1.HTTPIngressPath, name string) bool {
-	var count int
-	for _, p := range ps {
-		if p.Backend.Service.Name == name {
-			count++
-		}
-	}
-	if count == 2 {
-		return true
-	}
-
-	return false
-}
-
 func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 	var rs = i.GetRules()
 	var upStreamConfigList = make([]*ingress.Backends, 0, len(rs))
+	var isSameBackend = make(map[string]bool)
 
 	for _, r := range rs {
 		var backends = make([]*ingress.IngBackends, 0, len(r.HTTP.Paths))
@@ -304,8 +285,11 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 			if (parser.IsRegex(p.Path) && *p.PathType != imp) || (*p.PathType == imp && !parser.IsRegex(p.Path)) {
 				return upStreamConfigList, cerr.NewSetPathTypeError(i.GetName(), i.GetNameSpace())
 			}
-
-			if i.isSameBackend(r.HTTP.Paths, p.Backend.Service.Name) {
+			b, ok := isSameBackend[p.Backend.Service.Name]
+			if !ok {
+				isSameBackend[p.Backend.Service.Name] = true
+			}
+			if b {
 				backend = new(v1.ServiceBackendPort)
 			}
 

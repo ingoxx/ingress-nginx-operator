@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/apps/v1"
 	v13 "k8s.io/api/core/v1"
+	v14 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,7 @@ type DeploymentServiceImpl struct {
 	ctx     context.Context
 	generic common.Generic
 	config  *annotations.IngressAnnotationsConfig
+	bks     []*v14.ServiceBackendPort
 }
 
 func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, config *annotations.IngressAnnotationsConfig) *DeploymentServiceImpl {
@@ -158,21 +160,38 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	cs := make([]v13.Container, 0, 3)
 	cps := make([]v13.ContainerPort, 0, 10)
 
-	bks, err := d.generic.GetUpstreamConfig()
-	if err != nil {
-		return cs
-	}
-	for _, b := range bks {
-		for _, b2 := range b.ServiceBackend {
-			if b2.Services.Number == 0 {
-				continue
-			}
-			cp := v13.ContainerPort{
-				ContainerPort: b2.Services.Number,
-			}
-			cps = append(cps, cp)
+	for _, v := range d.bks {
+		cp := v13.ContainerPort{
+			ContainerPort: v.Number,
 		}
+		cps = append(cps, cp)
 	}
+
+	//bks, err := d.generic.GetUpstreamConfig()
+	//if err != nil {
+	//	return cs
+	//}
+	//for _, b := range bks {
+	//	for _, b2 := range b.ServiceBackend {
+	//		if b2.Services.Number == 0 {
+	//			continue
+	//		}
+	//		cp := v13.ContainerPort{
+	//			ContainerPort: b2.Services.Number,
+	//		}
+	//		cps = append(cps, cp)
+	//	}
+	//}
+	//
+	//if d.config.EnableStream.EnableStream {
+	//	ports := d.streamPorts()
+	//	for _, v := range ports {
+	//		cp := v13.ContainerPort{
+	//			ContainerPort: v.Number,
+	//		}
+	//		cps = append(cps, cp)
+	//	}
+	//}
 
 	cp := v13.ContainerPort{
 		ContainerPort: int32(constants.HealthPort),
@@ -244,6 +263,20 @@ func (d *DeploymentServiceImpl) deployStrategy() v1.DeploymentStrategy {
 	return strategy
 }
 
+func (d *DeploymentServiceImpl) streamPorts() []*v14.ServiceBackendPort {
+	streamData := d.config.EnableStream.StreamBackendList
+	var bk = make([]*v14.ServiceBackendPort, 0, 10)
+	for _, v := range streamData {
+		sp := &v14.ServiceBackendPort{
+			Name:   v.Name,
+			Number: v.Port,
+		}
+		bk = append(bk, sp)
+	}
+
+	return bk
+}
+
 func (d *DeploymentServiceImpl) deployIsReady() bool {
 	deploy, err := d.GetDeploy()
 	if err != nil {
@@ -263,7 +296,42 @@ func (d *DeploymentServiceImpl) deployIsReady() bool {
 	return true
 }
 
+func (d *DeploymentServiceImpl) getBackends() error {
+	var bks = make([]*v14.ServiceBackendPort, 0, 10)
+	bk, err := d.generic.GetUpstreamConfig()
+	for _, b1 := range bk {
+		for _, b2 := range b1.ServiceBackend {
+			if b2.Services.Number == 0 {
+				continue
+			}
+			bks = append(bks, b2.Services)
+		}
+	}
+
+	if d.config.EnableStream.EnableStream {
+		ports := d.streamPorts()
+		bks = append(bks, ports...)
+	}
+
+	backend, err := d.generic.GetDefaultBackend()
+	if err != nil {
+		return err
+	}
+
+	if backend.Name != "" && backend.Number > 0 {
+		bks = append(bks, backend)
+	}
+
+	d.bks = bks
+
+	return nil
+}
+
 func (d *DeploymentServiceImpl) CheckDeploy() error {
+	if err := d.getBackends(); err != nil {
+		return err
+	}
+
 	deploy, err := d.GetDeploy()
 	if err != nil && errors.IsNotFound(err) {
 		if err := d.CreateDeploy(); err != nil {

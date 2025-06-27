@@ -18,6 +18,12 @@ import (
 	"text/template"
 )
 
+type RespData struct {
+	Msg    string `json:"msg"`
+	Code   int    `json:"code"`
+	Status int    `json:"status"`
+}
+
 type Config struct {
 	Annotations      *annotations.IngressAnnotationsConfig
 	DefaultBackend   *v1.ServiceBackendPort
@@ -173,7 +179,7 @@ func (nc *NginxController) renderTemplateData(file string) (*template.Template, 
 }
 
 func (nc *NginxController) updateNginxConfig(config NginxConfig) error {
-	var respData map[string]interface{}
+	var respData RespData
 	b, err := json.Marshal(config)
 	if err != nil {
 		return err
@@ -205,11 +211,11 @@ func (nc *NginxController) updateNginxConfig(config NginxConfig) error {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(respData["msg"].(string))
+		return errors.New(respData.Msg)
 	}
 
-	if respData["code"].(int) != constants.HttpStatusOk {
-		return errors.New(respData["msg"].(string))
+	if respData.Code != constants.HttpStatusOk {
+		return errors.New(respData.Msg)
 	}
 
 	return nil
