@@ -37,7 +37,7 @@ COPY --from=builder /workspace/rootfs /rootfs
 COPY --from=builder /workspace/manager .
 RUN chown -R www-data:www-data /rootfs manager && \
     chmod +x rootfs/etc/nginx/shell/start.sh && \
-    chmod +x /manager && \
+    chmod +x /manager
 
 
 # Use distroless as minimal base image to package the manager binary
