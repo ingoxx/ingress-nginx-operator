@@ -147,7 +147,7 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := file.SaveToFile(ncp.FileName, ncp.FileBytes); err != nil {
+	if err := file.SaveToFile(fmt.Sprintf("%s", ncp.FileName), ncp.FileBytes); err != nil {
 		klog.Error(fmt.Sprintf("save to file failed, file name '%s'", ncp.FileName))
 	}
 
