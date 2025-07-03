@@ -51,7 +51,7 @@ http {
     ### default backend
     {{ if and (ne .DefaultBackendAd "") ( gt $df.Number 0 ) }}
     server {
-        listen {{ $df.Number }} default_server;
+        listen {{ .DefaultPort }};
         server_name _;  # 匹配所有未被其他 server_name 命中的请求
 
         location / {

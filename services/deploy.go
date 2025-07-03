@@ -167,36 +167,10 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 		cps = append(cps, cp)
 	}
 
-	//bks, err := d.generic.GetUpstreamConfig()
-	//if err != nil {
-	//	return cs
+	//cp := v13.ContainerPort{
+	//	ContainerPort: int32(constants.HealthPort),
 	//}
-	//for _, b := range bks {
-	//	for _, b2 := range b.ServiceBackend {
-	//		if b2.Services.Number == 0 {
-	//			continue
-	//		}
-	//		cp := v13.ContainerPort{
-	//			ContainerPort: b2.Services.Number,
-	//		}
-	//		cps = append(cps, cp)
-	//	}
-	//}
-	//
-	//if d.config.EnableStream.EnableStream {
-	//	ports := d.streamPorts()
-	//	for _, v := range ports {
-	//		cp := v13.ContainerPort{
-	//			ContainerPort: v.Number,
-	//		}
-	//		cps = append(cps, cp)
-	//	}
-	//}
-
-	cp := v13.ContainerPort{
-		ContainerPort: int32(constants.HealthPort),
-	}
-	cps = append(cps, cp)
+	//cps = append(cps, cp)
 
 	readinessProbe := &v13.Probe{
 		ProbeHandler: v13.ProbeHandler{
@@ -235,9 +209,9 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 				v13.ResourceMemory: resource.MustParse("256Mi"),
 			},
 		},
-
-		ReadinessProbe: readinessProbe,
-		LivenessProbe:  livenessProbe,
+		ImagePullPolicy: v13.PullAlways,
+		ReadinessProbe:  readinessProbe,
+		LivenessProbe:   livenessProbe,
 	}
 
 	cs = append(cs, c)
@@ -298,14 +272,22 @@ func (d *DeploymentServiceImpl) deployIsReady() bool {
 
 func (d *DeploymentServiceImpl) getBackends() error {
 	var bks = make([]*v14.ServiceBackendPort, 0, 10)
-	bk, err := d.generic.GetUpstreamConfig()
-	for _, b1 := range bk {
-		for _, b2 := range b1.ServiceBackend {
-			if b2.Services.Number == 0 {
-				continue
-			}
-			bks = append(bks, b2.Services)
+	//bk, err := d.generic.GetUpstreamConfig()
+	//for _, b1 := range bk {
+	//	for _, b2 := range b1.ServiceBackend {
+	//		if b2.Services.Number == 0 {
+	//			continue
+	//		}
+	//		bks = append(bks, b2.Services)
+	//	}
+	//}
+
+	for _, p := range constants.HttpPorts {
+		sp := &v14.ServiceBackendPort{
+			Name:   fmt.Sprintf("%s-%d", d.generic.GetDeployNameLabel(), p),
+			Number: p,
 		}
+		bks = append(bks, sp)
 	}
 
 	if d.config.EnableStream.EnableStream {

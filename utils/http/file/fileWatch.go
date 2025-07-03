@@ -94,8 +94,16 @@ func addExistingFiles(watcher *fsnotify.Watcher, dir string) error {
 
 // SaveToFile 将 content 内容写入到 filepath 指定的文件，自动创建目录。
 func SaveToFile(path string, content []byte) error {
-	if err := handleConfigUpdate(path, content); err != nil {
-		return err
+	dir := filepath.Dir(path)
+
+	// 自动创建目录（如果不存在）
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return fmt.Errorf("创建目录失败: %w", err)
+	}
+
+	// 写入文件（覆盖写入）
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		return fmt.Errorf("写入文件失败: %w", err)
 	}
 
 	return nil
@@ -144,8 +152,45 @@ func reloadNginx() error {
 	return cmd.Run()
 }
 
-// 处理配置文件更新
-func handleConfigUpdate(targetPath string, newContent []byte) error {
+// 检查 nginx 是否存在
+func isNginxRunning() bool {
+	cmd := exec.Command("pgrep", "nginx")
+	out, _ := cmd.Output()
+	return len(out) > 0
+}
+
+// 启动 nginx
+func startNginx() error {
+	cmd := exec.Command("nginx", "-c", nginxpath.NginxMainConf)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// IsNginxRunning 检查 nginx 是否在跑
+func IsNginxRunning() error {
+	// 检查 nginx 是否在跑
+	if !isNginxRunning() {
+		klog.Info("[INFO] nginx not running, try starting...")
+		if err := startNginx(); err != nil {
+			return fmt.Errorf("attempt to start nginx failed: %v", err)
+		}
+		if !isNginxRunning() {
+			return fmt.Errorf("nginx still cannot detect processes after startup")
+		}
+		klog.Info("[INFO] nginx started successfully")
+	}
+
+	return nil
+}
+
+// HandleConfigUpdate 处理配置文件更新
+func HandleConfigUpdate(targetPath string, newContent []byte) error {
 	tmpPath := targetPath + ".tmp"
 
 	// 如果存在，先比对
@@ -157,9 +202,8 @@ func handleConfigUpdate(targetPath string, newContent []byte) error {
 		}
 
 		newMD5 := getContentMD5(newContent)
-
 		if oldMD5 == newMD5 {
-			fmt.Println("[INFO] content MD5 consistent, no need to update")
+			klog.Info("[INFO] content MD5 consistent, no need to update")
 			return nil
 		}
 	}
@@ -171,9 +215,8 @@ func handleConfigUpdate(targetPath string, newContent []byte) error {
 
 	// 检测
 	if err := checkNginxConfig(); err != nil {
-		fmt.Println("[WARN] nginx -t test failed，rollback")
 		if err := os.Remove(tmpPath); err != nil {
-			klog.Warning(fmt.Sprintf("[WARN] nginx -t test failed，rollback"))
+			klog.Warning(fmt.Sprintf("[WARN] nginx -t test failed, rollback"))
 		}
 		return err
 	}
@@ -192,6 +235,6 @@ func handleConfigUpdate(targetPath string, newContent []byte) error {
 		return err
 	}
 
-	fmt.Printf("[SUCCESS] update %s completed and reload\n", targetPath)
+	klog.Infof("[SUCCESS] update %s completed and reload\n", targetPath)
 	return nil
 }

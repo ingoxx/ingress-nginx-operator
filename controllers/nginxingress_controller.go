@@ -21,8 +21,6 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/internal"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
-	v12 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -79,7 +77,5 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 	return ctrl.NewControllerManagedBy(mgr).
 		//For(&ingressv1.NginxIngress{}).
 		For(&v1.Ingress{}).
-		For(&corev1.Service{}).
-		For(&v12.Deployment{}).
 		Complete(r)
 }

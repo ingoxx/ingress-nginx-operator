@@ -18,4 +18,6 @@ var (
 	Replicas       = 1
 	AuthToken      = "k8s"
 	HttpStatusOk   = 1000
+	HttpPorts      = []int32{80, 443, 9092}
+	DefaultPort    = 80
 )

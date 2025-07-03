@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"golang.org/x/net/context"
 	v13 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -81,8 +82,10 @@ func (s *SvcServiceImpl) svcObjectMeta(data *buildSvcData) v12.ObjectMeta {
 
 func (s *SvcServiceImpl) svcServiceSpec(data *buildSvcData) v13.ServiceSpec {
 	ss := v13.ServiceSpec{
-		Selector: data.labels,
-		Ports:    s.svcServicePort(data.sbp),
+		Selector:              data.labels,
+		Ports:                 s.svcServicePort(data.sbp),
+		Type:                  v13.ServiceTypeLoadBalancer,
+		ExternalTrafficPolicy: v13.ServiceExternalTrafficPolicyTypeLocal,
 	}
 
 	return ss
@@ -118,66 +121,39 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 		sps = append(sps, sp)
 	}
 
-	extraPort := int32(svcPort)
-	sps = append(sps, v13.ServicePort{
-		Name: fmt.Sprintf("port-%d", extraPort),
-		Port: extraPort,
-		TargetPort: intstr.IntOrString{
-			IntVal: extraPort,
-		},
-		Protocol: v13.ProtocolTCP,
-	})
+	//extraPort := int32(svcPort)
+	//sps = append(sps, v13.ServicePort{
+	//	Name: fmt.Sprintf("port-%d", extraPort),
+	//	Port: extraPort,
+	//	TargetPort: intstr.IntOrString{
+	//		IntVal: extraPort,
+	//	},
+	//	Protocol: v13.ProtocolTCP,
+	//})
 
 	return sps
 }
 
-func (s *SvcServiceImpl) streamSvc() error {
-	if s.config.EnableStream.EnableStream {
-		var bk = make([]*v1.ServiceBackendPort, 0, 10)
-		for _, s1 := range s.config.EnableStream.StreamBackendList {
-			sp := &v1.ServiceBackendPort{
-				Name:   s1.Name,
-				Number: s1.Port,
-			}
-			bk = append(bk, sp)
-		}
-
-		ctlSvcKey := types.NamespacedName{Name: s.generic.GetDaemonSvcName(), Namespace: s.generic.GetNameSpace()}
-		data := &buildSvcData{
-			key:    ctlSvcKey,
-			sbp:    bk,
-			labels: map[string]string{"app": s.generic.GetDaemonSetLabel()},
-		}
-		svc, err := s.generic.GetService(ctlSvcKey)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				if err := s.CreateSvc(data); err != nil {
-					return err
-				}
-			}
-			return err
-		}
-		if err := s.UpdateSvc(svc, data); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (s *SvcServiceImpl) ingressSvc() error {
 	var bks = make([]*v1.ServiceBackendPort, 0, 10)
-	config, err := s.generic.GetUpstreamConfig()
-	if err != nil {
-		return err
-	}
+	//config, err := s.generic.GetUpstreamConfig()
+	//if err != nil {
+	//	return err
+	//}
 
 	// 获取ingress配置文件中的所有svc
-	for _, b1 := range config {
-		for _, b2 := range b1.ServiceBackend {
-			bks = append(bks, b2.Services)
+	for _, p := range constants.HttpPorts {
+		sp := &v1.ServiceBackendPort{
+			Name:   fmt.Sprintf("%s-%d", s.generic.GetDeployNameLabel(), p),
+			Number: p,
 		}
+		bks = append(bks, sp)
 	}
+	//for _, b1 := range config {
+	//	for _, b2 := range b1.ServiceBackend {
+	//		bks = append(bks, b2.Services)
+	//	}
+	//}
 
 	if s.config.EnableStream.EnableStream {
 		for _, s1 := range s.config.EnableStream.StreamBackendList {
@@ -189,14 +165,14 @@ func (s *SvcServiceImpl) ingressSvc() error {
 		}
 	}
 
-	backend, err := s.generic.GetDefaultBackend()
-	if err != nil {
-		return err
-	}
-
-	if backend.Name != "" && backend.Number > 0 {
-		bks = append(bks, backend)
-	}
+	//backend, err := s.generic.GetDefaultBackend()
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if backend.Name != "" && backend.Number > 0 {
+	//	bks = append(bks, backend)
+	//}
 
 	// controller的data plane
 	ctlSvcKey := types.NamespacedName{Name: s.generic.GetDeploySvcName(), Namespace: s.generic.GetNameSpace()}

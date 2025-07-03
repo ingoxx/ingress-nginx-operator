@@ -32,6 +32,7 @@ type Config struct {
 	NginxConfTmpl    string
 	DefaultConfTmpl  string
 	ConfDir          string
+	DefaultPort      int32
 }
 
 type NginxConfig struct {
@@ -134,6 +135,7 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 	if backend.Name != "" && backend.Number > 0 {
 		cfg.DefaultBackend = backend
 		cfg.DefaultBackendAd = nc.allResourcesData.GetBackendName(backend)
+		cfg.DefaultPort = int32(constants.DefaultPort)
 	}
 
 	serverTemp, err := nc.renderTemplateData(cfg.NginxConfTmpl)

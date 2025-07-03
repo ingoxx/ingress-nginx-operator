@@ -13,11 +13,11 @@ import (
 
 func main() {
 	go func() {
-		if err := file.StartWatch(); err != nil {
-			klog.Fatalf("fail to start file watch process, error msg '%s'", err.Error())
-			return
+		if err := file.IsNginxRunning(); err != nil {
+			klog.Fatalf(err.Error())
 		}
 	}()
+
 	StartHttp()
 }
 
@@ -147,7 +147,7 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := file.SaveToFile(fmt.Sprintf("%s", ncp.FileName), ncp.FileBytes); err != nil {
+	if err := file.HandleConfigUpdate(fmt.Sprintf("%s", ncp.FileName), ncp.FileBytes); err != nil {
 		klog.Error(fmt.Sprintf("save to file failed, file name '%s'", ncp.FileName))
 	}
 

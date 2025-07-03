@@ -14,7 +14,6 @@ RUN go mod download
 
 # Copy the go source
 COPY utils/ utils/
-COPY rootfs/ rootfs/
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
@@ -27,11 +26,8 @@ FROM nginx:latest AS chroot
 
 WORKDIR /
 
-COPY --from=builder /workspace/rootfs /rootfs
 COPY --from=builder /workspace/httpserver .
-RUN chown -R www-data:www-data /rootfs && \
-    chmod +x rootfs/etc/nginx/shell/start.sh && \
-    chmod +x /httpserver
+RUN chmod +x /httpserver
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
