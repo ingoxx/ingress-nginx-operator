@@ -97,7 +97,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 
 	upstreamConfig, err := r.resources.GetUpstreamConfig()
 	if err != nil {
-
 		return config, err
 	}
 

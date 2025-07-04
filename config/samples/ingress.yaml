@@ -6,16 +6,17 @@ metadata:
     ingress.nginx.k8s.io/lb-policy: "least_conn"
     ingress.nginx.k8s.io/lb-config: |
       {
-        "backends": [ 
-          {"name": "nginx-service-a", "config": "max_fails=3 fail_timeout=30s weight=80"}
+        "backends": [
+          {"name": "nginx-service-a", "config": "max_fails=3 fail_timeout=30s weight=80"},
+          {"name": "nginx-service-g", "config": "max_fails=3 fail_timeout=30s weight=80"},
+          {"name": "nginx-service-h", "config": "max_fails=3 fail_timeout=30s weight=20"}
         ]
       }
     ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {
-        "backends": [ 
-          {"name": "nginx-service-h", "port": 9098},
-          {"name": "nginx-service-i", "port": 9097}
+        "backends": [
+          {"name": "mysql", "port": 3306}
         ]
       }
     ingress.nginx.k8s.io/enable-limit-req: "true"
@@ -30,17 +31,17 @@ metadata:
     ingress.nginx.k8s.io/rewrite-flag: "break"
     ingress.nginx.k8s.io/enable-regex: "true"
 
-#    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
-#    ingress.nginx.k8s.io/set-ip-white-config: |
-#      {
-#        "ip": ["3.3.3.3", "3.3.3.4"],
-#        "backend": ["nginx-service-a"]
-#      }
+    #    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
+    #    ingress.nginx.k8s.io/set-ip-white-config: |
+    #      {
+    #        "ip": ["3.3.3.3", "3.3.3.4"],
+    #        "backend": ["nginx-service-a"]
+    #      }
 
     ingress.nginx.k8s.io/enable-ip-blacklist: "true"
     ingress.nginx.k8s.io/set-ip-black-config: |
       {
-        "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.4"],
+        "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.7", "192.168.3.196"],
         "backend": ["nginx-service-a"]
       }
   labels:
@@ -85,10 +86,27 @@ spec:
                 name: nginx-service-g
                 port:
                   number: 9096
-          - path: "/ee"
+          - path: "/gg"
             pathType: Exact
             backend:
               service:
                 name: nginx-service-e
                 port:
                   number: 9093
+    - host: "api.web99.com"
+      http:
+        paths:
+          - path: "/aa"
+            pathType: Exact
+            backend:
+              service:
+                name: nginx-service-g
+                port:
+                  number: 9096
+          - path: "/bb"
+            pathType: Exact
+            backend:
+              service:
+                name: nginx-service-h
+                port:
+                  number: 9098

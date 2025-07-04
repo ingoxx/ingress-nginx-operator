@@ -271,10 +271,10 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 	var rs = i.GetRules()
 	var upStreamConfigList = make([]*ingress.Backends, 0, len(rs))
-	var isSameBackend = make(map[string]bool)
 
 	for _, r := range rs {
 		var backends = make([]*ingress.IngBackends, 0, len(r.HTTP.Paths))
+		var isSameBackend = make(map[string]bool)
 		for _, p := range r.HTTP.Paths {
 			backend, err := i.GetBackend(p.Backend.Service.Name)
 			if err != nil {
@@ -421,10 +421,12 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	pattern := `^/`
 	var recordExistsPath string
 	for _, p := range path {
+		if recordExistsPath == p.Path {
+			return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
+		}
+
 		if recordExistsPath == "" {
 			recordExistsPath = p.Path
-		} else if recordExistsPath == p.Path {
-			return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
 		}
 
 		matched, err := regexp.MatchString(pattern, p.Path)
