@@ -19,15 +19,19 @@ type RequestLimitIng struct {
 }
 
 type ReqLimitConfig struct {
-	LimitReqZone string   `json:"limit_req_zone"`
-	LimitReq     string   `json:"limit_req"`
-	Backend      []string `json:"backend"`
+	LimitReqZone []string `json:"limit_req_zone"`
+	LimitReq     []string `json:"limit_req"`
+	Backend      string   `json:"backend"`
+}
+
+type ReqBackendsConfig struct {
+	Backends []ReqLimitConfig `json:"backends"`
 }
 
 type Config struct {
 	EnableRequestLimit bool   `json:"enable-request-limit"`
 	SetLimitConfig     string `json:"set-limit-config"`
-	ReqLimitConfig
+	ReqBackendsConfig
 }
 
 var RequestLimitIngAnnotations = parser.AnnotationsContents{
@@ -47,7 +51,7 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format, example: {\"path\": [\"svc_name\"], \"limit_req_zone\": \"$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s;\"}.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
-				var lq = new(ReqLimitConfig)
+				var lq = new(ReqBackendsConfig)
 				if err := jsonParser.JSONToStruct(s, lq); err != nil {
 					return err
 				}
@@ -99,7 +103,7 @@ func (r *RequestLimitIng) validate(config *Config) error {
 		if config.SetLimitConfig == "" {
 			return cerr.NewMissIngressFieldValueError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
-		var lq = new(ReqLimitConfig)
+		var lq = new(ReqBackendsConfig)
 		if err := jsonParser.JSONToStruct(config.SetLimitConfig, lq); err != nil {
 			return err
 		}
@@ -108,9 +112,7 @@ func (r *RequestLimitIng) validate(config *Config) error {
 			return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 
-		config.LimitReqZone = lq.LimitReqZone
-		config.LimitReq = lq.LimitReq
-		config.Backend = lq.Backend
+		config.ReqBackendsConfig = *lq
 	}
 
 	return nil

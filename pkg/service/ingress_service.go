@@ -21,7 +21,7 @@ type K8sResourcesIngress interface {
 	CheckController() error
 	GetAnnotations() map[string]string
 	CheckService() error
-	CheckHost() error
+	CheckHosts() error
 	CheckPath([]v1.HTTPIngressPath) error
 	GetName() string
 	GetNameSpace() string
@@ -41,4 +41,5 @@ type K8sResourcesIngress interface {
 	GetDaemonSetLabel() string
 	GetDeployLabel() string
 	CheckDefaultBackend() error
+	CheckHost(string) bool
 }

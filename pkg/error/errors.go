@@ -317,3 +317,17 @@ func NewInvalidFieldError(field, name, namespace string) error {
 		errMsg: fmt.Sprintf("%s invalid field, ingress '%s', namespace '%s'", field, name, namespace),
 	}
 }
+
+type IngressHostNotFoundError struct {
+	errMsg string
+}
+
+func (e IngressHostNotFoundError) Error() string {
+	return e.errMsg
+}
+
+func NewIngressHostNotFoundError(val, name, namespace string) error {
+	return IngressHostNotFoundError{
+		errMsg: fmt.Sprintf("host '%s' not found, ingress '%s', namespace '%s'", val, name, namespace),
+	}
+}

@@ -38,4 +38,5 @@ type ResourcesMth interface {
 	GetDeployLabel() string
 	GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	CheckDefaultBackend() error
+	CheckHost(string) bool
 }

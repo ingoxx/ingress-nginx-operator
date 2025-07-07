@@ -65,9 +65,9 @@ server {
 
         ### ip allow
         {{ if $annotations.EnableIpWhileList.EnableIpWhiteList }}
-        {{ range $tbk := $annotations.EnableIpWhileList.AllowIpConfig.Backend }}
-        {{ if and $tbk $path.SvcName (eq $tbk $path.SvcName) }}
-        {{ range $ips := $annotations.EnableIpWhileList.AllowIpConfig.Ip }}
+        {{ range $tbk := $annotations.EnableIpWhileList.AllowIpConfig.Backends }}
+        {{ if and $tbk.Backend $path.SvcName (eq $tbk.Backend $path.SvcName) }}
+        {{ range $ips := $tbk.Ip }}
         allow {{ $ips }};
         {{ end }}
         {{ end }}
@@ -77,9 +77,9 @@ server {
 
         ### ip deny
         {{ if $annotations.EnableIpBlackList.EnableIpBlackList }}
-        {{ range $tbk := $annotations.EnableIpBlackList.DenyIpConfig.Backend }}
-        {{ if and $tbk $path.SvcName (eq $tbk $path.SvcName) }}
-        {{ range $ips := $annotations.EnableIpBlackList.DenyIpConfig.Ip }}
+        {{ range $tbk := $annotations.EnableIpBlackList.DenyIpConfig.Backends }}
+        {{ if and $tbk.Backend $path.SvcName (eq $tbk.Backend $path.SvcName) }}
+        {{ range $ips := $tbk.Ip }}
         deny {{ $ips }};
         {{ end }}
         {{ end }}
@@ -89,9 +89,11 @@ server {
 
         ### limit_req
         {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
-        {{ range $lmpath := $annotations.EnableReqLimit.Backend }}
-        {{ if and $lmpath $path.SvcName (eq $lmpath $path.SvcName) }}
-        {{ $annotations.EnableReqLimit.LimitReq }}
+        {{ range $lmpath := $annotations.EnableReqLimit.Backends }}
+        {{ if and $lmpath.Backend $path.SvcName (eq $lmpath.Backend $path.SvcName) }}
+        {{ range $reqs := $annotations.EnableReqLimit.LimitReq }}
+        limit_req {{ $reqs }};
+        {{ end }}
         {{ end }}
         {{ end }}
         {{ end }}

@@ -63,6 +63,15 @@ func (i *IngressServiceImpl) GetRules() []v1.IngressRule {
 	return rs
 }
 
+func (i *IngressServiceImpl) CheckHost(host string) bool {
+	for _, h := range i.GetHosts() {
+		if h == host {
+			return true
+		}
+	}
+	return false
+}
+
 func (i *IngressServiceImpl) GetHosts() []string {
 	rs := i.GetRules()
 	var hosts = make([]string, len(rs))
@@ -268,6 +277,7 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 	return ports
 }
 
+// GetUpstreamConfig 将后端处理成Upstream格式
 func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 	var rs = i.GetRules()
 	var upStreamConfigList = make([]*ingress.Backends, 0, len(rs))
@@ -398,7 +408,7 @@ func (i *IngressServiceImpl) CheckController() error {
 	return nil
 }
 
-func (i *IngressServiceImpl) CheckHost() error {
+func (i *IngressServiceImpl) CheckHosts() error {
 	var recordExistsHost string
 	var rs = i.GetRules()
 
@@ -502,7 +512,7 @@ func (i *IngressServiceImpl) checkBackend() error {
 	}
 
 	for _, r := range rules {
-		if err := i.CheckHost(); err != nil {
+		if err := i.CheckHosts(); err != nil {
 			return err
 		}
 

@@ -7,9 +7,9 @@ metadata:
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [
-          {"name": "nginx-service-a", "config": "max_fails=3 fail_timeout=30s weight=80"},
-          {"name": "nginx-service-g", "config": "max_fails=3 fail_timeout=30s weight=80"},
-          {"name": "nginx-service-h", "config": "max_fails=3 fail_timeout=30s weight=20"}
+          {"host": "api.web22.com", "name": "nginx-service-a", "config": "max_fails=3 fail_timeout=30s weight=80"},
+          {"host": "api.web99.com", "name": "nginx-service-g", "config": "max_fails=3 fail_timeout=30s weight=80"},
+          {"host": "api.web99.com", "name": "nginx-service-h", "config": "max_fails=3 fail_timeout=30s weight=20"}
         ]
       }
     ingress.nginx.k8s.io/enable-stream: "true"
@@ -22,27 +22,36 @@ metadata:
     ingress.nginx.k8s.io/enable-limit-req: "true"
     ingress.nginx.k8s.io/set-limit-config: |
       {
-        "limit_req_zone": "$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s",
-        "limit_req": "limit_req zone=per_ip_uri burst=5 nodelay;",
-        "backend": ["nginx-service-a"]
+        "backends": [
+          {
+            "limit_req_zone": ["$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s"],
+            "limit_req": ["zone=per_ip_uri burst=5 nodelay"],
+            "backend": "nginx-service-a"
+          }
+        ]
       }
-
     ingress.nginx.k8s.io/rewrite-target: "$2"
     ingress.nginx.k8s.io/rewrite-flag: "break"
     ingress.nginx.k8s.io/enable-regex: "true"
-
-    #    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
-    #    ingress.nginx.k8s.io/set-ip-white-config: |
-    #      {
-    #        "ip": ["3.3.3.3", "3.3.3.4"],
-    #        "backend": ["nginx-service-a"]
-    #      }
-
+#    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
+#    ingress.nginx.k8s.io/set-ip-white-config: |
+#      {
+#        "backends": [
+#          {
+#            "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.7", "192.168.3.196"],
+#            "backend": "nginx-service-a"
+#          }
+#        ]
+#      }
     ingress.nginx.k8s.io/enable-ip-blacklist: "true"
     ingress.nginx.k8s.io/set-ip-black-config: |
       {
-        "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.7", "192.168.3.196"],
-        "backend": ["nginx-service-a"]
+        "backends": [
+          {
+            "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.7", "192.168.3.196"],
+            "backend": "nginx-service-a"
+          }
+        ]
       }
   labels:
     app.kubernetes.io/name: nginxingress

@@ -2,6 +2,7 @@ package allowiplist
 
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
@@ -23,10 +24,14 @@ type IpWhiteConfig struct {
 	Ip      []string `json:"ip"`
 }
 
+type IpWhiteBackendsConfig struct {
+	Backends []ingress.IpListBackendsConfig
+}
+
 type Config struct {
 	EnableIpWhiteList bool   `json:"enable-ip-whitelist"`
 	SetIpWhiteConfig  string `json:"set-ip-white-config"`
-	AllowIpConfig     IpWhiteConfig
+	AllowIpConfig     IpWhiteBackendsConfig
 }
 
 var enableIpWhiteListIngAnnotations = parser.AnnotationsContents{
@@ -46,7 +51,7 @@ var enableIpWhiteListIngAnnotations = parser.AnnotationsContents{
 		Doc: "nginx allow ip access, must be in JSON format, example: {\"ip\": [\"2.2.2.2\"], \"backend\": [\"svc-name\"]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
-				var lq = new(IpWhiteConfig)
+				var lq = new(IpWhiteBackendsConfig)
 				if err := jsonParser.JSONToStruct(s, lq); err != nil {
 					return err
 				}
@@ -94,7 +99,7 @@ func (r *enableIpWhiteListIng) validate(config *Config) error {
 			return cerr.NewMissIngressFieldValueError(setIpWhiteConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 
-		var lq = new(IpWhiteConfig)
+		var lq = new(IpWhiteBackendsConfig)
 		if err := jsonParser.JSONToStruct(config.SetIpWhiteConfig, lq); err != nil {
 			return err
 		}

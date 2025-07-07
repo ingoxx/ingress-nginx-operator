@@ -49,7 +49,7 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 		},
 	},
 	lbConfigAnnotations: {
-		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"backends\": [{\"name\": \"svcName-1\", \"config\": \"max_fails=3 fail_timeout=30s weight=80\"}... ]}",
+		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"backends\": [{\"host\": \"api.aaa.com\", {\"name\": \"svcName-1\", \"config\": \"max_fails=3 fail_timeout=30s weight=80\"}... ]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var bks = new(ingress.LbConfigList)
@@ -65,6 +65,10 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					if _, err := ing.GetBackend(v.Name); err != nil {
 						//return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 						return err
+					}
+
+					if !ing.CheckHost(v.Host) {
+						return cerr.NewIngressHostNotFoundError(v.Host, ing.GetName(), ing.GetNameSpace())
 					}
 				}
 			}
@@ -116,12 +120,12 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 			if svc.Services.Name == "" {
 				continue
 			}
-			updated := false
+			var updated bool
 			for _, v3 := range bks.Backends {
 				if svc.Services.Name == "" {
 					continue
 				}
-				if svc.Services.Name == v3.Name {
+				if svc.Services.Name == v3.Name && v1.Host == v3.Host {
 					if len(bks.Backends) > 0 && len(bks.Backends) < 2 {
 						config.LbPolicy = ""
 						svc.Services.Name = r.resources.GetBackendName(svc.Services)

@@ -140,3 +140,7 @@ func (r ResourceAdapter) GetDefaultBackend() (*v1.ServiceBackendPort, error) {
 func (r ResourceAdapter) CheckDefaultBackend() error {
 	return r.Ingress.CheckDefaultBackend()
 }
+
+func (r ResourceAdapter) CheckHost(host string) bool {
+	return r.Ingress.CheckHost(host)
+}

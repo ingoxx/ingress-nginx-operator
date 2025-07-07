@@ -35,6 +35,12 @@ type LbConfigList struct {
 }
 
 type LbConfig struct {
+	Host   string // host
 	Name   string // svc的name
 	Config string // 负载均衡的参数配置，如：max_fails=3 fail_timeout=30s weight=20
+}
+
+type IpListBackendsConfig struct {
+	Ip      []string `json:"ip"`
+	Backend string   `json:"backend"`
 }

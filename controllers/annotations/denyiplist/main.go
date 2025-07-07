@@ -2,6 +2,7 @@ package denyiplist
 
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
@@ -23,10 +24,14 @@ type IpDenyConfig struct {
 	Ip      []string `json:"ip"`
 }
 
+type IpDenyBackendsConfig struct {
+	Backends []ingress.IpListBackendsConfig
+}
+
 type Config struct {
 	EnableIpBlackList bool   `json:"enable-ip-blacklist"`
 	SetIpBlackConfig  string `json:"set-ip-black-config"`
-	DenyIpConfig      IpDenyConfig
+	DenyIpConfig      IpDenyBackendsConfig
 }
 
 var enableIpBlackListIngAnnotations = parser.AnnotationsContents{
@@ -46,7 +51,7 @@ var enableIpBlackListIngAnnotations = parser.AnnotationsContents{
 		Doc: "nginx deny ip access, must be in JSON format, example: {\"ip\": [\"2.2.2.2\"], \"backend\": [\"svc-name\"]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
-				var lq = new(IpDenyConfig)
+				var lq = new(IpDenyBackendsConfig)
 				if err := jsonParser.JSONToStruct(s, lq); err != nil {
 					return err
 				}
@@ -94,7 +99,7 @@ func (r *enableIpBlackListIng) validate(config *Config) error {
 			return cerr.NewMissIngressFieldValueError(setIpBlackConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 
-		var lq = new(IpDenyConfig)
+		var lq = new(IpDenyBackendsConfig)
 		if err := jsonParser.JSONToStruct(config.SetIpBlackConfig, lq); err != nil {
 			return err
 		}
