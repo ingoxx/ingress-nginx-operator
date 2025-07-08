@@ -277,7 +277,20 @@ func (i *IngressServiceImpl) GetSvcPort(svc *corev1.Service) []int32 {
 	return ports
 }
 
-// GetUpstreamConfig 将后端处理成Upstream格式
+func (i *IngressServiceImpl) isOneSvc(paths []v1.HTTPIngressPath) bool {
+	var seen = make(map[string]bool)
+	var result = make([]v1.HTTPIngressPath, 0, len(paths))
+	for _, p := range paths {
+		if !seen[p.Backend.Service.Name] {
+			seen[p.Backend.Service.Name] = true
+			result = append(result, p)
+		}
+	}
+
+	return len(result) == 1
+}
+
+// GetUpstreamConfig 将ingress中所有backends处理成Upstream格式
 func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 	var rs = i.GetRules()
 	var upStreamConfigList = make([]*ingress.Backends, 0, len(rs))
@@ -304,11 +317,12 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 			}
 
 			bk := &ingress.IngBackends{
-				Services:      backend,
-				Path:          p.Path,
-				PathType:      string(*p.PathType),
-				SvcName:       backend.Name,
-				IsPathIsRegex: parser.IsRegex(p.Path),
+				Services:        backend,
+				Path:            p.Path,
+				PathType:        string(*p.PathType),
+				SvcName:         backend.Name,
+				IsPathIsRegex:   parser.IsRegex(p.Path),
+				IsSingleService: i.isOneSvc(r.HTTP.Paths),
 			}
 			backends = append(backends, bk)
 		}
@@ -409,17 +423,19 @@ func (i *IngressServiceImpl) CheckController() error {
 }
 
 func (i *IngressServiceImpl) CheckHosts() error {
-	var recordExistsHost string
 	var rs = i.GetRules()
-
+	var recordExistsHost = make(map[string]bool)
 	for _, r := range rs {
 		if r.Host == "" {
 			return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
 		}
 
-		if recordExistsHost == "" {
-			recordExistsHost = r.Host
-		} else if recordExistsHost == r.Host {
+		b, ok := recordExistsHost[r.Host]
+		if !ok {
+			recordExistsHost[r.Host] = true
+		}
+
+		if b {
 			return cerr.NewDuplicateHostError(i.GetName(), i.GetNameSpace())
 		}
 	}
@@ -429,15 +445,25 @@ func (i *IngressServiceImpl) CheckHosts() error {
 
 func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	pattern := `^/`
-	var recordExistsPath string
+	var recordExistsPath = make(map[string]bool)
 	for _, p := range path {
-		if recordExistsPath == p.Path {
+
+		b, ok := recordExistsPath[p.Path]
+		if !ok {
+			recordExistsPath[p.Path] = true
+		}
+
+		if b {
 			return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
 		}
 
-		if recordExistsPath == "" {
-			recordExistsPath = p.Path
-		}
+		//if recordExistsPath == p.Path {
+		//	return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
+		//}
+		//
+		//if recordExistsPath == "" {
+		//	recordExistsPath = p.Path
+		//}
 
 		matched, err := regexp.MatchString(pattern, p.Path)
 		if err != nil {
@@ -512,12 +538,12 @@ func (i *IngressServiceImpl) checkBackend() error {
 	}
 
 	for _, r := range rules {
-		if err := i.CheckHosts(); err != nil {
-			return err
-		}
-
 		if r.HTTP == nil {
 			return cerr.NewMissIngressFieldValueError("HTTP", i.GetName(), i.GetNameSpace())
+		}
+
+		if err := i.CheckHosts(); err != nil {
+			return err
 		}
 
 		if err := i.CheckPath(r.HTTP.Paths); err != nil {

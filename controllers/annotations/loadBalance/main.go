@@ -126,12 +126,18 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 					continue
 				}
 				if svc.Services.Name == v3.Name && v1.Host == v3.Host {
-					if len(bks.Backends) > 0 && len(bks.Backends) < 2 {
-						config.LbPolicy = ""
+					if svc.IsSingleService {
 						svc.Services.Name = r.resources.GetBackendName(svc.Services)
 					} else {
 						svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
 					}
+					//svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
+					//if isEmptySvc {
+					//	config.LbPolicy = ""
+					//	svc.Services.Name = r.resources.GetBackendName(svc.Services)
+					//} else {
+					//	svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
+					//}
 					updated = true
 					break // 找到后就退出
 				}

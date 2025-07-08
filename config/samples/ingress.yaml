@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
-    ingress.nginx.k8s.io/lb-policy: "least_conn"
+    ingress.nginx.k8s.io/lb-policy: "ip_hash"
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [
@@ -27,6 +27,11 @@ metadata:
             "limit_req_zone": ["$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s"],
             "limit_req": ["zone=per_ip_uri burst=5 nodelay"],
             "backend": "nginx-service-a"
+          },
+          {
+            "limit_req_zone": ["$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s"],
+            "limit_req": ["zone=per_ip_uri burst=5 nodelay"],
+            "backend": "nginx-service-g"
           }
         ]
       }

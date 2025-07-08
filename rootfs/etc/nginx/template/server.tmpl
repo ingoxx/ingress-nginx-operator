@@ -91,7 +91,7 @@ server {
         {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
         {{ range $lmpath := $annotations.EnableReqLimit.Backends }}
         {{ if and $lmpath.Backend $path.SvcName (eq $lmpath.Backend $path.SvcName) }}
-        {{ range $reqs := $annotations.EnableReqLimit.LimitReq }}
+        {{ range $reqs := $lmpath.LimitReq }}
         limit_req {{ $reqs }};
         {{ end }}
         {{ end }}
