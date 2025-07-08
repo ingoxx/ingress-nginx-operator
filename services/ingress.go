@@ -54,13 +54,13 @@ func (i *IngressServiceImpl) GetNameSpace() string {
 }
 
 func (i *IngressServiceImpl) GetRules() []v1.IngressRule {
-	var rs = make([]v1.IngressRule, len(i.ingress.Spec.Rules))
+	//var rs = make([]v1.IngressRule, len(i.ingress.Spec.Rules))
+	//
+	//for k, s := range i.ingress.Spec.Rules {
+	//	rs = append(rs[:k], s)
+	//}
 
-	for k, s := range i.ingress.Spec.Rules {
-		rs = append(rs[:k], s)
-	}
-
-	return rs
+	return i.ingress.Spec.Rules
 }
 
 func (i *IngressServiceImpl) CheckHost(host string) bool {
@@ -447,12 +447,10 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	pattern := `^/`
 	var recordExistsPath = make(map[string]bool)
 	for _, p := range path {
-
 		b, ok := recordExistsPath[p.Path]
 		if !ok {
 			recordExistsPath[p.Path] = true
 		}
-
 		if b {
 			return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
 		}
@@ -537,13 +535,13 @@ func (i *IngressServiceImpl) checkBackend() error {
 		return cerr.NewMissIngressFieldValueError("rules", i.GetName(), i.GetNameSpace())
 	}
 
+	if err := i.CheckHosts(); err != nil {
+		return err
+	}
+
 	for _, r := range rules {
 		if r.HTTP == nil {
 			return cerr.NewMissIngressFieldValueError("HTTP", i.GetName(), i.GetNameSpace())
-		}
-
-		if err := i.CheckHosts(); err != nil {
-			return err
 		}
 
 		if err := i.CheckPath(r.HTTP.Paths); err != nil {
