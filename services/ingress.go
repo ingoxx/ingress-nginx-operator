@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
@@ -54,12 +53,6 @@ func (i *IngressServiceImpl) GetNameSpace() string {
 }
 
 func (i *IngressServiceImpl) GetRules() []v1.IngressRule {
-	//var rs = make([]v1.IngressRule, len(i.ingress.Spec.Rules))
-	//
-	//for k, s := range i.ingress.Spec.Rules {
-	//	rs = append(rs[:k], s)
-	//}
-
 	return i.ingress.Spec.Rules
 }
 
@@ -391,11 +384,26 @@ func (i *IngressServiceImpl) GetDeploySvcName() string {
 }
 
 func (i *IngressServiceImpl) CheckService() error {
-	var err error
-	if err1, err2 := i.CheckDefaultBackend(), i.checkBackend(); err1 != nil && err2 != nil {
-		err = errors.Join(err1, err2)
+	if err := i.checkBackend(); err != nil {
 		return err
 	}
+
+	if err := i.CheckDefaultBackend(); err != nil {
+		if !cerr.IsNewMissIngressFieldValueError(err) {
+			return err
+		}
+	}
+
+	//var err error
+	//if err1 := i.checkBackend(); err1 != nil {
+	//	if err2 := i.CheckDefaultBackend(); err2 != nil {
+	//		err = errors.Join(err, err1, err2)
+	//	}
+	//}
+	//
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }
@@ -429,15 +437,10 @@ func (i *IngressServiceImpl) CheckHosts() error {
 		if r.Host == "" {
 			return cerr.NewMissIngressFieldValueError("host", i.GetName(), i.GetNameSpace())
 		}
-
-		b, ok := recordExistsHost[r.Host]
-		if !ok {
-			recordExistsHost[r.Host] = true
-		}
-
-		if b {
+		if _, ok := recordExistsHost[r.Host]; ok {
 			return cerr.NewDuplicateHostError(i.GetName(), i.GetNameSpace())
 		}
+		recordExistsHost[r.Host] = true
 	}
 
 	return nil
@@ -447,21 +450,10 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	pattern := `^/`
 	var recordExistsPath = make(map[string]bool)
 	for _, p := range path {
-		b, ok := recordExistsPath[p.Path]
-		if !ok {
-			recordExistsPath[p.Path] = true
-		}
-		if b {
+		if _, ok := recordExistsPath[p.Path]; ok {
 			return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
 		}
-
-		//if recordExistsPath == p.Path {
-		//	return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
-		//}
-		//
-		//if recordExistsPath == "" {
-		//	recordExistsPath = p.Path
-		//}
+		recordExistsPath[p.Path] = true
 
 		matched, err := regexp.MatchString(pattern, p.Path)
 		if err != nil {
