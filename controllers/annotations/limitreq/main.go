@@ -19,13 +19,13 @@ type RequestLimitIng struct {
 }
 
 type ReqLimitConfig struct {
-	LimitReqZone []string `json:"limit_req_zone"`
-	LimitReq     []string `json:"limit_req"`
-	Backend      string   `json:"backend"`
+	LimitReq []string `json:"limit_req"`
+	Backend  string   `json:"backend"`
 }
 
 type ReqBackendsConfig struct {
-	Backends []ReqLimitConfig `json:"backends"`
+	Backends     []ReqLimitConfig `json:"backends"`
+	LimitReqZone []string         `json:"limit_req_zone"`
 }
 
 type Config struct {
