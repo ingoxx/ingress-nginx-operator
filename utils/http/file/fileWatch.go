@@ -196,6 +196,16 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 	// 如果存在，先比对
 	_, err := os.Stat(targetPath)
 	if err == nil {
+		if len(newContent) == 0 {
+			if err := os.Remove(targetPath); err != nil {
+				return err
+			}
+			if err := reloadNginx(); err != nil {
+				return fmt.Errorf("failed to nginx reload: %v", err)
+			}
+			return nil
+		}
+
 		oldMD5, err := getFileMD5(targetPath)
 		if err != nil {
 			return fmt.Errorf("failed to calculate MD5 of the original file: %v", err)
