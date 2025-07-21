@@ -27,11 +27,79 @@ func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, oper
 func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
-	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); err != nil {
+	il, err := ing.GetIngressList(nc.ctx, req.NamespacedName)
+	if err != nil {
 		klog.Error(err)
 		return err
 	}
 
+	for _, i := range il.Items {
+		if _, err := ing.GetIngress(&i); err != nil {
+			klog.Error(err)
+			continue
+		}
+
+		if err := nc.check(ing); err != nil {
+			klog.Error(err)
+			continue
+		}
+	}
+
+	//if err := ing.CheckController(); err != nil {
+	//	klog.Warning(err)
+	//	return err
+	//}
+	//
+	//if err := ing.CheckService(); err != nil {
+	//	klog.Error(err)
+	//	return err
+	//}
+	//
+	//cert := services.NewCertServiceImpl(nc.ctx, ing)
+	//secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
+	//issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
+	//configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
+	//
+	//ar := adapter.ResourceAdapter{
+	//	Ingress:   ing,
+	//	Secret:    secret,
+	//	Cert:      cert,
+	//	Issuer:    issuer,
+	//	ConfigMap: configMap,
+	//}
+	//
+	//if err := ar.CheckCert(); err != nil {
+	//	klog.Error(err)
+	//	return err
+	//}
+	//
+	//extract, err := annotations.NewExtractor(ing, ar).Extract()
+	//if err != nil {
+	//	klog.Error(err)
+	//	return err
+	//}
+	//
+	//deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
+	//if err := deployment.CheckDeploy(); err != nil {
+	//	klog.Error(err)
+	//	return err
+	//}
+	//
+	//svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
+	//if err := svc.CheckSvc(); err != nil {
+	//	klog.Error(err)
+	//	return err
+	//}
+	//
+	//if err := NewNginxController(ar, extract).Run(); err != nil {
+	//	klog.Error(err)
+	//	return err
+	//}
+
+	return nil
+}
+
+func (nc *CrdNginxController) check(ing common.Generic) error {
 	if err := ing.CheckController(); err != nil {
 		klog.Warning(err)
 		return err
@@ -71,12 +139,6 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		klog.Error(err)
 		return err
 	}
-
-	//daemonSet := services.NewDaemonSetServiceImpl(nc.ctx, ing, extract)
-	//if err := daemonSet.CheckDaemonSet(); err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
 
 	svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
 	if err := svc.CheckSvc(); err != nil {

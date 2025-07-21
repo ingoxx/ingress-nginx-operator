@@ -123,7 +123,7 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 	return nil
 }
 
-// generateNgxConfTmpl 生成nginx.conf配置
+// generateNgxConfTmpl 生成nginx.conf配置, 在同一个namespace里的ingress都是共用这份配置
 func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 	var buffer bytes.Buffer
 

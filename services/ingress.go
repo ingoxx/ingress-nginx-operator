@@ -24,7 +24,7 @@ type IngressServiceImpl struct {
 	k8sCli      common.K8sClientSet
 	operatorCli common.OperatorClientSet
 	ctx         context.Context
-	ingress     *v1.Ingress
+	Ingress     *v1.Ingress
 }
 
 // NewIngressServiceImpl 创建 Service 实例
@@ -32,28 +32,53 @@ func NewIngressServiceImpl(ctx context.Context, k8sCli common.K8sClientSet, oper
 	return &IngressServiceImpl{ctx: ctx, k8sCli: k8sCli, operatorCli: operatorCli}
 }
 
-func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
+func (i *IngressServiceImpl) GetIngres2(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
 	var ing = new(v1.Ingress)
 	if err := i.operatorCli.GetClient().Get(ctx, req, ing); err != nil {
-		return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("ingress '%s' not found in namespace '%s'", req.Name, req.Namespace))
+		return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("Ingress '%s' not found in namespace '%s'", req.Name, req.Namespace))
 	}
 
-	i.ingress = ing
+	i.Ingress = ing
 	i.ctx = ctx
 
 	return ing, nil
 }
 
+func (i *IngressServiceImpl) GetIngress(ing *v1.Ingress) (*v1.Ingress, error) {
+	if err := i.operatorCli.GetClient().Get(i.ctx, types.NamespacedName{Namespace: ing.Name, Name: ing.Namespace}, ing); err != nil {
+		return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("Ingress '%s' not found in namespace '%s'", ing.Name, ing.Namespace))
+	}
+
+	i.Ingress = ing
+
+	return ing, nil
+}
+
+func (i *IngressServiceImpl) GetIngressList(ctx context.Context, req client.ObjectKey) (*v1.IngressList, error) {
+	var il = new(v1.IngressList)
+	if err := i.operatorCli.GetClient().List(ctx, il, client.InNamespace(req.Namespace)); err != nil {
+		return il, err
+	}
+
+	if len(il.Items) == 0 {
+		return il, cerr.NewIngressNotFoundError(fmt.Sprintf("Ingress not found in namespace '%s'", req.Namespace))
+	}
+
+	i.ctx = ctx
+
+	return il, nil
+}
+
 func (i *IngressServiceImpl) GetName() string {
-	return i.ingress.Name
+	return i.Ingress.Name
 }
 
 func (i *IngressServiceImpl) GetNameSpace() string {
-	return i.ingress.Namespace
+	return i.Ingress.Namespace
 }
 
 func (i *IngressServiceImpl) GetRules() []v1.IngressRule {
-	return i.ingress.Spec.Rules
+	return i.Ingress.Spec.Rules
 }
 
 func (i *IngressServiceImpl) CheckHost(host string) bool {
@@ -153,7 +178,7 @@ func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, er
 
 	port = i.GetBackendPort(svc)
 	if port == 0 {
-		return bk, fmt.Errorf("service '%s' not exists in ingress '%s' namespace '%s'", name, i.GetName(), i.GetNameSpace())
+		return bk, fmt.Errorf("service '%s' not exists in Ingress '%s' namespace '%s'", name, i.GetName(), i.GetNameSpace())
 	}
 
 	for _, r := range rs {
@@ -175,17 +200,17 @@ func (i *IngressServiceImpl) GetBackend(name string) (*v1.ServiceBackendPort, er
 }
 
 func (i *IngressServiceImpl) GetAnnotations() map[string]string {
-	return i.ingress.GetAnnotations()
+	return i.Ingress.GetAnnotations()
 }
 
 func (i *IngressServiceImpl) GetIngressObjectMate() metav1.ObjectMeta {
-	return i.ingress.ObjectMeta
+	return i.Ingress.ObjectMeta
 }
 
 func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error) {
 	var bk = new(v1.ServiceBackendPort)
-	if i.ingress.Spec.DefaultBackend != nil {
-		key := types.NamespacedName{Name: i.ingress.Spec.DefaultBackend.Service.Name, Namespace: i.GetNameSpace()}
+	if i.Ingress.Spec.DefaultBackend != nil {
+		key := types.NamespacedName{Name: i.Ingress.Spec.DefaultBackend.Service.Name, Namespace: i.GetNameSpace()}
 		svc, err := i.GetService(key)
 		if err != nil {
 			return bk, err
@@ -253,7 +278,7 @@ func (i *IngressServiceImpl) GetBackendPorts(key client.ObjectKey) ([]*v1.Servic
 func (i *IngressServiceImpl) GetDefaultBackendPort(svc *corev1.Service) int32 {
 	var port int32
 	for _, p := range i.GetSvcPort(svc) {
-		if i.ingress.Spec.DefaultBackend.Service.Port.Number == p {
+		if i.Ingress.Spec.DefaultBackend.Service.Port.Number == p {
 			return p
 		}
 	}
@@ -356,7 +381,7 @@ func (i *IngressServiceImpl) GetClient() client.Client {
 }
 
 func (i *IngressServiceImpl) GetTls() []v1.IngressTLS {
-	return i.ingress.Spec.TLS
+	return i.Ingress.Spec.TLS
 }
 
 func (i *IngressServiceImpl) GetDaemonSetNameLabel() string {
@@ -411,20 +436,20 @@ func (i *IngressServiceImpl) CheckService() error {
 func (i *IngressServiceImpl) CheckController() error {
 	ic := new(v1.IngressClass)
 
-	if i.ingress.Spec.IngressClassName == nil && i.ingress.GetAnnotations()[constants.IngAnnotationKey] == "" {
-		return fmt.Errorf("select available ingress nginx controller")
+	if i.Ingress.Spec.IngressClassName == nil && i.Ingress.GetAnnotations()[constants.IngAnnotationKey] == "" {
+		return fmt.Errorf("select available Ingress nginx controller")
 	}
 
-	if i.ingress.Annotations[constants.IngAnnotationKey] == constants.IngAnnotationVal {
+	if i.Ingress.Annotations[constants.IngAnnotationKey] == constants.IngAnnotationVal {
 		return nil
 	}
 
-	if err := i.operatorCli.GetClient().Get(i.ctx, types.NamespacedName{Name: *i.ingress.Spec.IngressClassName}, ic); err != nil {
+	if err := i.operatorCli.GetClient().Get(i.ctx, types.NamespacedName{Name: *i.Ingress.Spec.IngressClassName}, ic); err != nil {
 		return err
 	}
 
 	if ic.Spec.Controller != constants.IngController {
-		return fmt.Errorf("pls select available ingress nginx controller")
+		return fmt.Errorf("pls select available Ingress nginx controller")
 	}
 
 	return nil
@@ -502,12 +527,12 @@ func (i *IngressServiceImpl) CheckPathType(path v1.HTTPIngressPath) error {
 }
 
 func (i *IngressServiceImpl) CheckDefaultBackend() error {
-	if i.ingress.Spec.DefaultBackend == nil {
+	if i.Ingress.Spec.DefaultBackend == nil {
 		return cerr.NewMissIngressFieldValueError("defaultBackend", i.GetName(), i.GetNameSpace())
 	}
 
-	if i.ingress.Spec.DefaultBackend != nil {
-		key := types.NamespacedName{Namespace: i.GetNameSpace(), Name: i.ingress.Spec.DefaultBackend.Service.Name}
+	if i.Ingress.Spec.DefaultBackend != nil {
+		key := types.NamespacedName{Namespace: i.GetNameSpace(), Name: i.Ingress.Spec.DefaultBackend.Service.Name}
 		svc, err := i.GetService(key)
 		if err != nil {
 			return err
