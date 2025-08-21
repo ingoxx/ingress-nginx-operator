@@ -45,57 +45,6 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		}
 	}
 
-	//if err := ing.CheckController(); err != nil {
-	//	klog.Warning(err)
-	//	return err
-	//}
-	//
-	//if err := ing.CheckService(); err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
-	//
-	//cert := services.NewCertServiceImpl(nc.ctx, ing)
-	//secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
-	//issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
-	//configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
-	//
-	//ar := adapter.ResourceAdapter{
-	//	Ingress:   ing,
-	//	Secret:    secret,
-	//	Cert:      cert,
-	//	Issuer:    issuer,
-	//	ConfigMap: configMap,
-	//}
-	//
-	//if err := ar.CheckCert(); err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
-	//
-	//extract, err := annotations.NewExtractor(ing, ar).Extract()
-	//if err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
-	//
-	//deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
-	//if err := deployment.CheckDeploy(); err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
-	//
-	//svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
-	//if err := svc.CheckSvc(); err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
-	//
-	//if err := NewNginxController(ar, extract).Run(); err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
-
 	return nil
 }
 
