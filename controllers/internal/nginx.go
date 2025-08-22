@@ -45,9 +45,6 @@ type NginxController struct {
 	allResourcesData service.ResourcesMth
 	config           *annotations.IngressAnnotationsConfig
 	mux              *sync.Mutex
-	httpReqChan      chan NginxConfig
-	limitReqChan     chan struct{}
-	errorChan        chan error
 }
 
 func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
@@ -55,9 +52,6 @@ func NewNginxController(data service.ResourcesMth, config *annotations.IngressAn
 		allResourcesData: data,
 		config:           config,
 		mux:              new(sync.Mutex),
-		httpReqChan:      make(chan NginxConfig),
-		limitReqChan:     make(chan struct{}, 10),
-		errorChan:        make(chan error),
 	}
 }
 
@@ -103,8 +97,6 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 		return err
 	}
 
-	fmt.Println("server.conf >>> ", buffer.String())
-
 	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
 	file := NginxConfig{
 		FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
@@ -146,8 +138,6 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 	if err := serverTemp.Execute(&buffer, cfg); err != nil {
 		return err
 	}
-
-	fmt.Println("nginx.conf >>> ", buffer.String())
 
 	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
 	file := NginxConfig{

@@ -6,6 +6,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -14,13 +15,15 @@ type CrdNginxController struct {
 	k8sCli      common.K8sClientSet
 	operatorCli common.OperatorClientSet
 	ctx         context.Context
+	recorder    record.EventRecorder
 }
 
-func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet) *CrdNginxController {
+func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet, recorder record.EventRecorder) *CrdNginxController {
 	return &CrdNginxController{
 		ctx:         ctx,
 		k8sCli:      k8sCli,
 		operatorCli: operatorCli,
+		recorder:    recorder,
 	}
 }
 
@@ -40,9 +43,11 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		}
 
 		if err := nc.check(ing); err != nil {
+			nc.recorder.Eventf(&i, "Warning", "IngressDetectionFailed", err.Error())
 			klog.Error(err)
 			continue
 		}
+
 	}
 
 	return nil
