@@ -17,15 +17,16 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// IngressAnnotationsConfig nginx各个功能的入口
 type IngressAnnotationsConfig struct {
-	Rewrite           rewrite.Config
-	LoadBalance       loadBalance.Config
-	SSLStapling       ssl.Config
-	EnableCos         allowcos.Config
-	EnableReqLimit    limitreq.Config
-	EnableStream      stream.Config
-	EnableIpWhileList allowiplist.Config
-	EnableIpBlackList denyiplist.Config
+	Rewrite           rewrite.Config     // nginx rewrite重写url功能
+	LoadBalance       loadBalance.Config // nginx 负载均衡功能
+	SSLStapling       ssl.Config         // nginx ssl功能
+	EnableCos         allowcos.Config    // nginx 跨域功能
+	EnableReqLimit    limitreq.Config    // nginx 限流功能
+	EnableStream      stream.Config      // nginx stream功能
+	EnableIpWhileList allowiplist.Config // nginx 白名单功能
+	EnableIpBlackList denyiplist.Config  // nginx 黑名单功能
 }
 
 func (iac *IngressAnnotationsConfig) GetIngAnnConfig() {}
