@@ -2,6 +2,8 @@ package internal
 
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/services"
@@ -10,6 +12,11 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+type AggregatedFeatures struct {
+	EnableReqLimit map[string][]*limitreq.ReqBackendsConfig
+	EnableStream   map[string][]*stream.Backend
+}
 
 type CrdNginxController struct {
 	k8sCli      common.K8sClientSet
@@ -35,24 +42,25 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
+	af := &AggregatedFeatures{}
+
 	for _, i := range il.Items {
 		if _, err := ing.GetIngress(&i); err != nil {
 			klog.Error(err)
 			continue
 		}
 
-		if err := nc.check(ing); err != nil {
+		if err := nc.check(ing, af); err != nil {
 			nc.recorder.Eventf(&i, "Warning", "IngressDetectionFailed", err.Error())
 			klog.Error(err)
 			continue
 		}
-
 	}
 
 	return nil
 }
 
-func (nc *CrdNginxController) check(ing common.Generic) error {
+func (nc *CrdNginxController) check(ing common.Generic, af *AggregatedFeatures) error {
 	if err := ing.CheckController(); err != nil {
 		klog.Warning(err)
 		return err
@@ -87,6 +95,14 @@ func (nc *CrdNginxController) check(ing common.Generic) error {
 		return err
 	}
 
+	if extract.EnableStream.EnableStream {
+		af.EnableStream[ing.GetNameSpace()] = append(af.EnableStream[ing.GetNameSpace()], extract.EnableStream.StreamBackendList...)
+	}
+
+	if extract.EnableReqLimit.EnableRequestLimit {
+		af.EnableReqLimit[ing.GetNameSpace()] = append(af.EnableReqLimit[ing.GetNameSpace()], &extract.EnableReqLimit.ReqBackendsConfig)
+	}
+
 	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
 	if err := deployment.CheckDeploy(); err != nil {
 		klog.Error(err)
@@ -99,7 +115,7 @@ func (nc *CrdNginxController) check(ing common.Generic) error {
 		return err
 	}
 
-	if err := NewNginxController(ar, extract).Run(); err != nil {
+	if err := NewNginxController(ar, extract).GenerateServerTmpl(extract); err != nil {
 		klog.Error(err)
 		return err
 	}

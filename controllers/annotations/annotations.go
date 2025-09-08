@@ -23,8 +23,8 @@ type IngressAnnotationsConfig struct {
 	LoadBalance       loadBalance.Config // nginx 负载均衡功能
 	SSLStapling       ssl.Config         // nginx ssl功能
 	EnableCos         allowcos.Config    // nginx 跨域功能
-	EnableReqLimit    limitreq.Config    // nginx 限流功能
-	EnableStream      stream.Config      // nginx stream功能
+	EnableReqLimit    limitreq.Config    // nginx 限流功能-nginx.conf中的配置需额外处理
+	EnableStream      stream.Config      // nginx stream tcp功能-nginx.conf的配置需额外处理
 	EnableIpWhileList allowiplist.Config // nginx 白名单功能
 	EnableIpBlackList denyiplist.Config  // nginx 黑名单功能
 }

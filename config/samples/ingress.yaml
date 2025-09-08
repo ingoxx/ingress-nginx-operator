@@ -31,7 +31,6 @@ metadata:
           {
             "limit_req": ["zone=per_ip_uri burst=5 nodelay"],
             "backend": "nginx-service-g"
-            
           }
         ]
       }

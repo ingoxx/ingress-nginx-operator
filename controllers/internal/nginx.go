@@ -28,10 +28,6 @@ type Config struct {
 	Annotations      *annotations.IngressAnnotationsConfig
 	DefaultBackend   *v1.ServiceBackendPort
 	DefaultBackendAd string
-	ServerTmpl       string
-	NginxConfTmpl    string
-	DefaultConfTmpl  string
-	ConfDir          string
 	DefaultPort      int32
 }
 
@@ -66,31 +62,32 @@ func (nc *NginxController) Run() error {
 }
 
 func (nc *NginxController) generateBackendCfg() error {
-	c := &Config{
-		ServerTmpl:    constants.NginxServerTmpl,
-		NginxConfTmpl: constants.NginxTmpl,
-		Annotations:   nc.config,
-		ConfDir:       constants.NginxConfDir,
-	}
+	//c := &Config{
+	//	Annotations: nc.config,
+	//}
 
-	if err := nc.generateNgxConfTmpl(c); err != nil {
-		return err
-	}
+	//if err := nc.GenerateNgxConfTmpl(); err != nil {
+	//	return err
+	//}
 
-	if err := nc.generateServerTmpl(c); err != nil {
+	if err := nc.GenerateServerTmpl(nc.config); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// generateServerTmpl 生成conf.d/下的各个子配置
-func (nc *NginxController) generateServerTmpl(cfg *Config) error {
+// GenerateServerTmpl 生成conf.d/下的各个子配置
+func (nc *NginxController) GenerateServerTmpl(config *annotations.IngressAnnotationsConfig) error {
 	var buffer bytes.Buffer
 
-	serverTemp, err := nc.renderTemplateData(cfg.ServerTmpl)
+	serverTemp, err := nc.renderTemplateData(constants.NginxServerTmpl)
 	if err != nil {
 		return err
+	}
+
+	cfg := &Config{
+		Annotations: config,
 	}
 
 	if err := serverTemp.Execute(&buffer, cfg); err != nil {
@@ -115,13 +112,17 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 	return nil
 }
 
-// generateNgxConfTmpl 生成nginx.conf配置, 在同一个namespace里的ingress都是共用这份配置
-func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
+// GenerateNgxConfTmpl 生成nginx.conf配置, 在同一个namespace里的ingress都是共用这份配置
+func (nc *NginxController) GenerateNgxConfTmpl(config *annotations.IngressAnnotationsConfig) error {
 	var buffer bytes.Buffer
 
 	backend, err := nc.allResourcesData.GetDefaultBackend()
 	if err != nil {
 		return err
+	}
+
+	cfg := &Config{
+		Annotations: config,
 	}
 
 	if backend.Name != "" && backend.Number > 0 {
@@ -130,7 +131,7 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 		cfg.DefaultPort = int32(constants.DefaultPort)
 	}
 
-	serverTemp, err := nc.renderTemplateData(cfg.NginxConfTmpl)
+	serverTemp, err := nc.renderTemplateData(constants.NginxTmpl)
 	if err != nil {
 		return err
 	}
