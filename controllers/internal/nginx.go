@@ -39,15 +39,15 @@ type NginxConfig struct {
 
 type NginxController struct {
 	allResourcesData service.ResourcesMth
-	config           *annotations.IngressAnnotationsConfig
-	mux              *sync.Mutex
+	//config           *annotations.IngressAnnotationsConfig
+	mux *sync.Mutex
 }
 
-func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
+func NewNginxController(resource service.ResourcesMth) *NginxController {
 	return &NginxController{
-		allResourcesData: data,
-		config:           config,
-		mux:              new(sync.Mutex),
+		allResourcesData: resource,
+		//config:           config,
+		mux: new(sync.Mutex),
 	}
 }
 
@@ -70,9 +70,9 @@ func (nc *NginxController) generateBackendCfg() error {
 	//	return err
 	//}
 
-	if err := nc.GenerateServerTmpl(nc.config); err != nil {
-		return err
-	}
+	//if err := nc.GenerateServerTmpl(nc.config); err != nil {
+	//	return err
+	//}
 
 	return nil
 }

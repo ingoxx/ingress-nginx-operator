@@ -8,14 +8,23 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+type aff map[string][]*AggregatedFeatures
+
+func (a aff) Add(key string, feature *AggregatedFeatures) {
+	a[key] = append(a[key], feature)
+}
+
 type AggregatedFeatures struct {
-	EnableReqLimit map[string][]*limitreq.ReqBackendsConfig
-	EnableStream   map[string][]*stream.Backend
+	Ingress        *v1.Ingress
+	EnableReqLimit *limitreq.ReqBackendsConfig
+	EnableStream   []*stream.Backend
+	NameSpace      string
 }
 
 type CrdNginxController struct {
@@ -42,7 +51,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	af := &AggregatedFeatures{}
+	af := make(aff)
 
 	for _, i := range il.Items {
 		if _, err := ing.GetIngress(&i); err != nil {
@@ -50,17 +59,39 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 			continue
 		}
 
-		if err := nc.check(ing, af); err != nil {
+		if err := nc.check(ing, af, false); err != nil {
 			nc.recorder.Eventf(&i, "Warning", "IngressDetectionFailed", err.Error())
 			klog.Error(err)
 			continue
 		}
 	}
 
+	//聚合公共配置nginx.conf
+	var st = new(stream.Config)
+	var lm = new(limitreq.Config)
+	for m := range af {
+		for _, v := range af[m] {
+
+			if len(v.EnableStream) > 0 {
+				st.StreamBackendList = v.EnableStream
+				if !st.EnableStream {
+					st.EnableStream = true
+				}
+			}
+			if len(v.EnableReqLimit.Backends) > 0 && len(v.EnableReqLimit.LimitReqZone) > 0 {
+				lm.Backends = v.EnableReqLimit.Backends
+				lm.LimitReqZone = v.EnableReqLimit.LimitReqZone
+				if !lm.EnableRequestLimit {
+					lm.EnableRequestLimit = true
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
-func (nc *CrdNginxController) check(ing common.Generic, af *AggregatedFeatures) error {
+func (nc *CrdNginxController) check(ing common.Generic, af aff, isMainConf bool) error {
 	if err := ing.CheckController(); err != nil {
 		klog.Warning(err)
 		return err
@@ -96,11 +127,21 @@ func (nc *CrdNginxController) check(ing common.Generic, af *AggregatedFeatures) 
 	}
 
 	if extract.EnableStream.EnableStream {
-		af.EnableStream[ing.GetNameSpace()] = append(af.EnableStream[ing.GetNameSpace()], extract.EnableStream.StreamBackendList...)
+		a := &AggregatedFeatures{
+			Ingress:      ing,
+			NameSpace:    ing.GetNameSpace(),
+			EnableStream: extract.EnableStream.StreamBackendList,
+		}
+		af.Add(ing.GetNameSpace(), a)
 	}
 
 	if extract.EnableReqLimit.EnableRequestLimit {
-		af.EnableReqLimit[ing.GetNameSpace()] = append(af.EnableReqLimit[ing.GetNameSpace()], &extract.EnableReqLimit.ReqBackendsConfig)
+		b := &AggregatedFeatures{
+			Ingress:        ing,
+			NameSpace:      ing.GetNameSpace(),
+			EnableReqLimit: &extract.EnableReqLimit.ReqBackendsConfig,
+		}
+		af.Add(ing.GetNameSpace(), b)
 	}
 
 	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
@@ -115,9 +156,16 @@ func (nc *CrdNginxController) check(ing common.Generic, af *AggregatedFeatures) 
 		return err
 	}
 
-	if err := NewNginxController(ar, extract).GenerateServerTmpl(extract); err != nil {
-		klog.Error(err)
-		return err
+	if isMainConf {
+		if err := NewNginxController(ar).GenerateNgxConfTmpl(extract); err != nil {
+			klog.Error(err)
+			return err
+		}
+	} else {
+		if err := NewNginxController(ar).GenerateServerTmpl(extract); err != nil {
+			klog.Error(err)
+			return err
+		}
 	}
 
 	return nil
