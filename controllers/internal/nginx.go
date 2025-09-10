@@ -79,8 +79,10 @@ func (nc *NginxController) generateBackendCfg() error {
 
 // GenerateServerTmpl 生成conf.d/下的各个子配置
 func (nc *NginxController) GenerateServerTmpl(config *annotations.IngressAnnotationsConfig) error {
-	var buffer bytes.Buffer
+	nc.mux.Lock()
+	defer nc.mux.Unlock()
 
+	var buffer bytes.Buffer
 	serverTemp, err := nc.renderTemplateData(constants.NginxServerTmpl)
 	if err != nil {
 		return err
@@ -114,8 +116,10 @@ func (nc *NginxController) GenerateServerTmpl(config *annotations.IngressAnnotat
 
 // GenerateNgxConfTmpl 生成nginx.conf配置, 在同一个namespace里的ingress都是共用这份配置
 func (nc *NginxController) GenerateNgxConfTmpl(config *annotations.IngressAnnotationsConfig) error {
-	var buffer bytes.Buffer
+	nc.mux.Lock()
+	defer nc.mux.Unlock()
 
+	var buffer bytes.Buffer
 	backend, err := nc.allResourcesData.GetDefaultBackend()
 	if err != nil {
 		return err

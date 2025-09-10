@@ -21,8 +21,9 @@ func (a aff) Add(key string, feature *AggregatedFeatures) {
 }
 
 type AggregatedFeatures struct {
-	Ingress        *v1.Ingress
 	EnableReqLimit *limitreq.ReqBackendsConfig
+	Ingress        *v1.Ingress
+	Generic        common.Generic
 	EnableStream   []*stream.Backend
 	NameSpace      string
 }
@@ -52,14 +53,13 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	af := make(aff)
-
 	for _, i := range il.Items {
 		if _, err := ing.GetIngress(&i); err != nil {
 			klog.Error(err)
 			continue
 		}
 
-		if err := nc.check(ing, af, false); err != nil {
+		if err := nc.check(&i, ing, af, false); err != nil {
 			nc.recorder.Eventf(&i, "Warning", "IngressDetectionFailed", err.Error())
 			klog.Error(err)
 			continue
@@ -70,8 +70,9 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	var st = new(stream.Config)
 	var lm = new(limitreq.Config)
 	for m := range af {
+		var ing *v1.Ingress
+		var generic common.Generic
 		for _, v := range af[m] {
-
 			if len(v.EnableStream) > 0 {
 				st.StreamBackendList = v.EnableStream
 				if !st.EnableStream {
@@ -85,30 +86,37 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 					lm.EnableRequestLimit = true
 				}
 			}
+			ing = v.Ingress
+			generic = v.Generic
+		}
+		if err := nc.check(ing, generic, af, false); err != nil {
+			nc.recorder.Eventf(ing, "Warning", "IngressDetectionFailed", err.Error())
+			klog.Error(err)
+			continue
 		}
 	}
 
 	return nil
 }
 
-func (nc *CrdNginxController) check(ing common.Generic, af aff, isMainConf bool) error {
-	if err := ing.CheckController(); err != nil {
+func (nc *CrdNginxController) check(ing *v1.Ingress, generic common.Generic, af aff, isMainConf bool) error {
+	if err := generic.CheckController(); err != nil {
 		klog.Warning(err)
 		return err
 	}
 
-	if err := ing.CheckService(); err != nil {
+	if err := generic.CheckService(); err != nil {
 		klog.Error(err)
 		return err
 	}
 
-	cert := services.NewCertServiceImpl(nc.ctx, ing)
-	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
-	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
-	configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
+	cert := services.NewCertServiceImpl(nc.ctx, generic)
+	secret := services.NewSecretServiceImpl(nc.ctx, generic, cert)
+	issuer := services.NewIssuerServiceImpl(nc.ctx, generic, cert)
+	configMap := services.NewConfigMapServiceImpl(nc.ctx, generic)
 
 	ar := adapter.ResourceAdapter{
-		Ingress:   ing,
+		Ingress:   generic,
 		Secret:    secret,
 		Cert:      cert,
 		Issuer:    issuer,
@@ -120,7 +128,7 @@ func (nc *CrdNginxController) check(ing common.Generic, af aff, isMainConf bool)
 		return err
 	}
 
-	extract, err := annotations.NewExtractor(ing, ar).Extract()
+	extract, err := annotations.NewExtractor(generic, ar).Extract()
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -129,28 +137,30 @@ func (nc *CrdNginxController) check(ing common.Generic, af aff, isMainConf bool)
 	if extract.EnableStream.EnableStream {
 		a := &AggregatedFeatures{
 			Ingress:      ing,
-			NameSpace:    ing.GetNameSpace(),
+			Generic:      generic,
+			NameSpace:    generic.GetNameSpace(),
 			EnableStream: extract.EnableStream.StreamBackendList,
 		}
-		af.Add(ing.GetNameSpace(), a)
+		af.Add(generic.GetNameSpace(), a)
 	}
 
 	if extract.EnableReqLimit.EnableRequestLimit {
 		b := &AggregatedFeatures{
 			Ingress:        ing,
-			NameSpace:      ing.GetNameSpace(),
+			Generic:        generic,
+			NameSpace:      generic.GetNameSpace(),
 			EnableReqLimit: &extract.EnableReqLimit.ReqBackendsConfig,
 		}
-		af.Add(ing.GetNameSpace(), b)
+		af.Add(generic.GetNameSpace(), b)
 	}
 
-	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
+	deployment := services.NewDeploymentServiceImpl(nc.ctx, generic, extract)
 	if err := deployment.CheckDeploy(); err != nil {
 		klog.Error(err)
 		return err
 	}
 
-	svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
+	svc := services.NewSvcServiceImpl(nc.ctx, generic, extract)
 	if err := svc.CheckSvc(); err != nil {
 		klog.Error(err)
 		return err
