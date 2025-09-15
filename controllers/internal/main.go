@@ -9,6 +9,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,7 +55,12 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 
 	af := make(aff)
 	for _, i := range il.Items {
-		if _, err := ing.GetIngress(&i); err != nil {
+		key := types.NamespacedName{
+			Namespace: i.Namespace,
+			Name:      i.Name,
+		}
+		var ig = new(v1.Ingress)
+		if _, err := ing.GetIngress(ig, key); err != nil {
 			klog.Error(err)
 			continue
 		}

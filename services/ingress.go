@@ -44,8 +44,8 @@ func (i *IngressServiceImpl) GetIngres2(ctx context.Context, req client.ObjectKe
 	return ing, nil
 }
 
-func (i *IngressServiceImpl) GetIngress(ing *v1.Ingress) (*v1.Ingress, error) {
-	if err := i.operatorCli.GetClient().Get(i.ctx, types.NamespacedName{Namespace: ing.Name, Name: ing.Namespace}, ing); err != nil {
+func (i *IngressServiceImpl) GetIngress(ing *v1.Ingress, req client.ObjectKey) (*v1.Ingress, error) {
+	if err := i.operatorCli.GetClient().Get(i.ctx, req, ing); err != nil {
 		return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("Ingress '%s' not found in namespace '%s'", ing.Name, ing.Namespace))
 	}
 

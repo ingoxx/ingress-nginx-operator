@@ -10,7 +10,7 @@ import (
 )
 
 type K8sResourcesIngress interface {
-	GetIngress(ing *v1.Ingress) (*v1.Ingress, error)
+	GetIngress(*v1.Ingress, client.ObjectKey) (*v1.Ingress, error)
 	GetIngressList(context.Context, client.ObjectKey) (*v1.IngressList, error)
 	GetHosts() []string
 	GetBackend(string) (*v1.ServiceBackendPort, error)
