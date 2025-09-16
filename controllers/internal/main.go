@@ -9,7 +9,6 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,16 +54,6 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 
 	af := make(aff)
 	for _, i := range il.Items {
-		key := types.NamespacedName{
-			Namespace: i.Namespace,
-			Name:      i.Name,
-		}
-		var ig = new(v1.Ingress)
-		if _, err := ing.GetIngress(ig, key); err != nil {
-			klog.Error(err)
-			continue
-		}
-
 		if err := nc.check(&i, ing, af, false); err != nil {
 			nc.recorder.Eventf(&i, "Warning", "IngressDetectionFailed", err.Error())
 			klog.Error(err)
@@ -95,7 +84,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 			ing = v.Ingress
 			generic = v.Generic
 		}
-		if err := nc.check(ing, generic, af, false); err != nil {
+		if err := nc.check(ing, generic, af, true); err != nil {
 			nc.recorder.Eventf(ing, "Warning", "IngressDetectionFailed", err.Error())
 			klog.Error(err)
 			continue
