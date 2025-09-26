@@ -6,6 +6,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -33,4 +34,33 @@ func (c *ConfigMapServiceImpl) GetConfigMapData(name string) ([]byte, error) {
 	}
 
 	return []byte(data), nil
+}
+
+func (c *ConfigMapServiceImpl) CreateConfigMap(name string, data map[string]string) (map[string]string, error) {
+	cm := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.ing.GetNameSpace(),
+		},
+		Data: data,
+	}
+
+	if err := c.ing.GetClient().Create(context.Background(), cm); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (c *ConfigMapServiceImpl) UpdateConfigMap(name string, data map[string]string) (map[string]string, error) {
+	var cm = new(v1.ConfigMap)
+	req := types.NamespacedName{Name: name, Namespace: c.ing.GetNameSpace()}
+	if err := c.ing.GetClient().Get(context.Background(), req, cm); err == nil {
+		cm.Data = data
+		if err := c.ing.GetClient().Update(context.Background(), cm); err != nil {
+			return nil, err
+		}
+	}
+
+	return data, nil
 }
