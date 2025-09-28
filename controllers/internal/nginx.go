@@ -71,6 +71,51 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
+func (nc *NginxController) appendUniqueData() {}
+
+func (nc *NginxController) getPublicNgxConfig() (map[string]string, error) {
+	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
+	cm, err := nc.allResourcesData.GetNgxConfigMap(name)
+	if err != nil {
+		return cm, err
+	}
+
+	return cm, nil
+}
+
+// publicConfig 保存stream跟limit功能是公共配置
+func (nc *NginxController) setPublicNgxConfig() (map[string]string, error) {
+	var pd map[string]string
+	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
+	if nc.config.EnableStream.EnableStream {
+
+		b, err := json.Marshal(&nc.config.EnableStream)
+		if err != nil {
+			return pd, err
+		}
+
+		data, err := nc.allResourcesData.UpdateConfigMap(name, constants.StreamKey, b)
+		if err != nil {
+			return data, err
+		}
+	}
+
+	if nc.config.EnableReqLimit.EnableRequestLimit {
+		b, err := json.Marshal(&nc.config.EnableReqLimit)
+		if err != nil {
+			return nil, err
+		}
+
+		data, err := nc.allResourcesData.UpdateConfigMap(name, constants.StreamKey, b)
+		if err != nil {
+			return data, err
+		}
+	}
+
+	return nil, nil
+
+}
+
 func (nc *NginxController) generateBackendCfg() error {
 	c := &Config{
 		ServerTmpl:    constants.NginxServerTmpl,
@@ -102,8 +147,6 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 	if err := serverTemp.Execute(&buffer, cfg); err != nil {
 		return err
 	}
-
-	fmt.Println("server.conf >>> ", buffer.String())
 
 	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
 	file := NginxConfig{
@@ -146,8 +189,6 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 	if err := serverTemp.Execute(&buffer, cfg); err != nil {
 		return err
 	}
-
-	fmt.Println("nginx.conf >>> ", buffer.String())
 
 	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
 	file := NginxConfig{

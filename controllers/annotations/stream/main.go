@@ -27,10 +27,12 @@ type BackendList struct {
 
 type Backend struct {
 	Name              string `json:"name"`
+	NameSpace         string `json:"name_space"`
 	StreamBackendName string `json:"-"`
 	Port              int32  `json:"port"`
 }
 
+// Config 支持不同ns下的tcp连接访问
 type Config struct {
 	EnableStream      bool       `json:"enable-stream"`
 	SetStreamConfig   string     `json:"set-stream-config"`
@@ -51,7 +53,7 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setStreamConfigAnnotations: {
-		Doc: "nginx stream, must be in JSON format, example: {\"backends\": [ {\"name\": \"svcName-1\", \"port\": 8080}, {\"name\": \"svcName-2\", \"port\": 8081}... ]}",
+		Doc: "nginx stream, must be in JSON format, example: {\"backends\": [ {\"name\": \"svc-name\", \"name_space\": \"svc-ns\"}, \"port\": 8080},... ]}",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var bks = new(BackendList)
@@ -64,17 +66,19 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 				}
 
 				var isExistsSvc string
+				var isExistsSvcNs string
 				for _, v := range bks.Backends {
-					if isExistsSvc == v.Name {
+					if isExistsSvc == v.Name && isExistsSvcNs == v.NameSpace {
 						return cerr.NewDuplicateValueError(v.Name, ing.GetName(), ing.GetNameSpace())
 					}
 
-					if isExistsSvc == "" {
+					if isExistsSvc == "" || isExistsSvcNs == "" {
 						isExistsSvc = v.Name
+						isExistsSvcNs = v.NameSpace
 					}
 
 					var isExistsPort bool
-					key := types.NamespacedName{Name: v.Name, Namespace: ing.GetNameSpace()}
+					key := types.NamespacedName{Name: v.Name, Namespace: v.NameSpace}
 					if _, err := ing.GetService(key); err != nil {
 						return err
 					}
@@ -151,7 +155,7 @@ func (r *enableStreamIng) validate(config *Config) error {
 				Number: v.Port,
 			}
 
-			v.StreamBackendName = r.ingress.GetBackendName(sp)
+			v.StreamBackendName = r.ingress.GetAnyBackendName(sp, v.NameSpace)
 
 		}
 

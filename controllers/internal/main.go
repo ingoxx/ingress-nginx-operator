@@ -72,12 +72,6 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	//daemonSet := services.NewDaemonSetServiceImpl(nc.ctx, ing, extract)
-	//if err := daemonSet.CheckDaemonSet(); err != nil {
-	//	klog.Error(err)
-	//	return err
-	//}
-
 	svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
 	if err := svc.CheckSvc(); err != nil {
 		klog.Error(err)

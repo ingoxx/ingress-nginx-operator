@@ -39,4 +39,6 @@ type ResourcesMth interface {
 	GetDefaultBackend() (*v1.ServiceBackendPort, error)
 	CheckDefaultBackend() error
 	CheckHost(string) bool
+	UpdateConfigMap(name, key string, data []byte) (map[string]string, error)
+	GetNgxConfigMap(name string) (map[string]string, error)
 }

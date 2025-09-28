@@ -16,7 +16,7 @@ metadata:
     ingress.nginx.k8s.io/set-stream-config: |
       {
         "backends": [
-          {"name": "mysql", "port": 3306}
+          {"name": "mysql", "name_space": "game", "port": 3306}
         ]
       }
     ingress.nginx.k8s.io/enable-limit-req: "true"
