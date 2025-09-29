@@ -22,18 +22,25 @@ metadata:
     ingress.nginx.k8s.io/enable-limit-req: "true"
     ingress.nginx.k8s.io/set-limit-config: |
       {
-        "limit_req_zone": ["$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s"],
-        "backends": [
-          {
-            "limit_req": ["zone=per_ip_uri burst=5 nodelay"],
-            "backend": "nginx-service-a"
-          },
-          {
-            "limit_req": ["zone=per_ip_uri burst=5 nodelay"],
-            "backend": "nginx-service-g"
-            
-          }
-        ]
+      	"backends": [
+      		{
+      			"limit_zone": [
+      				{
+      					"limit_key": "$binary_remote_addr$request_uri",
+      					"zone_name": "per_ip_uri:10m",
+      					"rate": "5r/s"
+      				}
+      			],
+      			"limit_req": [
+      				{
+      					"zone_name": "per_ip_uri",
+      					"burst": "5",
+                        "delay": true,
+      				}
+      			],
+      			"name": "svc_1"
+      		}
+      	]
       }
     ingress.nginx.k8s.io/rewrite-target: "$2"
     ingress.nginx.k8s.io/rewrite-flag: "break"

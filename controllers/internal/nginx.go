@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"io"
@@ -71,7 +73,21 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
-func (nc *NginxController) appendUniqueData() {}
+func (nc *NginxController) appendUniquePort(backends []*stream.Backend, seen map[int32]struct{}, b *stream.Backend) []*stream.Backend {
+	if _, exists := seen[b.Port]; !exists {
+		seen[b.Port] = struct{}{}
+		backends = append(backends, b)
+	}
+	return backends
+}
+
+func (nc *NginxController) appendUniqueZone(backends []*limitreq.ZoneRepConfig, seen map[string]struct{}, b *limitreq.ZoneRepConfig) []*limitreq.ZoneRepConfig {
+	if _, exists := seen[b.LimitZone.ZoneName]; !exists {
+		seen[b.LimitZone.ZoneName] = struct{}{}
+		backends = append(backends, b)
+	}
+	return backends
+}
 
 func (nc *NginxController) getPublicNgxConfig() (map[string]string, error) {
 	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())

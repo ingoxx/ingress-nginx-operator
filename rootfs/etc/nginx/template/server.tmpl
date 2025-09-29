@@ -89,10 +89,13 @@ server {
 
         ### limit_req
         {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
-        {{ range $lmpath := $annotations.EnableReqLimit.Backends }}
-        {{ if and $lmpath.Backend $path.SvcName (eq $lmpath.Backend $path.SvcName) }}
-        {{ range $reqs := $lmpath.LimitReq }}
-        limit_req {{ $reqs }};
+        {{ range $lmpath := $annotations.EnableReqLimit.Bs.Backends }}
+        {{ if and $lmpath.Name $path.SvcName (eq $lmpath.Name $path.SvcName) }}
+        {{ if $lmpath.LimitReq.Delay }}
+        limit_req {{ $lmpath.LimitReq.ZoneName }} {{ $lmpath.LimitReq.Burst }} nodelay;
+        {{ else }}
+        limit_req {{ $lmpath.LimitReq.ZoneName }} {{ $lmpath.LimitReq.Burst }};
+        {{ end }}
         {{ end }}
         {{ end }}
         {{ end }}
