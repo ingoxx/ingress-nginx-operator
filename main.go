@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/client"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/config"
 	"k8s.io/klog/v2"
 	"os"
 
@@ -121,7 +122,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("starting manager", "version", config.Version)
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

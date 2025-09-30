@@ -31,9 +31,9 @@ type ReqConfig struct {
 }
 
 type ZoneRepConfig struct {
-	LimitZone ZoneConfig `json:"limit_zone"`
-	LimitReq  ReqConfig  `json:"limit_req"`
-	Name      string     `json:"name"`
+	LimitZone []*ZoneConfig `json:"limit_zone"`
+	LimitReq  []*ReqConfig  `json:"limit_req"`
+	Name      string        `json:"name"`
 }
 
 type SetLimitConfig struct {
@@ -71,10 +71,6 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 				if parser.IsZeroStruct(lq) {
 					return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
-
-				//if lq.LimitReq == "" || lq.LimitReqZone == "" || len(lq.Backend) == 0 {
-				//	return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-				//}
 			}
 
 			return nil

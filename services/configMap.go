@@ -6,6 +6,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -79,8 +80,11 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, 
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.ing.GetNameSpace()}
 	if err := c.ing.GetClient().Get(context.Background(), req, cm); err != nil {
-		return cm.Data, err
+		if errors.IsNotFound(err) {
+			return cm.Data, nil
+		}
 
+		return cm.Data, err
 	}
 
 	return cm.Data, nil

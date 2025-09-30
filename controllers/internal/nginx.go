@@ -66,6 +66,11 @@ func NewNginxController(data service.ResourcesMth, config *annotations.IngressAn
 func (nc *NginxController) Run() error {
 	nc.mux.Lock()
 	defer nc.mux.Unlock()
+
+	if err := nc.check(); err != nil {
+		return err
+	}
+
 	if err := nc.generateBackendCfg(); err != nil {
 		return err
 	}
@@ -73,63 +78,124 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
-func (nc *NginxController) appendUniquePort(backends []*stream.Backend, seen map[int32]struct{}, b *stream.Backend) []*stream.Backend {
-	if _, exists := seen[b.Port]; !exists {
-		seen[b.Port] = struct{}{}
-		backends = append(backends, b)
-	}
-	return backends
-}
-
-func (nc *NginxController) appendUniqueZone(backends []*limitreq.ZoneRepConfig, seen map[string]struct{}, b *limitreq.ZoneRepConfig) []*limitreq.ZoneRepConfig {
-	if _, exists := seen[b.LimitZone.ZoneName]; !exists {
-		seen[b.LimitZone.ZoneName] = struct{}{}
-		backends = append(backends, b)
-	}
-	return backends
-}
-
-func (nc *NginxController) getPublicNgxConfig() (map[string]string, error) {
+// check 先检查nginx.conf中的配置是否重复配置
+func (nc *NginxController) check() error {
 	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
 	cm, err := nc.allResourcesData.GetNgxConfigMap(name)
 	if err != nil {
-		return cm, err
+		return err
 	}
 
-	return cm, nil
+	// nginx.conf中的stream功能
+	var nb []*stream.Backend
+	if nc.config.EnableStream.EnableStream {
+		if len(cm) == 0 {
+			nb = nc.config.EnableStream.StreamBackendList
+		} else {
+			es := cm[constants.StreamKey]
+			if err := json.Unmarshal([]byte(es), &nb); err != nil {
+				return err
+			}
+
+			bs, b := nc.isUniquePort(nb, nc.config.EnableStream.StreamBackendList)
+			if b {
+				return fmt.Errorf("the streams have the same port, ingress '%s', namespace '%s'", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
+			}
+
+			nc.config.EnableStream.StreamBackendList = bs
+			nb = bs
+		}
+
+		b, err := json.Marshal(&nb)
+		if err != nil {
+			return err
+		}
+
+		_, err = nc.allResourcesData.UpdateConfigMap(name, constants.StreamKey, b)
+		if err != nil {
+			return err
+		}
+	}
+
+	// nginx.conf中的limitreq功能
+	var lb []*limitreq.ZoneRepConfig
+	if nc.config.EnableReqLimit.EnableRequestLimit {
+		if len(cm) == 0 {
+			lb = nc.config.EnableReqLimit.Bs.Backends
+		} else {
+			es := cm[constants.LimitReqKey]
+			if err := json.Unmarshal([]byte(es), &lb); err != nil {
+				return err
+			}
+
+			bs, b := nc.isUniqueZone(lb, nc.config.EnableReqLimit.Bs.Backends)
+			if b {
+				return fmt.Errorf("the limitreq have the same zone, ingress '%s', namespace '%s'", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
+			}
+
+			nc.config.EnableReqLimit.Bs.Backends = bs
+			lb = bs
+		}
+
+		b, err := json.Marshal(&lb)
+		if err != nil {
+			return err
+		}
+		_, err = nc.allResourcesData.UpdateConfigMap(name, constants.LimitReqKey, b)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-// publicConfig 保存stream跟limit功能是公共配置
-func (nc *NginxController) setPublicNgxConfig() (map[string]string, error) {
-	var pd map[string]string
-	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
-	if nc.config.EnableStream.EnableStream {
+func (nc *NginxController) isUniquePort(cmBackend []*stream.Backend, anBackend []*stream.Backend) ([]*stream.Backend, bool) {
+	keySet := make(map[int32]struct{})
 
-		b, err := json.Marshal(&nc.config.EnableStream)
-		if err != nil {
-			return pd, err
-		}
+	// 先记录第一个切片中的key
+	for _, b := range cmBackend {
+		keySet[b.Port] = struct{}{}
+	}
 
-		data, err := nc.allResourcesData.UpdateConfigMap(name, constants.StreamKey, b)
-		if err != nil {
-			return data, err
+	// 检查第二个切片中是否有重复key
+	for _, b := range anBackend {
+		if _, exists := keySet[b.Port]; exists {
+			// 有重复，直接返回 true
+			return nil, true
 		}
 	}
 
-	if nc.config.EnableReqLimit.EnableRequestLimit {
-		b, err := json.Marshal(&nc.config.EnableReqLimit)
-		if err != nil {
-			return nil, err
+	// 没有重复，合并切片
+	merged := append(cmBackend, anBackend...)
+	return merged, false
+}
+
+func (nc *NginxController) isUniqueZone(cmBackend []*limitreq.ZoneRepConfig, anBackend []*limitreq.ZoneRepConfig) ([]*limitreq.ZoneRepConfig, bool) {
+	keySet := make(map[string]struct{})
+
+	// 先记录第一个切片中的key
+	for _, b1 := range cmBackend {
+		for _, b2 := range b1.LimitZone {
+			keySet[b2.ZoneName] = struct{}{}
 		}
 
-		data, err := nc.allResourcesData.UpdateConfigMap(name, constants.StreamKey, b)
-		if err != nil {
-			return data, err
-		}
 	}
 
-	return nil, nil
+	// 检查第二个切片中是否有重复key
+	for _, b1 := range anBackend {
+		for _, b2 := range b1.LimitZone {
+			if _, exists := keySet[b2.ZoneName]; exists {
+				// 有重复，直接返回 true
+				return nil, true
+			}
+		}
 
+	}
+
+	// 没有重复，合并切片
+	merged := append(cmBackend, anBackend...)
+	return merged, false
 }
 
 func (nc *NginxController) generateBackendCfg() error {

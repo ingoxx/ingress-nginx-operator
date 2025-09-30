@@ -67,14 +67,20 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 
 				var isExistsSvc string
 				var isExistsSvcNs string
+				var isDupPort int32
 				for _, v := range bks.Backends {
 					if isExistsSvc == v.Name && isExistsSvcNs == v.NameSpace {
 						return cerr.NewDuplicateValueError(v.Name, ing.GetName(), ing.GetNameSpace())
 					}
 
-					if isExistsSvc == "" || isExistsSvcNs == "" {
+					if isDupPort == v.Port {
+						return cerr.NewDuplicateValueError(v.Port, ing.GetName(), ing.GetNameSpace())
+					}
+
+					if isExistsSvc == "" {
 						isExistsSvc = v.Name
 						isExistsSvcNs = v.NameSpace
+						isDupPort = v.Port
 					}
 
 					var isExistsPort bool

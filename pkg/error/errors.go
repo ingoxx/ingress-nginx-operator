@@ -284,9 +284,9 @@ func (e DuplicateValueError) Error() string {
 	return e.errMsg
 }
 
-func NewDuplicateValueError(resource, name, namespace string) error {
+func NewDuplicateValueError(resource interface{}, name, namespace string) error {
 	return DuplicateValueError{
-		errMsg: fmt.Sprintf("duplicate service resource '%s', ingress '%s', namespace '%s'", resource, name, namespace),
+		errMsg: fmt.Sprintf("duplicate service resource '%v', ingress '%s', namespace '%s'", resource, name, namespace),
 	}
 }
 
