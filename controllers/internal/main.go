@@ -6,39 +6,42 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
-	"k8s.io/klog/v2"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type CrdNginxController struct {
 	k8sCli      common.K8sClientSet
 	operatorCli common.OperatorClientSet
+	recorder    record.EventRecorder
 	ctx         context.Context
 }
 
-func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet) *CrdNginxController {
+func NewCrdNginxController(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet, recorder record.EventRecorder) *CrdNginxController {
 	return &CrdNginxController{
 		ctx:         ctx,
 		k8sCli:      k8sCli,
 		operatorCli: operatorCli,
+		recorder:    recorder,
 	}
 }
 
 func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	ing := services.NewIngressServiceImpl(nc.ctx, nc.k8sCli, nc.operatorCli)
 
-	if _, err := ing.GetIngress(nc.ctx, req.NamespacedName); err != nil {
-		klog.Error(err)
+	ingress, err := ing.GetIngress(nc.ctx, req.NamespacedName)
+	if err != nil {
+		nc.recorder.Event(ingress, "Warning", "IngressNotExist", err.Error())
 		return err
 	}
 
 	if err := ing.CheckController(); err != nil {
-		klog.Warning(err)
+		nc.recorder.Event(ingress, "Normal", "NoCustomControllerSelected", err.Error())
 		return err
 	}
 
 	if err := ing.CheckService(); err != nil {
-		klog.Error(err)
+		nc.recorder.Event(ingress, "Warning", "BackendsNoServiceAvailable", err.Error())
 		return err
 	}
 
@@ -56,30 +59,30 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	if err := ar.CheckCert(); err != nil {
-		klog.Error(err)
+		nc.recorder.Event(ingress, "Warning", "NoCertAvailable", err.Error())
 		return err
 	}
 
 	extract, err := annotations.NewExtractor(ing, ar).Extract()
 	if err != nil {
-		klog.Error(err)
+		nc.recorder.Event(ingress, "Warning", "FailToExtractAnnotations", err.Error())
 		return err
 	}
 
 	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
 	if err := deployment.CheckDeploy(); err != nil {
-		klog.Error(err)
+		nc.recorder.Event(ingress, "Warning", "DeployDetectionFailed", err.Error())
 		return err
 	}
 
 	svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
 	if err := svc.CheckSvc(); err != nil {
-		klog.Error(err)
+		nc.recorder.Event(ingress, "Warning", "ServiceDetectionFailed", err.Error())
 		return err
 	}
 
 	if err := NewNginxController(ar, extract).Run(); err != nil {
-		klog.Error(err)
+		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
 		return err
 	}
 

@@ -18,7 +18,7 @@ metadata:
         "backends": [
           {"name": "mysql", "name_space": "web", "port": 3306},
           {"name": "mysql-2", "name_space": "web", "port": 33062},
-          {"name": "mysql", "name_space": "game", "port": 33063}
+          {"name": "mysql-3", "name_space": "game", "port": 33063}
         ]
       }
     ingress.nginx.k8s.io/enable-limit-req: "true"
@@ -36,8 +36,8 @@ metadata:
       			"limit_req": [
       				{
       					"zone_name": "per_ip_uri",
-      					"burst": "5",
-                        "delay": "true"
+      					"burst": 5,
+                        "delay": true
       				}
       			],
       			"name": "nginx-service-h"

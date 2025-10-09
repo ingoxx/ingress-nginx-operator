@@ -23,6 +23,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
@@ -34,6 +35,7 @@ type NginxIngressReconciler struct {
 	clientSet   common.K8sClientSet
 	operatorCli common.OperatorClientSet
 	Scheme      *runtime.Scheme
+	recorder    record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=ingress.ingress-k8s.io,resources=nginxingresses,verbs=get;list;watch;create;update;patch;delete
@@ -42,6 +44,7 @@ type NginxIngressReconciler struct {
 //+kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=cert-manager.io,resources=issuers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -62,8 +65,7 @@ type NginxIngressReconciler struct {
 func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	//_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
-	if err := internal.NewCrdNginxController(ctx, r.clientSet, r.operatorCli).Start(req); err != nil {
+	if err := internal.NewCrdNginxController(ctx, r.clientSet, r.operatorCli, r.recorder).Start(req); err != nil {
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
 	}
 
@@ -74,6 +76,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet common.K8sClientSet) error {
 	r.clientSet = clientSet
 	r.operatorCli = operatorCli.NewOperatorClientImp(mgr.GetClient())
+	r.recorder = mgr.GetEventRecorderFor("operator-ngx.k8s.cn")
 	return ctrl.NewControllerManagedBy(mgr).
 		//For(&ingressv1.NginxIngress{}).
 		For(&v1.Ingress{}).

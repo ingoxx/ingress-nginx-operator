@@ -10,7 +10,7 @@ import (
 
 const (
 	enableLimitReqAnnotations = "enable-limit-req"
-	setLimitConfigAnnotations = "set-limit-config"
+	limitConfigAnnotations    = "set-limit-config"
 )
 
 type RequestLimitIng struct {
@@ -42,7 +42,7 @@ type SetLimitConfig struct {
 
 type Config struct {
 	Bs                 *SetLimitConfig
-	SetLimitConfig     string `json:"set-limit-config"`
+	LimitConfig        string `json:"limit-config"`
 	EnableRequestLimit bool   `json:"enable-request-limit"`
 }
 
@@ -59,7 +59,7 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 			return nil
 		},
 	},
-	setLimitConfigAnnotations: {
+	limitConfigAnnotations: {
 		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format, example: {\"path\": [\"svc_name\"], \"limit_req_zone\": \"$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s;\"}.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
@@ -69,7 +69,7 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 				}
 
 				if parser.IsZeroStruct(lq) {
-					return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+					return cerr.NewInvalidIngressAnnotationsError(limitConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 			}
 
@@ -94,7 +94,7 @@ func (r *RequestLimitIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	config.SetLimitConfig, err = parser.GetStringAnnotation(setLimitConfigAnnotations, r.ingress, RequestLimitIngAnnotations)
+	config.LimitConfig, err = parser.GetStringAnnotation(limitConfigAnnotations, r.ingress, RequestLimitIngAnnotations)
 	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
@@ -108,16 +108,16 @@ func (r *RequestLimitIng) Parse() (interface{}, error) {
 
 func (r *RequestLimitIng) validate(config *Config) error {
 	if config.EnableRequestLimit {
-		if config.SetLimitConfig == "" {
-			return cerr.NewMissIngressFieldValueError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+		if config.LimitConfig == "" {
+			return cerr.NewMissIngressFieldValueError(limitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 		var lq = new(SetLimitConfig)
-		if err := jsonParser.JSONToStruct(config.SetLimitConfig, lq); err != nil {
+		if err := jsonParser.JSONToStruct(config.LimitConfig, lq); err != nil {
 			return err
 		}
 
 		if parser.IsZeroStruct(lq) {
-			return cerr.NewInvalidIngressAnnotationsError(setLimitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
+			return cerr.NewInvalidIngressAnnotationsError(limitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
 
 		config.Bs = lq
