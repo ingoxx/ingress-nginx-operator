@@ -33,7 +33,7 @@ func NewIngressServiceImpl(ctx context.Context, k8sCli common.K8sClientSet, oper
 }
 
 func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
-	var ing = new(v1.Ingress)
+	var ing *v1.Ingress
 	if err := i.operatorCli.GetClient().Get(ctx, req, ing); err != nil {
 		return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("ingress '%s' not found in namespace '%s'", req.Name, req.Namespace))
 	}
@@ -205,7 +205,7 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 }
 
 func (i *IngressServiceImpl) GetService(key client.ObjectKey) (*corev1.Service, error) {
-	var svc = new(corev1.Service)
+	var svc *corev1.Service
 	//key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
 	if err := i.operatorCli.GetClient().Get(i.ctx, key, svc); err != nil {
 		return svc, err
