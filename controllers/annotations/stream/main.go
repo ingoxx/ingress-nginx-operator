@@ -53,7 +53,7 @@ var enableStreamIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setStreamConfigAnnotations: {
-		Doc: "nginx stream, must be in JSON format, example: {\"backends\": [ {\"name\": \"svc-name\", \"name_space\": \"svc-ns\"}, \"port\": 8080},... ]}",
+		Doc: "nginx stream, must be in JSON format",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var bks = new(BackendList)

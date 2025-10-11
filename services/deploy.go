@@ -37,7 +37,7 @@ func (d *DeploymentServiceImpl) deployLabels() map[string]string {
 }
 
 func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
-	var dp *v1.Deployment
+	var dp = new(v1.Deployment)
 	if err := d.generic.GetClient().Get(d.ctx, d.GetDeployKey(), dp); err != nil {
 		return dp, err
 	}

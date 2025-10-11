@@ -48,7 +48,7 @@ var enableIpWhiteListIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	setIpWhiteConfigAnnotations: {
-		Doc: "nginx allow ip access, must be in JSON format, example: {\"ip\": [\"2.2.2.2\"], \"backend\": [\"svc-name\"]}",
+		Doc: "nginx allow ip access, must be in JSON format",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var lq = new(IpWhiteBackendsConfig)

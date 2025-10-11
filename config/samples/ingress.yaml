@@ -29,7 +29,8 @@ metadata:
       			"limit_zone": [
       				{
       					"limit_key": "$binary_remote_addr$request_uri",
-      					"zone_name": "per_ip_uri:10m",
+      					"zone_name": "per_ip_uri",
+                        "capacity": "10m",
       					"rate": "5r/s"
       				}
       			],

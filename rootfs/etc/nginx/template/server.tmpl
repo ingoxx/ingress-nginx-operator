@@ -89,16 +89,26 @@ server {
 
         ### limit_req
         {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
+
         {{ range $lmpath := $annotations.EnableReqLimit.Bs.Backends }}
+
         {{ if and $lmpath.Name $path.SvcName (eq $lmpath.Name $path.SvcName) }}
-        {{ if $lmpath.LimitReq.Delay }}
-        limit_req {{ $lmpath.LimitReq.ZoneName }} {{ $lmpath.LimitReq.Burst }} nodelay;
+
+        {{ range $lmreq := $lmpath.LimitReq }}
+
+        {{ if $lmreq.Delay }}
+        limit_req {{ $lmreq.ZoneName }}:{{ $lmreq.Capacity }} {{ $lmreq.Burst }} nodelay;
         {{ else }}
-        limit_req {{ $lmpath.LimitReq.ZoneName }} {{ $lmpath.LimitReq.Burst }};
+        limit_req {{ $lmreq.ZoneName }}:{{ $lmreq.Capacity }} {{ $lmreq.Burst }};
+
         {{ end }}
+
         {{ end }}
+
         {{ end }}
+
         {{ end }}
+
         {{ end }}
 
         set $best_http_host      $http_host;

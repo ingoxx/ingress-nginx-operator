@@ -49,7 +49,7 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 		},
 	},
 	lbConfigAnnotations: {
-		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format, example: {\"backends\": [{\"host\": \"api.aaa.com\", {\"name\": \"svcName-1\", \"config\": \"max_fails=3 fail_timeout=30s weight=80\"}... ]}",
+		Doc: "nginx lb config, same as the official configuration requirements of nginx, must be in JSON format",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var bks = new(ingress.LbConfigList)

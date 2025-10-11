@@ -21,6 +21,7 @@ type RequestLimitIng struct {
 type ZoneConfig struct {
 	LimitKey string `json:"limit_key"`
 	ZoneName string `json:"zone_name"`
+	Capacity string `json:"capacity"`
 	Rate     string `json:"rate"` // 10r/s, 10r/m
 }
 
@@ -60,7 +61,7 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	limitConfigAnnotations: {
-		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format, example: {\"path\": [\"svc_name\"], \"limit_req_zone\": \"$binary_remote_addr$request_uri zone=per_ip_uri:10m rate=5r/s;\"}.",
+		Doc: "nginx request limit, same as the official configuration requirements of nginx, must be in JSON format",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var lq = new(SetLimitConfig)
