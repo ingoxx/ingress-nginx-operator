@@ -3,11 +3,10 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
-    ingress.nginx.k8s.io/lb-policy: "ip_hash"
+#    ingress.nginx.k8s.io/lb-policy: "ip_hash"
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [
-          {"host": "api.web22.com", "name": "nginx-service-a", "config": "max_fails=3 fail_timeout=30s weight=80"},
           {"host": "api.web99.com", "name": "nginx-service-g", "config": "max_fails=3 fail_timeout=30s weight=80"},
           {"host": "api.web99.com", "name": "nginx-service-h", "config": "max_fails=3 fail_timeout=30s weight=20"}
         ]
@@ -42,6 +41,24 @@ metadata:
       				}
       			],
       			"name": "nginx-service-h"
+      		},
+            {
+      			"limit_zone": [
+      				{
+      					"limit_key": "$binary_remote_addr$server_name",
+      					"zone_name": "per_ip_sn",
+                        "capacity": "10m",
+      					"rate": "10r/s"
+      				}
+      			],
+      			"limit_req": [
+      				{
+      					"zone_name": "per_ip_sn",
+      					"burst": 10,
+                        "delay": true
+      				}
+      			],
+      			"name": "nginx-service-a"
       		}
       	]
       }
@@ -86,13 +103,6 @@ spec:
     - host: "api.web22.com"
       http:
         paths:
-          - path: "/aa"
-            pathType: Prefix
-            backend:
-              service:
-                name: nginx-service-a
-                port:
-                  number: 9094
           - path: "/a2/(p1|p2)(/.*)$"
             pathType: ImplementationSpecific
             backend:
@@ -110,13 +120,6 @@ spec:
                 name: nginx-service-g
                 port:
                   number: 9096
-          - path: "/ee"
-            pathType: Exact
-            backend:
-              service:
-                name: nginx-service-e
-                port:
-                  number: 9093
     - host: "api.web99.com"
       http:
         paths:

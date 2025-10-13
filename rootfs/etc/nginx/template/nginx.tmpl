@@ -35,7 +35,7 @@ http {
     {{ if $annotations.EnableReqLimit.EnableRequestLimit }}
     {{ range $reqsZone  := $annotations.EnableReqLimit.Bs.Backends }}
     {{ range $lmZone := $reqsZone.LimitZone }}
-    limit_req_zone {{ $lmZone.LimitKey }} {{ $lmZone.ZoneName }} {{ $lmZone.Rate }};
+    limit_req_zone {{ $lmZone.LimitKey }} zone={{ $lmZone.ZoneName }}:{{ $lmZone.Capacity }} rate={{ $lmZone.Rate }};
     {{ end }}
     {{ end }}
     {{ end }}

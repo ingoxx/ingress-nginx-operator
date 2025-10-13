@@ -205,7 +205,7 @@ func (i *IngressServiceImpl) GetDefaultBackend() (*v1.ServiceBackendPort, error)
 }
 
 func (i *IngressServiceImpl) GetService(key client.ObjectKey) (*corev1.Service, error) {
-	var svc *corev1.Service
+	var svc = new(corev1.Service)
 	//key := types.NamespacedName{Name: name, Namespace: i.GetNameSpace()}
 	if err := i.operatorCli.GetClient().Get(i.ctx, key, svc); err != nil {
 		return svc, err
@@ -385,25 +385,14 @@ func (i *IngressServiceImpl) GetDeploySvcName() string {
 
 func (i *IngressServiceImpl) CheckService() error {
 	if err := i.checkBackend(); err != nil {
+		if err := i.CheckDefaultBackend(); err != nil {
+			if !cerr.IsNewMissIngressFieldValueError(err) {
+				return fmt.Errorf("miss ingress.spec data, ingress '%s', namespace '%s'", i.GetName(), i.GetNameSpace())
+			}
+		}
+
 		return err
 	}
-
-	if err := i.CheckDefaultBackend(); err != nil {
-		if !cerr.IsNewMissIngressFieldValueError(err) {
-			return err
-		}
-	}
-
-	//var err error
-	//if err1 := i.checkBackend(); err1 != nil {
-	//	if err2 := i.CheckDefaultBackend(); err2 != nil {
-	//		err = errors.Join(err, err1, err2)
-	//	}
-	//}
-	//
-	//if err != nil {
-	//	return err
-	//}
 
 	return nil
 }
@@ -448,6 +437,7 @@ func (i *IngressServiceImpl) CheckHosts() error {
 
 func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	pattern := `^/`
+
 	var recordExistsPath = make(map[string]bool)
 	for _, p := range path {
 		if _, ok := recordExistsPath[p.Path]; ok {
@@ -465,6 +455,7 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 		}
 
 		if err := i.CheckPathType(p); err != nil {
+
 			return err
 		}
 
@@ -493,12 +484,10 @@ func (i *IngressServiceImpl) CheckPathType(path v1.HTTPIngressPath) error {
 
 	switch *path.PathType {
 	case v1.PathTypePrefix, v1.PathTypeExact, v1.PathTypeImplementationSpecific:
-
+		return nil
 	default:
 		return cerr.NewMissIngressFieldValueError("PathType", i.GetName(), i.GetNameSpace())
 	}
-
-	return nil
 }
 
 func (i *IngressServiceImpl) CheckDefaultBackend() error {

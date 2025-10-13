@@ -97,9 +97,9 @@ server {
         {{ range $lmreq := $lmpath.LimitReq }}
 
         {{ if $lmreq.Delay }}
-        limit_req {{ $lmreq.ZoneName }}:{{ $lmreq.Capacity }} {{ $lmreq.Burst }} nodelay;
+        limit_req zone={{ $lmreq.ZoneName }} burst={{ $lmreq.Burst }} nodelay;
         {{ else }}
-        limit_req {{ $lmreq.ZoneName }}:{{ $lmreq.Capacity }} {{ $lmreq.Burst }};
+        limit_req zone={{ $lmreq.ZoneName }} burst={{ $lmreq.Burst }};
 
         {{ end }}
 
