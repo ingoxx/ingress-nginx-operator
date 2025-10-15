@@ -80,7 +80,7 @@ func (nc *NginxController) Run() error {
 
 // check 先检查nginx.conf中的配置是否重复配置
 func (nc *NginxController) check() error {
-	name := fmt.Sprintf("%s-ngx-cm", nc.allResourcesData.GetNameSpace())
+	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
 	cm, err := nc.allResourcesData.GetNgxConfigMap(name)
 	if err != nil {
 		return err
@@ -93,7 +93,6 @@ func (nc *NginxController) check() error {
 			nb = nc.config.EnableStream.StreamBackendList
 		} else {
 			es := cm[constants.StreamKey]
-			fmt.Println("es >>> ", es)
 			if es == "" {
 				nb = nc.config.EnableStream.StreamBackendList
 			} else {
@@ -107,7 +106,6 @@ func (nc *NginxController) check() error {
 			}
 		}
 
-		fmt.Println("StreamBackendList >>> ", nc.config.EnableStream.StreamBackendList)
 		b, err := json.Marshal(&nb)
 		if err != nil {
 			return err
