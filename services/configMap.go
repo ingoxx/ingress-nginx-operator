@@ -1,7 +1,7 @@
 package services
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -9,7 +9,6 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,25 +80,61 @@ func (c *ConfigMapServiceImpl) UpdateConfigMap(name, key string, data []byte) (m
 }
 
 func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, error) {
-	var cm = new(v1.ConfigMap)
-	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}
-	if err := c.generic.GetClient().Get(context.Background(), req, cm); err != nil {
-		if errors.IsNotFound(err) {
-			return cm.Data, nil
-		}
-
-		return cm.Data, err
-	}
-
+	var data = make(map[string]string)
 	var cms = new(v1.ConfigMapList)
 	if err := c.generic.GetClient().List(context.Background(), cms, client.InNamespace(name)); err != nil {
-		return cm.Data, err
+		return data, err
 	}
 
-	var nb []*stream.Backend
-	var lb []*limitreq.ZoneRepConfig
+	var tnb []*stream.Backend
+	var tlb []*limitreq.ZoneRepConfig
 
-	fmt.Println(nb, lb)
+	for _, v := range cms.Items {
+		if len(v.Data) == 0 {
+			continue
+		}
 
-	return cm.Data, nil
+		var nb []*stream.Backend
+		s1 := v.Data[constants.StreamKey]
+
+		if s1 == "" {
+			continue
+		}
+
+		if err := json.Unmarshal([]byte(s1), &nb); err != nil {
+			return v.Data, err
+		}
+		tnb = append(tnb, nb...)
+
+		var lb []*limitreq.ZoneRepConfig
+		s2 := v.Data[constants.LimitReqKey]
+		if s2 == "" {
+			continue
+		}
+
+		if err := json.Unmarshal([]byte(s2), &lb); err != nil {
+			return v.Data, err
+		}
+		tlb = append(tlb, lb...)
+	}
+
+	if len(tnb) > 0 {
+		b1, err := json.Marshal(&tnb)
+		if err != nil {
+			return data, err
+		}
+
+		data[constants.StreamKey] = string(b1)
+	}
+
+	if len(tlb) > 0 {
+		b2, err := json.Marshal(&tlb)
+		if err != nil {
+			return data, err
+		}
+
+		data[constants.LimitReqKey] = string(b2)
+	}
+
+	return data, nil
 }

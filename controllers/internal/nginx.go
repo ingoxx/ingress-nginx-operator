@@ -80,8 +80,8 @@ func (nc *NginxController) Run() error {
 
 // check 先检查nginx.conf中的配置是否重复配置
 func (nc *NginxController) check() error {
-	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
-	cm, err := nc.allResourcesData.GetNgxConfigMap(name)
+	name := fmt.Sprintf("%s-%s-ngx-map", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
+	cm, err := nc.allResourcesData.GetNgxConfigMap(nc.allResourcesData.GetNameSpace())
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,6 @@ func (nc *NginxController) check() error {
 
 				nc.config.EnableStream.StreamBackendList = nc.isUniquePort(nb, nc.config.EnableStream.StreamBackendList)
 				nb = nc.config.EnableStream.StreamBackendList
-
 			}
 		}
 
@@ -151,7 +150,6 @@ func (nc *NginxController) check() error {
 
 func (nc *NginxController) isUniquePort(cmBackend []*stream.Backend, anBackend []*stream.Backend) []*stream.Backend {
 	keySet := make(map[int32]struct{})
-	var newBackend []*stream.Backend
 
 	for _, b := range cmBackend {
 		keySet[b.Port] = struct{}{}
@@ -159,11 +157,11 @@ func (nc *NginxController) isUniquePort(cmBackend []*stream.Backend, anBackend [
 
 	for _, b := range anBackend {
 		if _, exists := keySet[b.Port]; !exists {
-			newBackend = append(newBackend, b)
+			cmBackend = append(cmBackend, b)
 		}
 	}
 
-	return newBackend
+	return cmBackend
 }
 
 func (nc *NginxController) isUniqueZone(cmBackend []*limitreq.ZoneRepConfig, anBackend []*limitreq.ZoneRepConfig) []*limitreq.ZoneRepConfig {

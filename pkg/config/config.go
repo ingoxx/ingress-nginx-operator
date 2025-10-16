@@ -2,5 +2,5 @@ package config
 
 var (
 	LoggerFile = "/workspace/kubernetes.log"
-	Version    = "v1.0.2"
+	Version    = "v1.0.3"
 )
