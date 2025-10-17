@@ -59,24 +59,28 @@ func (c *ConfigMapServiceImpl) CreateConfigMap(name, key string, data []byte) (m
 	return cm.Data, nil
 }
 
-func (c *ConfigMapServiceImpl) UpdateConfigMap(name, key string, data []byte) (map[string]string, error) {
+func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}
 	if err := c.generic.GetClient().Get(context.Background(), req, cm); err == nil {
 		cm.Data[key] = string(data)
 		if err := c.generic.GetClient().Update(context.Background(), cm); err != nil {
-			return nil, err
+			return "", err
 		}
 
-		return cm.Data, nil
+		return "", nil
 	}
 
-	cd, err := c.CreateConfigMap(name, key, data)
+	if _, err := c.CreateConfigMap(name, key, data); err != nil {
+		return "", err
+	}
+
+	tm, err := c.GetNgxConfigMap(ns)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return cd, nil
+	return tm[key], nil
 }
 
 func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, error) {
@@ -90,32 +94,25 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, 
 	var tlb []*limitreq.ZoneRepConfig
 
 	for _, v := range cms.Items {
-		if len(v.Data) == 0 {
-			continue
-		}
-
 		var nb []*stream.Backend
-		s1 := v.Data[constants.StreamKey]
-
-		if s1 == "" {
-			continue
-		}
-
-		if err := json.Unmarshal([]byte(s1), &nb); err != nil {
-			return v.Data, err
-		}
-		tnb = append(tnb, nb...)
-
 		var lb []*limitreq.ZoneRepConfig
+		s1 := v.Data[constants.StreamKey]
 		s2 := v.Data[constants.LimitReqKey]
-		if s2 == "" {
-			continue
+
+		if s1 != "" {
+			if err := json.Unmarshal([]byte(s1), &nb); err != nil {
+				return v.Data, err
+			}
+			tnb = append(tnb, nb...)
 		}
 
-		if err := json.Unmarshal([]byte(s2), &lb); err != nil {
-			return v.Data, err
+		if s2 != "" {
+			if err := json.Unmarshal([]byte(s2), &lb); err != nil {
+				return v.Data, err
+			}
+			tlb = append(tlb, lb...)
 		}
-		tlb = append(tlb, lb...)
+
 	}
 
 	if len(tnb) > 0 {

@@ -251,13 +251,22 @@ func (d *DeploymentServiceImpl) streamPorts() []*v14.ServiceBackendPort {
 	return bk
 }
 
-func (d *DeploymentServiceImpl) deployIsReady() bool {
-	deploy, err := d.GetDeploy()
-	if err != nil {
+func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
+	//deploy, err := d.GetDeploy()
+	//if err != nil {
+	//	return false
+	//}
+
+	fmt.Println(".Status.UnavailableReplicas", deploy.Status.UnavailableReplicas)
+	fmt.Println(".Status.Replicas", deploy.Status.Replicas)
+	fmt.Println(".Status.AvailableReplicas", deploy.Status.AvailableReplicas)
+	fmt.Println("*deploy.Spec.Replicas", *deploy.Spec.Replicas)
+
+	if deploy.Status.Replicas != *deploy.Spec.Replicas {
 		return false
 	}
 
-	if deploy.Status.AvailableReplicas < *deploy.Spec.Replicas {
+	if deploy.Status.AvailableReplicas != *deploy.Spec.Replicas {
 		return false
 	}
 
@@ -272,15 +281,6 @@ func (d *DeploymentServiceImpl) deployIsReady() bool {
 
 func (d *DeploymentServiceImpl) getBackends() error {
 	var bks = make([]*v14.ServiceBackendPort, 0, 10)
-	//bk, err := d.generic.GetUpstreamConfig()
-	//for _, b1 := range bk {
-	//	for _, b2 := range b1.ServiceBackend {
-	//		if b2.Services.Number == 0 {
-	//			continue
-	//		}
-	//		bks = append(bks, b2.Services)
-	//	}
-	//}
 
 	for _, p := range constants.HttpPorts {
 		sp := &v14.ServiceBackendPort{
@@ -327,7 +327,7 @@ func (d *DeploymentServiceImpl) CheckDeploy() error {
 		return err
 	}
 
-	if !d.deployIsReady() {
+	if !d.deployIsReady(deploy) {
 		return fmt.Errorf("deployment not ready, name '%s', namespace '%s'", constants.DeployName, d.generic.GetNameSpace())
 	}
 

@@ -21,14 +21,11 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/internal"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
-	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 	"time"
 )
 
@@ -51,7 +48,7 @@ type NginxIngressReconciler struct {
 //+kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
@@ -83,6 +80,5 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 	r.recorder = mgr.GetEventRecorderFor("operator-ngx.k8s.cn")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Ingress{}).
-		Watches(&source.Kind{Type: &v12.ConfigMap{}}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }

@@ -101,8 +101,8 @@ func (r ResourceAdapter) GetConfigMapData(name string) ([]byte, error) {
 	return r.ConfigMap.GetConfigMapData(name)
 }
 
-func (r ResourceAdapter) UpdateConfigMap(name, key string, data []byte) (map[string]string, error) {
-	return r.ConfigMap.UpdateConfigMap(name, key, data)
+func (r ResourceAdapter) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
+	return r.ConfigMap.UpdateConfigMap(name, ns, key, data)
 }
 
 func (r ResourceAdapter) GetNgxConfigMap(name string) (map[string]string, error) {

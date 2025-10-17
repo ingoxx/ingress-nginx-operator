@@ -14,7 +14,7 @@ import (
 func main() {
 	go func() {
 		if err := file.IsNginxRunning(); err != nil {
-			klog.Fatalf(err.Error())
+			klog.Info(err.Error())
 		}
 	}()
 

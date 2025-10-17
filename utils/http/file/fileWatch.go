@@ -3,14 +3,13 @@ package file
 import (
 	"crypto/md5"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/ingoxx/ingress-nginx-operator/utils/http/nginxpath"
 	"io"
 	"k8s.io/klog/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 func StartWatch() error {
@@ -175,6 +174,7 @@ func startNginx() error {
 // IsNginxRunning 检查 nginx 是否在跑
 func IsNginxRunning() error {
 	// 检查 nginx 是否在跑
+
 	if !isNginxRunning() {
 		klog.Info("[INFO] nginx not running, try starting...")
 		if err := startNginx(); err != nil {

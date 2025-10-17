@@ -80,69 +80,47 @@ func (nc *NginxController) Run() error {
 
 // check 先检查nginx.conf中的配置是否重复配置
 func (nc *NginxController) check() error {
-	name := fmt.Sprintf("%s-%s-ngx-map", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
-	cm, err := nc.allResourcesData.GetNgxConfigMap(nc.allResourcesData.GetNameSpace())
-	if err != nil {
-		return err
-	}
+	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
 
 	// nginx.conf中的stream功能
-	var nb []*stream.Backend
 	if nc.config.EnableStream.EnableStream {
-		if len(cm) == 0 {
-			nb = nc.config.EnableStream.StreamBackendList
-		} else {
-			es := cm[constants.StreamKey]
-			if es == "" {
-				nb = nc.config.EnableStream.StreamBackendList
-			} else {
-				if err := json.Unmarshal([]byte(es), &nb); err != nil {
-					return err
-				}
-
-				nc.config.EnableStream.StreamBackendList = nc.isUniquePort(nb, nc.config.EnableStream.StreamBackendList)
-				nb = nc.config.EnableStream.StreamBackendList
-			}
-		}
-
-		b, err := json.Marshal(&nb)
+		b, err := json.Marshal(&nc.config.EnableStream.StreamBackendList)
 		if err != nil {
 			return err
 		}
 
-		_, err = nc.allResourcesData.UpdateConfigMap(name, constants.StreamKey, b)
+		cm1, err := nc.allResourcesData.UpdateConfigMap(name, nc.allResourcesData.GetNameSpace(), constants.StreamKey, b)
 		if err != nil {
 			return err
 		}
+
+		var tnb []*stream.Backend
+		if err := json.Unmarshal([]byte(cm1), &tnb); err != nil {
+			return err
+		}
+
+		nc.config.EnableStream.StreamBackendList = tnb
+		fmt.Println("StreamBackendList >>> ", tnb)
 	}
 
 	// nginx.conf中的limitreq功能
-	var lb []*limitreq.ZoneRepConfig
 	if nc.config.EnableReqLimit.EnableRequestLimit {
-		if len(cm) == 0 {
-			lb = nc.config.EnableReqLimit.Bs.Backends
-		} else {
-			es := cm[constants.LimitReqKey]
-			if es == "" {
-				lb = nc.config.EnableReqLimit.Bs.Backends
-			} else {
-				if err := json.Unmarshal([]byte(es), &lb); err != nil {
-					return err
-				}
-
-				nc.config.EnableReqLimit.Bs.Backends = nc.isUniqueZone(lb, nc.config.EnableReqLimit.Bs.Backends)
-				lb = nc.config.EnableReqLimit.Bs.Backends
-			}
-		}
-
-		b, err := json.Marshal(&lb)
+		b2, err := json.Marshal(&nc.config.EnableReqLimit.Bs.Backends)
 		if err != nil {
 			return err
 		}
-		_, err = nc.allResourcesData.UpdateConfigMap(name, constants.LimitReqKey, b)
+
+		cm2, err := nc.allResourcesData.UpdateConfigMap(name, nc.allResourcesData.GetNameSpace(), constants.LimitReqKey, b2)
 		if err != nil {
 			return err
 		}
+
+		var lb []*limitreq.ZoneRepConfig
+		if err := json.Unmarshal([]byte(cm2), &lb); err != nil {
+			return err
+		}
+
+		nc.config.EnableReqLimit.Bs.Backends = lb
 	}
 
 	return nil
