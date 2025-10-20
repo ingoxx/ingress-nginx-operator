@@ -28,7 +28,7 @@ type BackendList struct {
 type Backend struct {
 	Name              string `json:"name"`
 	NameSpace         string `json:"name_space"`
-	StreamBackendName string `json:"-"`
+	StreamBackendName string `json:"stream_backend_name,omitempty"`
 	Port              int32  `json:"port"`
 }
 

@@ -65,10 +65,10 @@ func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte
 	if err := c.generic.GetClient().Get(context.Background(), req, cm); err == nil {
 		cm.Data[key] = string(data)
 		if err := c.generic.GetClient().Update(context.Background(), cm); err != nil {
-			return "", err
+			return cm.Data[key], err
 		}
 
-		return "", nil
+		return cm.Data[key], nil
 	}
 
 	if _, err := c.CreateConfigMap(name, key, data); err != nil {

@@ -100,7 +100,6 @@ func (nc *NginxController) check() error {
 		}
 
 		nc.config.EnableStream.StreamBackendList = tnb
-		fmt.Println("StreamBackendList >>> ", tnb)
 	}
 
 	// nginx.conf中的limitreq功能
@@ -124,44 +123,6 @@ func (nc *NginxController) check() error {
 	}
 
 	return nil
-}
-
-func (nc *NginxController) isUniquePort(cmBackend []*stream.Backend, anBackend []*stream.Backend) []*stream.Backend {
-	keySet := make(map[int32]struct{})
-
-	for _, b := range cmBackend {
-		keySet[b.Port] = struct{}{}
-	}
-
-	for _, b := range anBackend {
-		if _, exists := keySet[b.Port]; !exists {
-			cmBackend = append(cmBackend, b)
-		}
-	}
-
-	return cmBackend
-}
-
-func (nc *NginxController) isUniqueZone(cmBackend []*limitreq.ZoneRepConfig, anBackend []*limitreq.ZoneRepConfig) []*limitreq.ZoneRepConfig {
-	keySet := make(map[string]struct{})
-
-	for _, b1 := range cmBackend {
-		for _, b2 := range b1.LimitZone {
-			keySet[b2.ZoneName] = struct{}{}
-		}
-
-	}
-
-	for _, b1 := range anBackend {
-		for _, b2 := range b1.LimitZone {
-			if _, exists := keySet[b2.ZoneName]; !exists {
-				cmBackend = append(cmBackend, b1)
-			}
-		}
-
-	}
-
-	return cmBackend
 }
 
 func (nc *NginxController) generateBackendCfg() error {
