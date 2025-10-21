@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -97,9 +96,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	fmt.Println("ingress >>> ", ingress.Spec)
-
-	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", err.Error())
+	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", "Ingress created successfully")
 
 	return nil
 }
