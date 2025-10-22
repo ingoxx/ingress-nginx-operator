@@ -164,7 +164,8 @@ func startNginx() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	// 使用 Start() 而不是 Run()，这样不会阻塞
+	if err := cmd.Start(); err != nil {
 		return err
 	}
 
@@ -173,16 +174,20 @@ func startNginx() error {
 
 // IsNginxRunning 检查 nginx 是否在跑
 func IsNginxRunning() error {
-	// 检查 nginx 是否在跑
-
 	if !isNginxRunning() {
-		klog.Info("[INFO] nginx not running, try starting...")
+		klog.Info("[INFO] nginx not running, try starting......")
 		if err := startNginx(); err != nil {
+			fmt.Println("1111")
 			return fmt.Errorf("attempt to start nginx failed: %v", err)
 		}
+		fmt.Println("2222")
 		if !isNginxRunning() {
 			return fmt.Errorf("nginx still cannot detect processes after startup")
 		}
+		fmt.Println("3333")
+		klog.Info("[INFO] nginx started successfully")
+	} else {
+		fmt.Println("4444")
 		klog.Info("[INFO] nginx started successfully")
 	}
 

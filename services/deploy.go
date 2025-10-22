@@ -252,16 +252,6 @@ func (d *DeploymentServiceImpl) streamPorts() []*v14.ServiceBackendPort {
 }
 
 func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
-	//deploy, err := d.GetDeploy()
-	//if err != nil {
-	//	return false
-	//}
-
-	//fmt.Println(".Status.UnavailableReplicas", deploy.Status.UnavailableReplicas)
-	//fmt.Println(".Status.Replicas", deploy.Status.Replicas)
-	//fmt.Println(".Status.AvailableReplicas", deploy.Status.AvailableReplicas)
-	//fmt.Println("*deploy.Spec.Replicas", *deploy.Spec.Replicas)
-
 	if deploy.Status.Replicas != *deploy.Spec.Replicas {
 		return false
 	}

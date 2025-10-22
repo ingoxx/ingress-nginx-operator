@@ -14,8 +14,11 @@ import (
 func main() {
 	go func() {
 		if err := file.IsNginxRunning(); err != nil {
+			fmt.Println("IsNginxRunning >>> ", err.Error())
 			klog.Info(err.Error())
 		}
+
+		fmt.Println("5555")
 	}()
 
 	StartHttp()
