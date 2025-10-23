@@ -114,7 +114,7 @@ spec:
       http:
         paths:
           - path: "/gg"
-            pathType: Prefix
+            pathType: Exact
             backend:
               service:
                 name: nginx-service-g
@@ -123,15 +123,15 @@ spec:
     - host: "api.web99.com"
       http:
         paths:
-          - path: "/gg"
-            pathType: Exact
+          - path: "/api"
+            pathType: Prefix
             backend:
               service:
                 name: nginx-service-g
                 port:
                   number: 9096
-          - path: "/hh"
-            pathType: Exact
+          - path: "/admin"
+            pathType: Prefix
             backend:
               service:
                 name: nginx-service-h

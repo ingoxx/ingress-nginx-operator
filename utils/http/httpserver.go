@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/utils/http/file"
 	"io"
 	"k8s.io/klog/v2"
@@ -14,11 +15,8 @@ import (
 func main() {
 	go func() {
 		if err := file.IsNginxRunning(); err != nil {
-			fmt.Println("IsNginxRunning >>> ", err.Error())
-			klog.Info(err.Error())
+			klog.ErrorS(err, err.Error())
 		}
-
-		fmt.Println("5555")
 	}()
 
 	StartHttp()
@@ -86,7 +84,7 @@ func (nc NginxCfgParams) H(rd RespData) {
 
 func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 	var ncp = NginxCfgParams{resp: resp}
-	if req.Header.Get("X-Auth-Token") != "k8s" {
+	if req.Header.Get("X-Auth-Token") != constants.AuthToken {
 		ncp.H(RespData{
 			Msg:    "request unauthorized",
 			Code:   1001,

@@ -17,6 +17,7 @@ type IngBackends struct {
 	Path            string                 `json:"path"`
 	PathType        string                 `json:"path_type"`
 	SvcName         string                 `json:"svc_name"`
+	BackendDns      string                 `json:"backend_dns"`
 	IsPathIsRegex   bool                   `json:"is_path_is_regex"`
 	IsSingleService bool                   `json:"is_single_service"`
 }

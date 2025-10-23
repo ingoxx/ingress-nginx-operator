@@ -120,6 +120,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 			if svc.Services.Name == "" {
 				continue
 			}
+			svc.BackendDns = r.resources.GetBackendName(svc.Services)
 			var updated bool
 			for _, v3 := range bks.Backends {
 				if svc.Services.Name == "" {
@@ -131,13 +132,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 					} else {
 						svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
 					}
-					//svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
-					//if isEmptySvc {
-					//	config.LbPolicy = ""
-					//	svc.Services.Name = r.resources.GetBackendName(svc.Services)
-					//} else {
-					//	svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
-					//}
 					updated = true
 					break // 找到后就退出
 				}

@@ -82,10 +82,11 @@ func (s *SvcServiceImpl) svcObjectMeta(data *buildSvcData) v12.ObjectMeta {
 
 func (s *SvcServiceImpl) svcServiceSpec(data *buildSvcData) v13.ServiceSpec {
 	ss := v13.ServiceSpec{
-		Selector:              data.labels,
-		Ports:                 s.svcServicePort(data.sbp),
-		Type:                  v13.ServiceTypeLoadBalancer,
-		ExternalTrafficPolicy: v13.ServiceExternalTrafficPolicyTypeLocal,
+		Selector: data.labels,
+		Ports:    s.svcServicePort(data.sbp),
+		//Type:                  v13.ServiceTypeLoadBalancer,
+		Type: v13.ServiceTypeClusterIP,
+		//ExternalTrafficPolicy: v13.ServiceExternalTrafficPolicyTypeLocal,
 	}
 
 	return ss
@@ -121,25 +122,11 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 		sps = append(sps, sp)
 	}
 
-	//extraPort := int32(svcPort)
-	//sps = append(sps, v13.ServicePort{
-	//	Name: fmt.Sprintf("port-%d", extraPort),
-	//	Port: extraPort,
-	//	TargetPort: intstr.IntOrString{
-	//		IntVal: extraPort,
-	//	},
-	//	Protocol: v13.ProtocolTCP,
-	//})
-
 	return sps
 }
 
 func (s *SvcServiceImpl) ingressSvc() error {
 	var bks = make([]*v1.ServiceBackendPort, 0, 10)
-	//config, err := s.generic.GetUpstreamConfig()
-	//if err != nil {
-	//	return err
-	//}
 
 	// 获取ingress配置文件中的所有svc
 	for _, p := range constants.HttpPorts {
@@ -149,11 +136,6 @@ func (s *SvcServiceImpl) ingressSvc() error {
 		}
 		bks = append(bks, sp)
 	}
-	//for _, b1 := range config {
-	//	for _, b2 := range b1.ServiceBackend {
-	//		bks = append(bks, b2.Services)
-	//	}
-	//}
 
 	if s.config.EnableStream.EnableStream {
 		for _, s1 := range s.config.EnableStream.StreamBackendList {
@@ -164,15 +146,6 @@ func (s *SvcServiceImpl) ingressSvc() error {
 			bks = append(bks, sp)
 		}
 	}
-
-	//backend, err := s.generic.GetDefaultBackend()
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if backend.Name != "" && backend.Number > 0 {
-	//	bks = append(bks, backend)
-	//}
 
 	// controller的data plane
 	ctlSvcKey := types.NamespacedName{Name: s.generic.GetDeploySvcName(), Namespace: s.generic.GetNameSpace()}

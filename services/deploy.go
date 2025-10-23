@@ -167,11 +167,6 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 		cps = append(cps, cp)
 	}
 
-	//cp := v13.ContainerPort{
-	//	ContainerPort: int32(constants.HealthPort),
-	//}
-	//cps = append(cps, cp)
-
 	readinessProbe := &v13.Probe{
 		ProbeHandler: v13.ProbeHandler{
 			HTTPGet: &v13.HTTPGetAction{
@@ -257,6 +252,10 @@ func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
 	}
 
 	if deploy.Status.AvailableReplicas != *deploy.Spec.Replicas {
+		return false
+	}
+
+	if deploy.Status.ReadyReplicas != *deploy.Spec.Replicas {
 		return false
 	}
 

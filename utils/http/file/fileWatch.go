@@ -177,17 +177,13 @@ func IsNginxRunning() error {
 	if !isNginxRunning() {
 		klog.Info("[INFO] nginx not running, try starting......")
 		if err := startNginx(); err != nil {
-			fmt.Println("1111")
 			return fmt.Errorf("attempt to start nginx failed: %v", err)
 		}
-		fmt.Println("2222")
 		if !isNginxRunning() {
 			return fmt.Errorf("nginx still cannot detect processes after startup")
 		}
-		fmt.Println("3333")
 		klog.Info("[INFO] nginx started successfully")
 	} else {
-		fmt.Println("4444")
 		klog.Info("[INFO] nginx started successfully")
 	}
 

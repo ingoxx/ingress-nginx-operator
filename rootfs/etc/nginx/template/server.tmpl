@@ -2,6 +2,7 @@
 {{ range $ut := $annotations.LoadBalance.LbConfig }}
 
 ### start {{ $ut.Host }} ###
+{{ if ne $ut.Upstream "" }}
 upstream {{ $ut.Upstream }} {
     {{ if ne $annotations.LoadBalance.LbPolicy "" }}
     {{ $annotations.LoadBalance.LbPolicy }};
@@ -12,6 +13,7 @@ upstream {{ $ut.Upstream }} {
     {{ end }}
     {{ end }}
 }
+{{ end }}
 
 
 server {
@@ -156,8 +158,11 @@ server {
         proxy_next_upstream_tries               3;
 		
         ### proxy backend
+        {{ if ne $ut.Upstream "" }}
         proxy_pass http://{{ $ut.Upstream }};
-      
+        {{ else }}
+        proxy_pass http://{{ $path.BackendDns }};
+        {{ end }}
         proxy_redirect                         off;
     }
 	{{ end }}

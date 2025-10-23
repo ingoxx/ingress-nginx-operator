@@ -320,9 +320,16 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 			backends = append(backends, bk)
 		}
 
+		var up string
+		if len(r.HTTP.Paths) > 1 {
+			up = i.getUpstreamName(r.Host)
+		} else {
+			up = ""
+		}
+
 		uc := &ingress.Backends{
 			Host:           r.Host,
-			Upstream:       i.getUpstreamName(r.Host),
+			Upstream:       up,
 			ServiceBackend: backends,
 		}
 		upStreamConfigList = append(upStreamConfigList, uc)
