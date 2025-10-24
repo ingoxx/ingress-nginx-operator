@@ -1,9 +1,11 @@
 package internal
 
 import (
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
@@ -11,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 type CrdNginxController struct {
@@ -42,7 +45,16 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		}
 		nc.recorder.Event(ingRef, "Warning", "IngressNotExist", err.Error())
 
-		return err
+		return nil
+	}
+
+	if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
+		controllerutil.RemoveFinalizer(ingress, constants.Finalizer)
+		if err := ing.UpdateIngress(ingress); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	if err := ing.CheckController(); err != nil {
@@ -96,7 +108,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", "Ingress created successfully")
+	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", fmt.Sprintf("'%s' ingress created successfully", ingress.Name))
 
 	return nil
 }

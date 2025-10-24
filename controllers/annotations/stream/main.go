@@ -132,8 +132,8 @@ func (r *enableStreamIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	if verr := r.validate(config); verr != nil {
-		return config, verr
+	if err := r.validate(config); err != nil {
+		return config, err
 	}
 
 	return config, err

@@ -7,6 +7,7 @@ const (
 	DaemonSetLabel   = "daemonset-manager-app"
 	DaemonSetName    = "daemonset-manager"
 	DaemonSetSvcName = "daemonset-manager-svc"
+	Finalizer        = "ingress-operator/finalizer"
 )
 
 var (

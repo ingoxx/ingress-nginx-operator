@@ -88,6 +88,7 @@ func NewLoadBalanceIng(ingress service.K8sResourcesIngress, resources service.Re
 func (r *loadBalanceIng) Parse() (interface{}, error) {
 	var err error
 	var config = new(Config)
+	var bks = new(ingress.LbConfigList)
 
 	config.LbPolicy, err = parser.GetStringAnnotation(lbPolicyAnnotations, r.ingress, loadBalanceAnnotations)
 	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
@@ -99,19 +100,20 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	upstreamConfig, err := r.resources.GetUpstreamConfig()
-	if err != nil {
-		return config, err
-	}
-
 	tls, err := r.resources.GetTlsFile()
 	if err != nil {
 		return config, err
 	}
 
-	var bks = new(ingress.LbConfigList)
-	if err := jsonParser.JSONToStruct(lbConfig, bks); err != nil {
+	upstreamConfig, err := r.resources.GetUpstreamConfig()
+	if err != nil {
 		return config, err
+	}
+
+	if lbConfig != "" {
+		if err := jsonParser.JSONToStruct(lbConfig, bks); err != nil {
+			return config, err
+		}
 	}
 
 	for _, v1 := range upstreamConfig {

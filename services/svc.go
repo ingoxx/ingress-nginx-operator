@@ -84,9 +84,9 @@ func (s *SvcServiceImpl) svcServiceSpec(data *buildSvcData) v13.ServiceSpec {
 	ss := v13.ServiceSpec{
 		Selector: data.labels,
 		Ports:    s.svcServicePort(data.sbp),
-		//Type:                  v13.ServiceTypeLoadBalancer,
-		Type: v13.ServiceTypeClusterIP,
-		//ExternalTrafficPolicy: v13.ServiceExternalTrafficPolicyTypeLocal,
+		Type:     v13.ServiceTypeLoadBalancer,
+		//Type: v13.ServiceTypeClusterIP,
+		ExternalTrafficPolicy: v13.ServiceExternalTrafficPolicyTypeLocal,
 	}
 
 	return ss

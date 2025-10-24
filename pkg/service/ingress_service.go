@@ -42,4 +42,5 @@ type K8sResourcesIngress interface {
 	GetDeployLabel() string
 	CheckDefaultBackend() error
 	CheckHost(string) bool
+	UpdateIngress(*v1.Ingress) error
 }

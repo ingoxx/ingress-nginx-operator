@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: ingress-operator
+    ingress.nginx.k8s.io/enable-stream: "true"
+    ingress.nginx.k8s.io/set-stream-config: |
+      {
+        "backends": [
+          {"name": "mysql", "name_space": "web", "port": 3306}
+        ]
+      }
+  name: api
+  namespace: game
+spec:
+  rules:
+    - host: "api.cc.com"
+      http:
+        paths:
+          - path: "/api"
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-service-c
+                port:
+                  number: 9094

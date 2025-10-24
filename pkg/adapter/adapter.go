@@ -152,3 +152,7 @@ func (r ResourceAdapter) CheckDefaultBackend() error {
 func (r ResourceAdapter) CheckHost(host string) bool {
 	return r.Ingress.CheckHost(host)
 }
+
+func (r ResourceAdapter) UpdateIngress(ing *v1.Ingress) error {
+	return r.Ingress.UpdateIngress(ing)
+}

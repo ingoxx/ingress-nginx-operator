@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -35,13 +36,25 @@ func NewIngressServiceImpl(ctx context.Context, k8sCli common.K8sClientSet, oper
 func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
 	var ing = new(v1.Ingress)
 	if err := i.operatorCli.GetClient().Get(ctx, req, ing); err != nil {
-		return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("ingress '%s' not found in namespace '%s'", req.Name, req.Namespace))
+		if errors.IsNotFound(err) {
+			return ing, cerr.NewIngressNotFoundError(fmt.Sprintf("ingress '%s' not found in namespace '%s'", req.Name, req.Namespace))
+		}
+
+		return ing, err
 	}
 
 	i.ingress = ing
 	i.ctx = ctx
 
 	return ing, nil
+}
+
+func (i *IngressServiceImpl) UpdateIngress(ing *v1.Ingress) error {
+	if err := i.operatorCli.GetClient().Update(i.ctx, ing); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *IngressServiceImpl) GetName() string {

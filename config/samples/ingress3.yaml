@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: ingress-operator
+    ingress.nginx.k8s.io/enable-stream: "true"
+    ingress.nginx.k8s.io/set-stream-config: |
+      {
+        "backends": [
+          {"name": "mysql-3", "name_space": "game", "port": 33063}
+        ]
+      }
+  name: admin
+  namespace: web
+spec:
+  rules:
+    - host: "admin.k8s.com"
+      http:
+        paths:
+          - path: "/admin"
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-service-k
+                port:
+                  number: 9099

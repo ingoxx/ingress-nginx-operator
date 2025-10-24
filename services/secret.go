@@ -93,9 +93,6 @@ func (s *SecretServiceImpl) selfSigned() (map[string]ingress.Tls, error) {
 			if err := file.SaveToFile(fileName, v2); err != nil {
 				return ht, err
 			}
-			//if err := os.WriteFile(fileName, v2, 0644); err != nil {
-			//	return ht, err
-			//}
 
 			if k == constants.NginxTlsCrt {
 				ss.TlsCrt = fileName
