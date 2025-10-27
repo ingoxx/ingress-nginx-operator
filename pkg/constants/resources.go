@@ -16,7 +16,7 @@ var (
 	HealthPort     = 9092
 	Command        = []string{"/httpserver"}
 	Images         = "gotec007/manager-nginx"
-	Replicas       = 1
+	Replicas       = 2
 	AuthToken      = "k8s"
 	HttpStatusOk   = 1000
 	HttpPorts      = []int32{80, 443, 9092}

@@ -43,19 +43,6 @@ func httpServer() {
 	}
 }
 
-func healthCheck(resp http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodGet {
-		http.Error(resp, "Method not allowed", http.StatusBadRequest)
-		return
-	}
-
-	resp.WriteHeader(http.StatusOK)
-	if _, err := resp.Write([]byte("OK")); err != nil {
-		klog.Fatalf("fail to response, error '%v'\n", err.Error())
-	}
-
-}
-
 type NginxCfgParams struct {
 	resp      http.ResponseWriter
 	FileBytes []byte `json:"file_bytes"`
@@ -157,4 +144,20 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		Msg:    "update nginx config ok",
 		Status: http.StatusOK,
 	})
+}
+
+func healthCheck(resp http.ResponseWriter, req *http.Request) {
+	var ncp = NginxCfgParams{resp: resp}
+
+	if req.Method != http.MethodGet {
+		http.Error(resp, "Method not allowed", http.StatusBadRequest)
+		return
+	}
+
+	ncp.H(RespData{
+		Code:   1000,
+		Msg:    "health check ok",
+		Status: http.StatusOK,
+	})
+
 }

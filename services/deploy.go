@@ -99,11 +99,14 @@ func (d *DeploymentServiceImpl) deploySpec() v1.DeploymentSpec {
 	*replicas = int32(constants.Replicas)
 	*revisionHistoryLimit = 10
 
+	minReadySeconds := int32(5)
+
 	ds := v1.DeploymentSpec{
 		Selector: &v12.LabelSelector{
 			MatchLabels: d.deployLabels(),
 		},
 		Replicas:             replicas,
+		MinReadySeconds:      minReadySeconds,
 		Strategy:             d.deployStrategy(),
 		Template:             d.deployPodTemplate(),
 		RevisionHistoryLimit: revisionHistoryLimit,
@@ -260,12 +263,12 @@ func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
 	}
 
 	for _, cond := range deploy.Status.Conditions {
-		if cond.Type == v1.DeploymentAvailable && cond.Status == "True" {
+		if cond.Type == v1.DeploymentAvailable && string(cond.Status) == string(v12.ConditionTrue) {
 			return true
 		}
 	}
 
-	return true
+	return false
 }
 
 func (d *DeploymentServiceImpl) getBackends() error {
