@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -134,4 +135,8 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, 
 	}
 
 	return data, nil
+}
+
+func (c *ConfigMapServiceImpl) GetCmName() string {
+	return fmt.Sprintf("%s-%s-ngx-cm", c.generic.GetName(), c.generic.GetNameSpace())
 }

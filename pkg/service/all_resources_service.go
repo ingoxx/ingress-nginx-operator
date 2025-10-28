@@ -42,4 +42,5 @@ type ResourcesMth interface {
 	UpdateConfigMap(name, ns, key string, data []byte) (string, error)
 	GetNgxConfigMap(name string) (map[string]string, error)
 	UpdateIngress(ing *v1.Ingress) error
+	GetCmName() string
 }

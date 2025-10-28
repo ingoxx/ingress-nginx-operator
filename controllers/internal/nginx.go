@@ -80,8 +80,6 @@ func (nc *NginxController) Run() error {
 
 // check 先检查nginx.conf中的配置是否重复配置
 func (nc *NginxController) check() error {
-	name := fmt.Sprintf("%s-%s-ngx-cm", nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace())
-
 	// nginx.conf中的stream功能
 	if nc.config.EnableStream.EnableStream {
 		b, err := json.Marshal(&nc.config.EnableStream.StreamBackendList)
@@ -89,7 +87,7 @@ func (nc *NginxController) check() error {
 			return err
 		}
 
-		cm1, err := nc.allResourcesData.UpdateConfigMap(name, nc.allResourcesData.GetNameSpace(), constants.StreamKey, b)
+		cm1, err := nc.allResourcesData.UpdateConfigMap(nc.allResourcesData.GetCmName(), nc.allResourcesData.GetNameSpace(), constants.StreamKey, b)
 		if err != nil {
 			return err
 		}
@@ -109,7 +107,7 @@ func (nc *NginxController) check() error {
 			return err
 		}
 
-		cm2, err := nc.allResourcesData.UpdateConfigMap(name, nc.allResourcesData.GetNameSpace(), constants.LimitReqKey, b2)
+		cm2, err := nc.allResourcesData.UpdateConfigMap(nc.allResourcesData.GetCmName(), nc.allResourcesData.GetNameSpace(), constants.LimitReqKey, b2)
 		if err != nil {
 			return err
 		}

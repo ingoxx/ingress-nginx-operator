@@ -15,10 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	svcPort = 9092
-)
-
 type buildSvcData struct {
 	sbp    []*v1.ServiceBackendPort
 	labels map[string]string
@@ -46,7 +42,15 @@ func (s *SvcServiceImpl) GetSvc(key client.ObjectKey) (*v13.Service, error) {
 
 func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service, data *buildSvcData) error {
 	svc.Spec.Ports = s.svcServicePort(data.sbp)
-	return s.generic.GetClient().Update(s.ctx, svc)
+	if err := s.generic.GetClient().Update(s.ctx, svc); err != nil {
+		return err
+	}
+
+	if err := s.UpdateHandlesSvc(svc, data); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *SvcServiceImpl) DeleteSvc(svc *v13.Service) error {
@@ -57,11 +61,44 @@ func (s *SvcServiceImpl) CreateSvc(data *buildSvcData) error {
 	if err := s.generic.GetClient().Create(s.ctx, s.buildSvcData(data)); err != nil {
 		return err
 	}
+
+	if err := s.CreateHandlesSvc(data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateHandlesSvc 创建无头svc
+func (s *SvcServiceImpl) CreateHandlesSvc(data *buildSvcData) error {
+	svc := s.buildSvcData(data)
+	svc.Name = constants.SvcHandlesName
+	svc.Spec.ClusterIP = "None"
+	svc.Spec.Type = ""
+	svc.Spec.ExternalTrafficPolicy = ""
+
+	fmt.Println("handles svc >>> ", svc)
+
+	if err := s.generic.GetClient().Create(s.ctx, svc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateHandlesSvc 更新无头svc
+func (s *SvcServiceImpl) UpdateHandlesSvc(svc *v13.Service, data *buildSvcData) error {
+	svc.Spec.Ports = s.svcServicePort(data.sbp)
+	svc.Name = constants.SvcHandlesName
+
+	if err := s.generic.GetClient().Update(s.ctx, svc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (s *SvcServiceImpl) buildSvcData(data *buildSvcData) *v13.Service {
-
 	sd := &v13.Service{
 		ObjectMeta: s.svcObjectMeta(data),
 		Spec:       s.svcServiceSpec(data),

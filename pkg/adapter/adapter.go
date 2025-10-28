@@ -156,3 +156,7 @@ func (r ResourceAdapter) CheckHost(host string) bool {
 func (r ResourceAdapter) UpdateIngress(ing *v1.Ingress) error {
 	return r.Ingress.UpdateIngress(ing)
 }
+
+func (r ResourceAdapter) GetCmName() string {
+	return r.ConfigMap.GetCmName()
+}
