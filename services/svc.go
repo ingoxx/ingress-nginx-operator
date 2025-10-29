@@ -31,6 +31,23 @@ func NewSvcServiceImpl(ctx context.Context, clientSet common.Generic, config *an
 	return &SvcServiceImpl{ctx: ctx, generic: clientSet, config: config}
 }
 
+func (s *SvcServiceImpl) GetAllEndPoints() ([]string, error) {
+	var podIPs []string
+	endpoints, err := s.generic.GetClientSet().CoreV1().Endpoints(s.generic.GetNameSpace()).Get(s.ctx, constants.SvcHandlesName, v12.GetOptions{})
+	if err != nil {
+		return podIPs, err
+	}
+
+	for _, subset := range endpoints.Subsets {
+		for _, addr := range subset.Addresses {
+			fmt.Println("GetAllEndPoints >>> ", addr.IP)
+			podIPs = append(podIPs, addr.IP)
+		}
+	}
+
+	return podIPs, nil
+}
+
 func (s *SvcServiceImpl) GetSvc(key client.ObjectKey) (*v13.Service, error) {
 	var svc = new(v13.Service)
 	if err := s.generic.GetClient().Get(s.ctx, key, svc); err != nil {
@@ -46,7 +63,7 @@ func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service, data *buildSvcData) error {
 		return err
 	}
 
-	if err := s.UpdateHandlesSvc(svc, data); err != nil {
+	if err := s.UpdateHandlesSvc(data); err != nil {
 		return err
 	}
 
@@ -71,14 +88,18 @@ func (s *SvcServiceImpl) CreateSvc(data *buildSvcData) error {
 
 // CreateHandlesSvc 创建无头svc
 func (s *SvcServiceImpl) CreateHandlesSvc(data *buildSvcData) error {
-	svc := s.buildSvcData(data)
-	svc.Name = constants.SvcHandlesName
-	svc.Spec.ClusterIP = "None"
-	svc.Spec.Type = ""
-	svc.Spec.ExternalTrafficPolicy = ""
-
-	fmt.Println("handles svc >>> ", svc)
-
+	svc := &v13.Service{
+		ObjectMeta: v12.ObjectMeta{
+			Name:      constants.SvcHandlesName,
+			Namespace: data.key.Namespace,
+			Labels:    data.labels,
+		},
+		Spec: v13.ServiceSpec{
+			ClusterIP: "None",
+			Selector:  data.labels,
+			Ports:     s.svcServicePort(data.sbp),
+		},
+	}
 	if err := s.generic.GetClient().Create(s.ctx, svc); err != nil {
 		return err
 	}
@@ -87,9 +108,14 @@ func (s *SvcServiceImpl) CreateHandlesSvc(data *buildSvcData) error {
 }
 
 // UpdateHandlesSvc 更新无头svc
-func (s *SvcServiceImpl) UpdateHandlesSvc(svc *v13.Service, data *buildSvcData) error {
+func (s *SvcServiceImpl) UpdateHandlesSvc(data *buildSvcData) error {
+	data.key.Name = constants.SvcHandlesName
+	svc, err := s.generic.GetService(data.key)
+	if err != nil {
+		return err
+	}
+
 	svc.Spec.Ports = s.svcServicePort(data.sbp)
-	svc.Name = constants.SvcHandlesName
 
 	if err := s.generic.GetClient().Update(s.ctx, svc); err != nil {
 		return err
@@ -119,10 +145,9 @@ func (s *SvcServiceImpl) svcObjectMeta(data *buildSvcData) v12.ObjectMeta {
 
 func (s *SvcServiceImpl) svcServiceSpec(data *buildSvcData) v13.ServiceSpec {
 	ss := v13.ServiceSpec{
-		Selector: data.labels,
-		Ports:    s.svcServicePort(data.sbp),
-		Type:     v13.ServiceTypeLoadBalancer,
-		//Type: v13.ServiceTypeClusterIP,
+		Selector:              data.labels,
+		Ports:                 s.svcServicePort(data.sbp),
+		Type:                  v13.ServiceTypeLoadBalancer,
 		ExternalTrafficPolicy: v13.ServiceExternalTrafficPolicyTypeLocal,
 	}
 
@@ -191,13 +216,17 @@ func (s *SvcServiceImpl) ingressSvc() error {
 		sbp:    bks,
 		labels: map[string]string{"app": s.generic.GetDeployLabel()},
 	}
+
 	svc, err := s.generic.GetService(ctlSvcKey)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if err := s.CreateSvc(data); err != nil {
 				return err
 			}
+
+			return nil
 		}
+
 		return err
 	}
 

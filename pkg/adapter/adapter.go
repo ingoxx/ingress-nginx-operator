@@ -3,18 +3,20 @@ package adapter
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	v12 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ResourceAdapter struct {
-	Ingress   service.K8sResourcesIngress
-	Secret    service.K8sResourcesSecret
-	Issuer    service.K8sResourcesIssuer
-	Cert      service.K8sResourcesCert
-	ConfigMap service.K8sResourceConfigMap
-	Svc       service.K8sResourcesSvc
+	Ingress    service.K8sResourcesIngress
+	Secret     service.K8sResourcesSecret
+	Issuer     service.K8sResourcesIssuer
+	Cert       service.K8sResourcesCert
+	ConfigMap  service.K8sResourceConfigMap
+	Svc        service.K8sResourcesSvc
+	Deployment service.K8sResourcesDeploy
 }
 
 func (r ResourceAdapter) GetName() string {
@@ -159,4 +161,12 @@ func (r ResourceAdapter) UpdateIngress(ing *v1.Ingress) error {
 
 func (r ResourceAdapter) GetCmName() string {
 	return r.ConfigMap.GetCmName()
+}
+
+func (r ResourceAdapter) GetAllEndPoints() ([]string, error) {
+	return r.Svc.GetAllEndPoints()
+}
+
+func (r ResourceAdapter) GetDeploy() (*v12.Deployment, error) {
+	return r.Deployment.GetDeploy()
 }

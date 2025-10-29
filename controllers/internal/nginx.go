@@ -48,8 +48,7 @@ type NginxController struct {
 	config           *annotations.IngressAnnotationsConfig
 	mux              *sync.Mutex
 	httpReqChan      chan NginxConfig
-	limitReqChan     chan struct{}
-	errorChan        chan error
+	podsIp           []string
 }
 
 func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
@@ -58,8 +57,6 @@ func NewNginxController(data service.ResourcesMth, config *annotations.IngressAn
 		config:           config,
 		mux:              new(sync.Mutex),
 		httpReqChan:      make(chan NginxConfig),
-		limitReqChan:     make(chan struct{}, 10),
-		errorChan:        make(chan error),
 	}
 }
 
@@ -120,6 +117,17 @@ func (nc *NginxController) check() error {
 		nc.config.EnableReqLimit.Bs.Backends = lb
 	}
 
+	ips, err := nc.allResourcesData.GetAllEndPoints()
+	if err != nil {
+		return err
+	}
+
+	nc.podsIp = ips
+
+	for _, ip := range ips {
+		fmt.Println("check >>> ", ip)
+	}
+
 	return nil
 }
 
@@ -155,20 +163,37 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 		return err
 	}
 
-	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
-	file := NginxConfig{
-		FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
-		Url:       url,
-		FileBytes: buffer.Bytes(),
+	for _, ip := range nc.podsIp {
+		url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, constants.NginxConfUpUrl)
+		file := NginxConfig{
+			FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
+			Url:       url,
+			FileBytes: buffer.Bytes(),
+		}
+
+		if err := nc.updateNginxTls(url); err != nil {
+			return err
+		}
+
+		if err := nc.updateNginxConfig(file); err != nil {
+			return err
+		}
 	}
 
-	if err := nc.updateNginxTls(url); err != nil {
-		return err
-	}
-
-	if err := nc.updateNginxConfig(file); err != nil {
-		return err
-	}
+	//url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
+	//file := NginxConfig{
+	//	FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
+	//	Url:       url,
+	//	FileBytes: buffer.Bytes(),
+	//}
+	//
+	//if err := nc.updateNginxTls(url); err != nil {
+	//	return err
+	//}
+	//
+	//if err := nc.updateNginxConfig(file); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
@@ -197,16 +222,29 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 		return err
 	}
 
-	url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
-	file := NginxConfig{
-		FileName:  constants.NginxMainConf,
-		Url:       url,
-		FileBytes: buffer.Bytes(),
+	for _, ip := range nc.podsIp {
+		url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, constants.NginxConfUpUrl)
+		file := NginxConfig{
+			FileName:  constants.NginxMainConf,
+			Url:       url,
+			FileBytes: buffer.Bytes(),
+		}
+
+		if err := nc.updateNginxConfig(file); err != nil {
+			return err
+		}
 	}
 
-	if err := nc.updateNginxConfig(file); err != nil {
-		return err
-	}
+	//url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
+	//file := NginxConfig{
+	//	FileName:  constants.NginxMainConf,
+	//	Url:       url,
+	//	FileBytes: buffer.Bytes(),
+	//}
+	//
+	//if err := nc.updateNginxConfig(file); err != nil {
+	//	return err
+	//}
 
 	return nil
 }

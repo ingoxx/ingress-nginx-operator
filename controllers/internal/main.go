@@ -91,6 +91,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
+	// 检查deployment pod是否已经准备好提供服务
 	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
 	if err := deployment.CheckDeploy(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "DeployDetectionFailed", err.Error())
@@ -103,12 +104,14 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
+	ar.Svc = svc
+
 	if err := NewNginxController(ar, extract).Run(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
 		return err
 	}
 
-	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", fmt.Sprintf("'%s' ingress created successfully", ingress.Name))
+	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", fmt.Sprintf("'%s' ingress update successfully", ingress.Name))
 
 	return nil
 }

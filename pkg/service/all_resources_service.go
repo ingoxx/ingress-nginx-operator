@@ -43,4 +43,5 @@ type ResourcesMth interface {
 	GetNgxConfigMap(name string) (map[string]string, error)
 	UpdateIngress(ing *v1.Ingress) error
 	GetCmName() string
+	GetAllEndPoints() ([]string, error)
 }

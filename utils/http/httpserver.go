@@ -136,9 +136,14 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := file.HandleConfigUpdate(fmt.Sprintf("%s", ncp.FileName), ncp.FileBytes); err != nil {
-		klog.Error(fmt.Sprintf("save to file failed, file name '%s'", ncp.FileName))
+		ncp.H(RespData{
+			Code:   1007,
+			Msg:    "fail to save file",
+			Status: http.StatusBadRequest,
+		})
+		return
 	}
-
+	
 	ncp.H(RespData{
 		Code:   1000,
 		Msg:    "update nginx config ok",
