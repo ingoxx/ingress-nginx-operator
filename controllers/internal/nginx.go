@@ -124,10 +124,6 @@ func (nc *NginxController) check() error {
 
 	nc.podsIp = ips
 
-	for _, ip := range ips {
-		fmt.Println("check >>> ", ip)
-	}
-
 	return nil
 }
 

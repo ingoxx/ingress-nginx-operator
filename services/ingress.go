@@ -26,11 +26,23 @@ type IngressServiceImpl struct {
 	operatorCli common.OperatorClientSet
 	ctx         context.Context
 	ingress     *v1.Ingress
+	Ingress     *v1.Ingress
 }
 
 // NewIngressServiceImpl 创建 Service 实例
 func NewIngressServiceImpl(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet) *IngressServiceImpl {
 	return &IngressServiceImpl{ctx: ctx, k8sCli: k8sCli, operatorCli: operatorCli}
+}
+
+func (i *IngressServiceImpl) GetIngressList(ctx context.Context, req client.ObjectKey) (*v1.IngressList, error) {
+	var ingList = new(v1.IngressList)
+	if err := i.operatorCli.GetClient().List(ctx, ingList); err != nil {
+		return ingList, err
+	}
+
+	i.ctx = ctx
+
+	return ingList, nil
 }
 
 func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
@@ -44,7 +56,7 @@ func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKe
 	}
 
 	i.ingress = ing
-	i.ctx = ctx
+	//i.ctx = ctx
 
 	return ing, nil
 }

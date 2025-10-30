@@ -40,7 +40,6 @@ func (s *SvcServiceImpl) GetAllEndPoints() ([]string, error) {
 
 	for _, subset := range endpoints.Subsets {
 		for _, addr := range subset.Addresses {
-			fmt.Println("GetAllEndPoints >>> ", addr.IP)
 			podIPs = append(podIPs, addr.IP)
 		}
 	}

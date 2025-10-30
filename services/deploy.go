@@ -250,15 +250,27 @@ func (d *DeploymentServiceImpl) streamPorts() []*v14.ServiceBackendPort {
 }
 
 func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
+	if deploy.Generation > deploy.Status.ObservedGeneration {
+		return false
+	}
+
+	if deploy.Status.UnavailableReplicas >= 1 {
+		return false
+	}
+
 	if deploy.Status.Replicas != *deploy.Spec.Replicas {
 		return false
 	}
 
-	if deploy.Status.AvailableReplicas != *deploy.Spec.Replicas {
+	if deploy.Status.ReadyReplicas != *deploy.Spec.Replicas {
 		return false
 	}
 
-	if deploy.Status.ReadyReplicas != *deploy.Spec.Replicas {
+	if deploy.Status.UpdatedReplicas != deploy.Status.Replicas {
+		return false
+	}
+
+	if deploy.Status.AvailableReplicas != deploy.Status.Replicas {
 		return false
 	}
 
