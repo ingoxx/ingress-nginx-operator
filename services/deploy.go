@@ -1,10 +1,13 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/apps/v1"
 	v13 "k8s.io/api/core/v1"
@@ -15,17 +18,28 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"reflect"
+	"sync"
 )
 
+var depLocks = sync.Map{}
+
 type DeploymentServiceImpl struct {
-	ctx     context.Context
-	generic common.Generic
-	config  *annotations.IngressAnnotationsConfig
-	bks     []*v14.ServiceBackendPort
+	ctx              context.Context
+	generic          common.Generic
+	allResourcesData service.ResourcesMth
+	config           *annotations.IngressAnnotationsConfig
+	bks              []*v14.ServiceBackendPort
 }
 
-func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, config *annotations.IngressAnnotationsConfig) *DeploymentServiceImpl {
-	return &DeploymentServiceImpl{ctx: ctx, generic: clientSet, config: config}
+func (d *DeploymentServiceImpl) getDepLock() *sync.Mutex {
+	depName := fmt.Sprintf("%s/%s", constants.DeployName, d.generic.GetNameSpace())
+	val, _ := depLocks.LoadOrStore(depName, &sync.Mutex{})
+	return val.(*sync.Mutex)
+}
+
+func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, config *annotations.IngressAnnotationsConfig, allRes service.ResourcesMth) *DeploymentServiceImpl {
+	return &DeploymentServiceImpl{ctx: ctx, generic: clientSet, config: config, allResourcesData: allRes}
 }
 
 func (d *DeploymentServiceImpl) GetDeployKey() types.NamespacedName {
@@ -45,10 +59,37 @@ func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
 	return dp, nil
 }
 
+func (d *DeploymentServiceImpl) isUpdate(deploy *v1.Deployment) bool {
+	getNewPorts := d.deployPodContainer()
+	getOldPorts := deploy.Spec.Template.Spec.Containers
+	var op = make([]int32, len(getOldPorts))
+	var np = make([]int32, len(getNewPorts))
+	for _, p1 := range getOldPorts {
+		for _, p2 := range p1.Ports {
+			op = append(op, p2.ContainerPort)
+		}
+	}
+
+	for _, p1 := range getNewPorts {
+		for _, p2 := range p1.Ports {
+			np = append(np, p2.ContainerPort)
+		}
+	}
+
+	return reflect.DeepEqual(op, np)
+}
+
 func (d *DeploymentServiceImpl) UpdateDeploy(deploy *v1.Deployment) error {
-	deploy.Spec.Template.Spec.Containers = d.deployPodContainer()
-	if err := d.generic.GetClient().Update(d.ctx, deploy); err != nil {
-		return err
+	lock := d.getDepLock()
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	if !d.isUpdate(deploy) {
+		deploy.Spec.Template.Spec.Containers = d.deployPodContainer()
+		if err := d.generic.GetClient().Update(d.ctx, deploy); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -235,7 +276,27 @@ func (d *DeploymentServiceImpl) deployStrategy() v1.DeploymentStrategy {
 	return strategy
 }
 
+func (d *DeploymentServiceImpl) getLatestStreamPorts() error {
+	var tnb []*stream.Backend
+	configMap, err := d.allResourcesData.GetNgxConfigMap(d.generic.GetNameSpace())
+	if err != nil {
+		return err
+	}
+
+	data, ok := configMap[constants.StreamKey]
+	if !ok {
+		return nil
+	}
+
+	if err := json.Unmarshal([]byte(data), &tnb); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d *DeploymentServiceImpl) streamPorts() []*v14.ServiceBackendPort {
+
 	streamData := d.config.EnableStream.StreamBackendList
 	var bk = make([]*v14.ServiceBackendPort, 0, 10)
 	for _, v := range streamData {
@@ -325,6 +386,10 @@ func (d *DeploymentServiceImpl) CheckDeploy() error {
 		}
 
 		return err
+	}
+
+	if !d.deployIsReady(deploy) {
+		return fmt.Errorf("deployment not ready, name '%s', namespace '%s'", constants.DeployName, d.generic.GetNameSpace())
 	}
 
 	if err := d.UpdateDeploy(deploy); err != nil {

@@ -13,7 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sync"
 )
+
+var svcLocks = sync.Map{}
 
 type buildSvcData struct {
 	sbp    []*v1.ServiceBackendPort
@@ -29,6 +32,12 @@ type SvcServiceImpl struct {
 
 func NewSvcServiceImpl(ctx context.Context, clientSet common.Generic, config *annotations.IngressAnnotationsConfig) *SvcServiceImpl {
 	return &SvcServiceImpl{ctx: ctx, generic: clientSet, config: config}
+}
+
+func (s *SvcServiceImpl) getSvcLock(svc string) *sync.Mutex {
+	svcName := fmt.Sprintf("%s/%s", svc, s.generic.GetNameSpace())
+	val, _ := svcLocks.LoadOrStore(svcName, &sync.Mutex{})
+	return val.(*sync.Mutex)
 }
 
 func (s *SvcServiceImpl) GetAllEndPoints() ([]string, error) {
@@ -57,6 +66,10 @@ func (s *SvcServiceImpl) GetSvc(key client.ObjectKey) (*v13.Service, error) {
 }
 
 func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service, data *buildSvcData) error {
+	lock := s.getSvcLock(constants.DeploySvcName)
+	lock.Lock()
+	defer lock.Unlock()
+
 	svc.Spec.Ports = s.svcServicePort(data.sbp)
 	if err := s.generic.GetClient().Update(s.ctx, svc); err != nil {
 		return err
@@ -108,6 +121,11 @@ func (s *SvcServiceImpl) CreateHandlesSvc(data *buildSvcData) error {
 
 // UpdateHandlesSvc 更新无头svc
 func (s *SvcServiceImpl) UpdateHandlesSvc(data *buildSvcData) error {
+	lock := s.getSvcLock(constants.SvcHandlesName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	data.key.Name = constants.SvcHandlesName
 	svc, err := s.generic.GetService(data.key)
 	if err != nil {

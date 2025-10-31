@@ -68,7 +68,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//_ = log.FromContext(ctx)
 
 	if err := internal.NewCrdNginxController(ctx, r.clientSet, r.operatorCli, r.recorder).Start(req); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(30)}, nil
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(45)}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -81,5 +81,8 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 	r.recorder = mgr.GetEventRecorderFor("operator-ngx.k8s.cn")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Ingress{}).
+		//WithOptions(controller.Options{
+		//	MaxConcurrentReconciles: 3,
+		//}).
 		Complete(r)
 }

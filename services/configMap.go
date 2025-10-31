@@ -13,7 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sync"
 )
+
+var cmLocks = sync.Map{}
 
 // ConfigMapServiceImpl 实现 ConfigMapService 接口
 type ConfigMapServiceImpl struct {
@@ -24,6 +27,12 @@ type ConfigMapServiceImpl struct {
 // NewConfigMapServiceImpl 创建 Service 实例
 func NewConfigMapServiceImpl(ctx context.Context, clientSet common.Generic) *ConfigMapServiceImpl {
 	return &ConfigMapServiceImpl{ctx: ctx, generic: clientSet}
+}
+
+func (c *ConfigMapServiceImpl) getCmLock(cm string) *sync.Mutex {
+	svcName := fmt.Sprintf("%s/%s", cm, c.generic.GetNameSpace())
+	val, _ := cmLocks.LoadOrStore(svcName, &sync.Mutex{})
+	return val.(*sync.Mutex)
 }
 
 func (c *ConfigMapServiceImpl) GetConfigMapData(name string) ([]byte, error) {
@@ -61,6 +70,11 @@ func (c *ConfigMapServiceImpl) CreateConfigMap(name, key string, data []byte) (m
 }
 
 func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
+	lock := c.getCmLock(name)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}
 	if err := c.generic.GetClient().Get(context.Background(), req, cm); err == nil {
@@ -139,4 +153,23 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, 
 
 func (c *ConfigMapServiceImpl) GetCmName() string {
 	return fmt.Sprintf("%s-%s-ngx-cm", c.generic.GetName(), c.generic.GetNameSpace())
+}
+
+func (c *ConfigMapServiceImpl) GetLatestStreamPorts(name string) ([]*stream.Backend, error) {
+	var tnb []*stream.Backend
+	configMap, err := c.GetNgxConfigMap(name)
+	if err != nil {
+		return tnb, err
+	}
+
+	data, ok := configMap[constants.StreamKey]
+	if !ok {
+		return tnb, nil
+	}
+
+	if err := json.Unmarshal([]byte(data), &tnb); err != nil {
+		return tnb, err
+	}
+
+	return tnb, nil
 }

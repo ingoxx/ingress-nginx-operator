@@ -39,6 +39,7 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	for _, ig := range ingList.Items {
+		ing.NewIngress(&ig)
 		if err := nc.check(&ig, ing); err != nil {
 			return err
 		}
@@ -170,7 +171,7 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 	}
 
 	// 检查deployment pod是否已经准备好提供服务
-	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
+	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract, ar)
 	if err := deployment.CheckDeploy(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "DeployDetectionFailed", err.Error())
 		return err

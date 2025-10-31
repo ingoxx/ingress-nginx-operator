@@ -26,7 +26,6 @@ type IngressServiceImpl struct {
 	operatorCli common.OperatorClientSet
 	ctx         context.Context
 	ingress     *v1.Ingress
-	Ingress     *v1.Ingress
 }
 
 // NewIngressServiceImpl 创建 Service 实例
@@ -43,6 +42,10 @@ func (i *IngressServiceImpl) GetIngressList(ctx context.Context, req client.Obje
 	i.ctx = ctx
 
 	return ingList, nil
+}
+
+func (i *IngressServiceImpl) NewIngress(ing *v1.Ingress) {
+	i.ingress = ing
 }
 
 func (i *IngressServiceImpl) GetIngress(ctx context.Context, req client.ObjectKey) (*v1.Ingress, error) {
