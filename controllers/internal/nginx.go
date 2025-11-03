@@ -64,7 +64,7 @@ func (nc *NginxController) Run() error {
 	nc.mux.Lock()
 	defer nc.mux.Unlock()
 
-	if err := nc.check(); err != nil {
+	if err := nc.Check(); err != nil {
 		return err
 	}
 
@@ -75,8 +75,8 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
-// check 先检查nginx.conf中的配置是否重复配置
-func (nc *NginxController) check() error {
+// Check 先检查nginx.conf中的配置是否重复配置
+func (nc *NginxController) Check() error {
 	// nginx.conf中的stream功能
 	if nc.config.EnableStream.EnableStream {
 		b, err := json.Marshal(&nc.config.EnableStream.StreamBackendList)
@@ -95,6 +95,10 @@ func (nc *NginxController) check() error {
 		}
 
 		nc.config.EnableStream.StreamBackendList = tnb
+
+		for _, i := range nc.config.EnableStream.StreamBackendList {
+			fmt.Println("stream >>> ", i.Port)
+		}
 	}
 
 	// nginx.conf中的limitreq功能

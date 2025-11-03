@@ -99,6 +99,11 @@ func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte
 }
 
 func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, error) {
+	lock := c.getCmLock(name)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	var data = make(map[string]string)
 	var cms = new(v1.ConfigMapList)
 	if err := c.generic.GetClient().List(context.Background(), cms, client.InNamespace(name)); err != nil {

@@ -1,10 +1,13 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"golang.org/x/net/context"
 	v13 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -25,13 +28,14 @@ type buildSvcData struct {
 }
 
 type SvcServiceImpl struct {
-	generic common.Generic
-	ctx     context.Context
-	config  *annotations.IngressAnnotationsConfig
+	generic          common.Generic
+	ctx              context.Context
+	allResourcesData service.ResourcesMth
+	config           *annotations.IngressAnnotationsConfig
 }
 
-func NewSvcServiceImpl(ctx context.Context, clientSet common.Generic, config *annotations.IngressAnnotationsConfig) *SvcServiceImpl {
-	return &SvcServiceImpl{ctx: ctx, generic: clientSet, config: config}
+func NewSvcServiceImpl(ctx context.Context, clientSet common.Generic, allRes service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *SvcServiceImpl {
+	return &SvcServiceImpl{ctx: ctx, generic: clientSet, config: config, allResourcesData: allRes}
 }
 
 func (s *SvcServiceImpl) getSvcLock(svc string) *sync.Mutex {
@@ -204,6 +208,25 @@ func (s *SvcServiceImpl) svcServicePort(sbp []*v1.ServiceBackendPort) []v13.Serv
 	return sps
 }
 
+func (s *SvcServiceImpl) getLatestStreamPorts() ([]*stream.Backend, error) {
+	var sb []*stream.Backend
+	configMap, err := s.allResourcesData.GetNgxConfigMap(s.generic.GetNameSpace())
+	if err != nil {
+		return sb, err
+	}
+
+	data, ok := configMap[constants.StreamKey]
+	if !ok {
+		return sb, nil
+	}
+
+	if err := json.Unmarshal([]byte(data), &sb); err != nil {
+		return sb, err
+	}
+
+	return sb, nil
+}
+
 func (s *SvcServiceImpl) ingressSvc() error {
 	var bks = make([]*v1.ServiceBackendPort, 0, 10)
 
@@ -217,7 +240,12 @@ func (s *SvcServiceImpl) ingressSvc() error {
 	}
 
 	if s.config.EnableStream.EnableStream {
-		for _, s1 := range s.config.EnableStream.StreamBackendList {
+		streamPorts, err := s.getLatestStreamPorts()
+		if err != nil {
+			return err
+		}
+
+		for _, s1 := range streamPorts {
 			sp := &v1.ServiceBackendPort{
 				Name:   s1.Name,
 				Number: s1.Port,

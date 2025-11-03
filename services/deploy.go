@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	"reflect"
 	"sync"
 )
 
@@ -62,21 +61,23 @@ func (d *DeploymentServiceImpl) GetDeploy() (*v1.Deployment, error) {
 func (d *DeploymentServiceImpl) isUpdate(deploy *v1.Deployment) bool {
 	getNewPorts := d.deployPodContainer()
 	getOldPorts := deploy.Spec.Template.Spec.Containers
-	var op = make([]int32, len(getOldPorts))
-	var np = make([]int32, len(getNewPorts))
+
+	var isExists = make(map[int32]struct{})
 	for _, p1 := range getOldPorts {
 		for _, p2 := range p1.Ports {
-			op = append(op, p2.ContainerPort)
+			isExists[p2.ContainerPort] = struct{}{}
 		}
 	}
 
 	for _, p1 := range getNewPorts {
 		for _, p2 := range p1.Ports {
-			np = append(np, p2.ContainerPort)
+			if _, ok := isExists[p2.ContainerPort]; !ok {
+				return false
+			}
 		}
 	}
 
-	return reflect.DeepEqual(op, np)
+	return true
 }
 
 func (d *DeploymentServiceImpl) UpdateDeploy(deploy *v1.Deployment) error {
@@ -276,29 +277,33 @@ func (d *DeploymentServiceImpl) deployStrategy() v1.DeploymentStrategy {
 	return strategy
 }
 
-func (d *DeploymentServiceImpl) getLatestStreamPorts() error {
-	var tnb []*stream.Backend
+func (d *DeploymentServiceImpl) getLatestStreamPorts() ([]*stream.Backend, error) {
+	var sb []*stream.Backend
 	configMap, err := d.allResourcesData.GetNgxConfigMap(d.generic.GetNameSpace())
 	if err != nil {
-		return err
+		return sb, err
 	}
 
 	data, ok := configMap[constants.StreamKey]
 	if !ok {
-		return nil
+		return sb, nil
 	}
 
-	if err := json.Unmarshal([]byte(data), &tnb); err != nil {
-		return err
+	if err := json.Unmarshal([]byte(data), &sb); err != nil {
+		return sb, err
 	}
 
-	return nil
+	return sb, nil
 }
 
-func (d *DeploymentServiceImpl) streamPorts() []*v14.ServiceBackendPort {
-
-	streamData := d.config.EnableStream.StreamBackendList
+func (d *DeploymentServiceImpl) streamPorts() ([]*v14.ServiceBackendPort, error) {
 	var bk = make([]*v14.ServiceBackendPort, 0, 10)
+	streamData, err := d.getLatestStreamPorts()
+
+	if err != nil {
+		return bk, err
+	}
+
 	for _, v := range streamData {
 		sp := &v14.ServiceBackendPort{
 			Name:   v.Name,
@@ -307,7 +312,7 @@ func (d *DeploymentServiceImpl) streamPorts() []*v14.ServiceBackendPort {
 		bk = append(bk, sp)
 	}
 
-	return bk
+	return bk, nil
 }
 
 func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
@@ -345,6 +350,7 @@ func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
 }
 
 func (d *DeploymentServiceImpl) getBackends() error {
+	lock := d.getDepLock()
 	var bks = make([]*v14.ServiceBackendPort, 0, 10)
 
 	for _, p := range constants.HttpPorts {
@@ -356,7 +362,11 @@ func (d *DeploymentServiceImpl) getBackends() error {
 	}
 
 	if d.config.EnableStream.EnableStream {
-		ports := d.streamPorts()
+		ports, err := d.streamPorts()
+		if err != nil {
+			return err
+		}
+
 		bks = append(bks, ports...)
 	}
 
@@ -369,7 +379,9 @@ func (d *DeploymentServiceImpl) getBackends() error {
 		bks = append(bks, backend)
 	}
 
+	lock.Lock()
 	d.bks = bks
+	lock.Unlock()
 
 	return nil
 }

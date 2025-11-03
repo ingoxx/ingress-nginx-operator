@@ -45,84 +45,6 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		}
 	}
 
-	//ingress, err := ing.GetIngress(nc.ctx, req.NamespacedName)
-	//if cerr.IsIngressNotFoundError(err) {
-	//	ingRef := &v1.Ingress{
-	//		ObjectMeta: metav1.ObjectMeta{
-	//			Namespace: req.Namespace,
-	//			Name:      req.Name,
-	//		},
-	//	}
-	//	nc.recorder.Event(ingRef, "Warning", "IngressNotExist", err.Error())
-	//
-	//	return nil
-	//}
-	//
-	//if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
-	//	controllerutil.RemoveFinalizer(ingress, constants.Finalizer)
-	//	if err := ing.UpdateIngress(ingress); err != nil {
-	//		return err
-	//	}
-	//
-	//	return nil
-	//}
-	//
-	//if err := ing.CheckController(); err != nil {
-	//	nc.recorder.Event(ingress, "Normal", "NoCustomControllerSelected", err.Error())
-	//	return err
-	//}
-	//
-	//if err := ing.CheckService(); err != nil {
-	//	nc.recorder.Event(ingress, "Warning", "BackendsNoServiceAvailable", err.Error())
-	//	return err
-	//}
-	//
-	//cert := services.NewCertServiceImpl(nc.ctx, ing)
-	//secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
-	//issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
-	//configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
-	//
-	//ar := adapter.ResourceAdapter{
-	//	Ingress:   ing,
-	//	Secret:    secret,
-	//	Cert:      cert,
-	//	Issuer:    issuer,
-	//	ConfigMap: configMap,
-	//}
-	//
-	//if err := ar.CheckCert(); err != nil {
-	//	nc.recorder.Event(ingress, "Warning", "NoCertAvailable", err.Error())
-	//	return err
-	//}
-	//
-	//extract, err := annotations.NewExtractor(ing, ar).Extract()
-	//if err != nil {
-	//	nc.recorder.Event(ingress, "Warning", "FailToExtractAnnotations", err.Error())
-	//	return err
-	//}
-	//
-	//// 检查deployment pod是否已经准备好提供服务
-	//deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract)
-	//if err := deployment.CheckDeploy(); err != nil {
-	//	nc.recorder.Event(ingress, "Warning", "DeployDetectionFailed", err.Error())
-	//	return err
-	//}
-	//
-	//svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
-	//if err := svc.CheckSvc(); err != nil {
-	//	nc.recorder.Event(ingress, "Warning", "ServiceDetectionFailed", err.Error())
-	//	return err
-	//}
-	//
-	//ar.Svc = svc
-	//
-	//if err := NewNginxController(ar, extract).Run(); err != nil {
-	//	nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
-	//	return err
-	//}
-	//
-	//nc.recorder.Event(ingress, "Normal", "RunSuccessfully", fmt.Sprintf("'%s' ingress update successfully", ingress.Name))
-
 	return nil
 }
 
@@ -136,6 +58,11 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		return nil
 	}
 
+	cert := services.NewCertServiceImpl(nc.ctx, ing)
+	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
+	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
+	configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
+
 	if err := ing.CheckController(); err != nil {
 		nc.recorder.Event(ingress, "Normal", "NoCustomControllerSelected", err.Error())
 		return err
@@ -146,11 +73,6 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		return err
 	}
 
-	cert := services.NewCertServiceImpl(nc.ctx, ing)
-	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
-	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
-	configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
-
 	ar := adapter.ResourceAdapter{
 		Ingress:   ing,
 		Secret:    secret,
@@ -159,14 +81,31 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		ConfigMap: configMap,
 	}
 
+	// cert检查
 	if err := ar.CheckCert(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "NoCertAvailable", err.Error())
 		return err
 	}
 
+	// 提取annotations
 	extract, err := annotations.NewExtractor(ing, ar).Extract()
 	if err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToExtractAnnotations", err.Error())
+		return err
+	}
+
+	svc := services.NewSvcServiceImpl(nc.ctx, ing, ar, extract)
+	if err := svc.CheckSvc(); err != nil {
+		nc.recorder.Event(ingress, "Warning", "ServiceDetectionFailed", err.Error())
+		return err
+	}
+
+	ar.Svc = svc
+
+	//nginx配置生成，分发实例化
+	ngx := NewNginxController(ar, extract)
+	if err := ngx.Check(); err != nil {
+		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxPublicConfig", err.Error())
 		return err
 	}
 
@@ -177,19 +116,13 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		return err
 	}
 
-	svc := services.NewSvcServiceImpl(nc.ctx, ing, extract)
-	if err := svc.CheckSvc(); err != nil {
-		nc.recorder.Event(ingress, "Warning", "ServiceDetectionFailed", err.Error())
-		return err
-	}
-
-	ar.Svc = svc
-
-	if err := NewNginxController(ar, extract).Run(); err != nil {
+	//nginx配置生成，分发
+	if err := ngx.Run(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
 		return err
 	}
 
 	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", fmt.Sprintf("'%s' ingress update successfully", ingress.Name))
+
 	return nil
 }
