@@ -170,3 +170,7 @@ func (r ResourceAdapter) GetAllEndPoints() ([]string, error) {
 func (r ResourceAdapter) GetDeploy() (*v12.Deployment, error) {
 	return r.Deployment.GetDeploy()
 }
+
+func (r ResourceAdapter) NewIngress(ing *v1.Ingress) {
+	r.Ingress.NewIngress(ing)
+}

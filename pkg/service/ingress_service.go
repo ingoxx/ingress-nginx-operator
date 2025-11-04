@@ -43,4 +43,5 @@ type K8sResourcesIngress interface {
 	CheckDefaultBackend() error
 	CheckHost(string) bool
 	UpdateIngress(*v1.Ingress) error
+	NewIngress(ing *v1.Ingress)
 }

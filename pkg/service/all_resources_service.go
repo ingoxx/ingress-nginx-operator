@@ -44,4 +44,5 @@ type ResourcesMth interface {
 	UpdateIngress(ing *v1.Ingress) error
 	GetCmName() string
 	GetAllEndPoints() ([]string, error)
+	NewIngress(ing *v1.Ingress)
 }

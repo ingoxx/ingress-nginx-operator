@@ -17,6 +17,7 @@ import (
 )
 
 var cmLocks = sync.Map{}
+var comLock = sync.Mutex{}
 
 // ConfigMapServiceImpl 实现 ConfigMapService 接口
 type ConfigMapServiceImpl struct {
@@ -70,10 +71,10 @@ func (c *ConfigMapServiceImpl) CreateConfigMap(name, key string, data []byte) (m
 }
 
 func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
-	lock := c.getCmLock(name)
+	//lock := c.getCmLock(name)
 
-	lock.Lock()
-	defer lock.Unlock()
+	comLock.Lock()
+	defer comLock.Unlock()
 
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}
@@ -83,7 +84,12 @@ func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte
 			return cm.Data[key], err
 		}
 
-		return cm.Data[key], nil
+		cms, err := c.GetNgxConfigMap(ns)
+		if err != nil {
+			return cms[key], err
+		}
+
+		return cms[key], nil
 	}
 
 	if _, err := c.CreateConfigMap(name, key, data); err != nil {
@@ -99,11 +105,6 @@ func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte
 }
 
 func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, error) {
-	lock := c.getCmLock(name)
-
-	lock.Lock()
-	defer lock.Unlock()
-
 	var data = make(map[string]string)
 	var cms = new(v1.ConfigMapList)
 	if err := c.generic.GetClient().List(context.Background(), cms, client.InNamespace(name)); err != nil {

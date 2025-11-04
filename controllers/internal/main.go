@@ -39,7 +39,6 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 	}
 
 	for _, ig := range ingList.Items {
-		ing.NewIngress(&ig)
 		if err := nc.check(&ig, ing); err != nil {
 			return err
 		}
@@ -57,6 +56,8 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		}
 		return nil
 	}
+
+	ing.NewIngress(ingress)
 
 	cert := services.NewCertServiceImpl(nc.ctx, ing)
 	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
