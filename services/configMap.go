@@ -71,8 +71,6 @@ func (c *ConfigMapServiceImpl) CreateConfigMap(name, key string, data []byte) (m
 }
 
 func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
-	//lock := c.getCmLock(name)
-
 	comLock.Lock()
 	defer comLock.Unlock()
 
@@ -102,6 +100,32 @@ func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte
 	}
 
 	return tm[key], nil
+}
+
+func (c *ConfigMapServiceImpl) GetCm() (*v1.ConfigMap, error) {
+	var cm = new(v1.ConfigMap)
+	req := types.NamespacedName{Name: c.GetCmName(), Namespace: c.generic.GetNameSpace()}
+	if err := c.generic.GetClient().Get(context.Background(), req, cm); err != nil {
+		return cm, err
+	}
+
+	return cm, nil
+}
+
+func (c *ConfigMapServiceImpl) ClearCmData(key string) error {
+	cm, err := c.GetCm()
+	if err != nil {
+		return err
+	}
+
+	if cm.Data[key] != "" {
+		cm.Data[key] = ""
+		if err := c.generic.GetClient().Update(context.Background(), cm); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, error) {

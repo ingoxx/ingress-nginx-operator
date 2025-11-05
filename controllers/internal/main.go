@@ -103,7 +103,7 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 
 	ar.Svc = svc
 
-	//nginx配置生成，分发实例化
+	// nginx配置生成，分发实例化
 	ngx := NewNginxController(ar, extract)
 	if err := ngx.Check(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxPublicConfig", err.Error())
@@ -117,7 +117,7 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		return err
 	}
 
-	//nginx配置生成，分发
+	// nginx配置生成，分发
 	if err := ngx.Run(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
 		return err

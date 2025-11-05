@@ -285,7 +285,7 @@ func (d *DeploymentServiceImpl) getLatestStreamPorts() ([]*stream.Backend, error
 	}
 
 	data, ok := configMap[constants.StreamKey]
-	if !ok {
+	if !ok || data == "" {
 		return sb, nil
 	}
 
@@ -361,14 +361,14 @@ func (d *DeploymentServiceImpl) getBackends() error {
 		bks = append(bks, sp)
 	}
 
-	if d.config.EnableStream.EnableStream {
-		ports, err := d.streamPorts()
-		if err != nil {
-			return err
-		}
-
-		bks = append(bks, ports...)
+	//if d.config.EnableStream.EnableStream {
+	ports, err := d.streamPorts()
+	if err != nil {
+		return err
 	}
+
+	bks = append(bks, ports...)
+	//}
 
 	backend, err := d.generic.GetDefaultBackend()
 	if err != nil {
@@ -392,9 +392,13 @@ func (d *DeploymentServiceImpl) CheckDeploy() error {
 	}
 
 	deploy, err := d.GetDeploy()
-	if err != nil && errors.IsNotFound(err) {
-		if err := d.CreateDeploy(); err != nil {
-			return err
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err := d.CreateDeploy(); err != nil {
+				return err
+			}
+
+			return nil
 		}
 
 		return err

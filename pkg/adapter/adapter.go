@@ -174,3 +174,11 @@ func (r ResourceAdapter) GetDeploy() (*v12.Deployment, error) {
 func (r ResourceAdapter) NewIngress(ing *v1.Ingress) {
 	r.Ingress.NewIngress(ing)
 }
+
+func (r ResourceAdapter) GetCm() (*corev1.ConfigMap, error) {
+	return r.ConfigMap.GetCm()
+}
+
+func (r ResourceAdapter) ClearCmData(key string) error {
+	return r.ConfigMap.ClearCmData(key)
+}

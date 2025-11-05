@@ -220,8 +220,10 @@ func (s *SvcServiceImpl) getLatestStreamPorts() ([]*stream.Backend, error) {
 		return sb, nil
 	}
 
-	if err := json.Unmarshal([]byte(data), &sb); err != nil {
-		return sb, err
+	if data != "" {
+		if err := json.Unmarshal([]byte(data), &sb); err != nil {
+			return sb, err
+		}
 	}
 
 	return sb, nil
@@ -239,19 +241,17 @@ func (s *SvcServiceImpl) ingressSvc() error {
 		bks = append(bks, sp)
 	}
 
-	if s.config.EnableStream.EnableStream {
-		streamPorts, err := s.getLatestStreamPorts()
-		if err != nil {
-			return err
-		}
+	streamPorts, err := s.getLatestStreamPorts()
+	if err != nil {
+		return err
+	}
 
-		for _, s1 := range streamPorts {
-			sp := &v1.ServiceBackendPort{
-				Name:   s1.Name,
-				Number: s1.Port,
-			}
-			bks = append(bks, sp)
+	for _, s1 := range streamPorts {
+		sp := &v1.ServiceBackendPort{
+			Name:   s1.Name,
+			Number: s1.Port,
 		}
+		bks = append(bks, sp)
 	}
 
 	// controller的data plane

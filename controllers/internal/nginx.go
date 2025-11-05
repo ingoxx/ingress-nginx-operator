@@ -47,7 +47,6 @@ type NginxController struct {
 	allResourcesData service.ResourcesMth
 	config           *annotations.IngressAnnotationsConfig
 	mux              *sync.Mutex
-	httpReqChan      chan NginxConfig
 	podsIp           []string
 }
 
@@ -56,7 +55,6 @@ func NewNginxController(data service.ResourcesMth, config *annotations.IngressAn
 		allResourcesData: data,
 		config:           config,
 		mux:              new(sync.Mutex),
-		httpReqChan:      make(chan NginxConfig),
 	}
 }
 
@@ -73,8 +71,6 @@ func (nc *NginxController) Run() error {
 
 // Check 先检查nginx.conf中的配置是否重复配置
 func (nc *NginxController) Check() error {
-	nc.mux.Lock()
-	defer nc.mux.Unlock()
 	// nginx.conf中的stream功能
 	if nc.config.EnableStream.EnableStream {
 		b, err := json.Marshal(&nc.config.EnableStream.StreamBackendList)
@@ -93,9 +89,9 @@ func (nc *NginxController) Check() error {
 		}
 
 		nc.config.EnableStream.StreamBackendList = tnb
-
-		for _, i := range nc.config.EnableStream.StreamBackendList {
-			fmt.Println("stream >>> ", i.Port)
+	} else {
+		if err := nc.allResourcesData.ClearCmData(constants.StreamKey); err != nil {
+			return err
 		}
 	}
 
@@ -117,6 +113,10 @@ func (nc *NginxController) Check() error {
 		}
 
 		nc.config.EnableReqLimit.Bs.Backends = lb
+	} else {
+		if err := nc.allResourcesData.ClearCmData(constants.LimitReqKey); err != nil {
+			return err
+		}
 	}
 
 	ips, err := nc.allResourcesData.GetAllEndPoints()
@@ -178,26 +178,15 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 		}
 	}
 
-	//url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
-	//file := NginxConfig{
-	//	FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
-	//	Url:       url,
-	//	FileBytes: buffer.Bytes(),
-	//}
-	//
-	//if err := nc.updateNginxTls(url); err != nil {
-	//	return err
-	//}
-	//
-	//if err := nc.updateNginxConfig(file); err != nil {
-	//	return err
-	//}
-
 	return nil
 }
 
 // generateNgxConfTmpl 生成nginx.conf配置
 func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
+	if err := nc.Check(); err != nil {
+		return err
+	}
+
 	var buffer bytes.Buffer
 
 	backend, err := nc.allResourcesData.GetDefaultBackend()
@@ -232,17 +221,6 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 			return err
 		}
 	}
-
-	//url := fmt.Sprintf("http://%s.%s.svc:%d%s", constants.DeploySvcName, nc.allResourcesData.GetNameSpace(), constants.HealthPort, constants.NginxConfUpUrl)
-	//file := NginxConfig{
-	//	FileName:  constants.NginxMainConf,
-	//	Url:       url,
-	//	FileBytes: buffer.Bytes(),
-	//}
-	//
-	//if err := nc.updateNginxConfig(file); err != nil {
-	//	return err
-	//}
 
 	return nil
 }

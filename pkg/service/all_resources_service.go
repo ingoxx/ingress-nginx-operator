@@ -45,4 +45,6 @@ type ResourcesMth interface {
 	GetCmName() string
 	GetAllEndPoints() ([]string, error)
 	NewIngress(ing *v1.Ingress)
+	GetCm() (*corev1.ConfigMap, error)
+	ClearCmData(string) error
 }
