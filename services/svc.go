@@ -35,7 +35,7 @@ type SvcServiceImpl struct {
 }
 
 func NewSvcServiceImpl(ctx context.Context, clientSet common.Generic, allRes service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *SvcServiceImpl {
-	return &SvcServiceImpl{ctx: ctx, generic: clientSet, config: config, allResourcesData: allRes}
+	return &SvcServiceImpl{ctx: ctx, generic: clientSet, allResourcesData: allRes, config: config}
 }
 
 func (s *SvcServiceImpl) getSvcLock(svc string) *sync.Mutex {

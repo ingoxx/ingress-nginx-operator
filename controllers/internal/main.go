@@ -58,7 +58,6 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 	}
 
 	ing.NewIngress(ingress)
-
 	cert := services.NewCertServiceImpl(nc.ctx, ing)
 	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
 	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
@@ -95,27 +94,30 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		return err
 	}
 
+	// svc同步更新port
 	svc := services.NewSvcServiceImpl(nc.ctx, ing, ar, extract)
-	if err := svc.CheckSvc(); err != nil {
-		nc.recorder.Event(ingress, "Warning", "ServiceDetectionFailed", err.Error())
-		return err
-	}
+	//if err := svc.CheckSvc(); err != nil {
+	//	nc.recorder.Event(ingress, "Warning", "ServiceDetectionFailed", err.Error())
+	//	return err
+	//}
 
 	ar.Svc = svc
 
 	// nginx配置生成，分发实例化
 	ngx := NewNginxController(ar, extract)
-	if err := ngx.Check(); err != nil {
-		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxPublicConfig", err.Error())
-		return err
-	}
+	//if err := ngx.Check(); err != nil {
+	//	nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxPublicConfig", err.Error())
+	//	return err
+	//}
 
 	// 检查deployment pod是否已经准备好提供服务
-	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, extract, ar)
-	if err := deployment.CheckDeploy(); err != nil {
-		nc.recorder.Event(ingress, "Warning", "DeployDetectionFailed", err.Error())
-		return err
-	}
+	deployment := services.NewDeploymentServiceImpl(nc.ctx, ing, ar, extract)
+	//if err := deployment.CheckDeploy(); err != nil {
+	//	nc.recorder.Event(ingress, "Warning", "DeployDetectionFailed", err.Error())
+	//	return err
+	//}
+
+	ar.Deployment = deployment
 
 	// nginx配置生成，分发
 	if err := ngx.Run(); err != nil {

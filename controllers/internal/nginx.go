@@ -119,6 +119,22 @@ func (nc *NginxController) Check() error {
 		}
 	}
 
+	return nil
+}
+
+func (nc *NginxController) generateBackendCfg() error {
+	if err := nc.Check(); err != nil {
+		return err
+	}
+
+	if err := nc.allResourcesData.CheckSvc(); err != nil {
+		return err
+	}
+
+	if err := nc.allResourcesData.CheckDeploy(); err != nil {
+		return err
+	}
+
 	ips, err := nc.allResourcesData.GetAllEndPoints()
 	if err != nil {
 		return err
@@ -126,10 +142,6 @@ func (nc *NginxController) Check() error {
 
 	nc.podsIp = ips
 
-	return nil
-}
-
-func (nc *NginxController) generateBackendCfg() error {
 	c := &Config{
 		ServerTmpl:    constants.NginxServerTmpl,
 		NginxConfTmpl: constants.NginxTmpl,
@@ -183,10 +195,6 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 
 // generateNgxConfTmpl 生成nginx.conf配置
 func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
-	if err := nc.Check(); err != nil {
-		return err
-	}
-
 	var buffer bytes.Buffer
 
 	backend, err := nc.allResourcesData.GetDefaultBackend()

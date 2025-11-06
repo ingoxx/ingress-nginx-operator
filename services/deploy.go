@@ -37,7 +37,7 @@ func (d *DeploymentServiceImpl) getDepLock() *sync.Mutex {
 	return val.(*sync.Mutex)
 }
 
-func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, config *annotations.IngressAnnotationsConfig, allRes service.ResourcesMth) *DeploymentServiceImpl {
+func NewDeploymentServiceImpl(ctx context.Context, clientSet common.Generic, allRes service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *DeploymentServiceImpl {
 	return &DeploymentServiceImpl{ctx: ctx, generic: clientSet, config: config, allResourcesData: allRes}
 }
 

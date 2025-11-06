@@ -182,3 +182,11 @@ func (r ResourceAdapter) GetCm() (*corev1.ConfigMap, error) {
 func (r ResourceAdapter) ClearCmData(key string) error {
 	return r.ConfigMap.ClearCmData(key)
 }
+
+func (r ResourceAdapter) CheckDeploy() error {
+	return r.Deployment.CheckDeploy()
+}
+
+func (r ResourceAdapter) CheckSvc() error {
+	return r.Svc.CheckSvc()
+}

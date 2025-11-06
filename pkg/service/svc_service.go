@@ -8,4 +8,5 @@ import (
 type K8sResourcesSvc interface {
 	GetSvc(key client.ObjectKey) (*corev1.Service, error)
 	GetAllEndPoints() ([]string, error)
+	CheckSvc() error
 }
