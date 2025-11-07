@@ -17,17 +17,19 @@ import (
 )
 
 var cmLocks = sync.Map{}
-var comLock = sync.Mutex{}
+
+//var comLock = sync.Mutex{}
 
 // ConfigMapServiceImpl 实现 ConfigMapService 接口
 type ConfigMapServiceImpl struct {
 	generic common.Generic
 	ctx     context.Context
+	comLock sync.Mutex
 }
 
 // NewConfigMapServiceImpl 创建 Service 实例
 func NewConfigMapServiceImpl(ctx context.Context, clientSet common.Generic) *ConfigMapServiceImpl {
-	return &ConfigMapServiceImpl{ctx: ctx, generic: clientSet}
+	return &ConfigMapServiceImpl{ctx: ctx, generic: clientSet, comLock: sync.Mutex{}}
 }
 
 func (c *ConfigMapServiceImpl) getCmLock(cm string) *sync.Mutex {
@@ -71,8 +73,8 @@ func (c *ConfigMapServiceImpl) CreateConfigMap(name, key string, data []byte) (m
 }
 
 func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
-	comLock.Lock()
-	defer comLock.Unlock()
+	c.comLock.Lock()
+	defer c.comLock.Unlock()
 
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}
@@ -128,10 +130,10 @@ func (c *ConfigMapServiceImpl) ClearCmData(key string) error {
 	return nil
 }
 
-func (c *ConfigMapServiceImpl) GetNgxConfigMap(name string) (map[string]string, error) {
+func (c *ConfigMapServiceImpl) GetNgxConfigMap(ns string) (map[string]string, error) {
 	var data = make(map[string]string)
 	var cms = new(v1.ConfigMapList)
-	if err := c.generic.GetClient().List(context.Background(), cms, client.InNamespace(name)); err != nil {
+	if err := c.generic.GetClient().List(context.Background(), cms, client.InNamespace(ns)); err != nil {
 		return data, err
 	}
 

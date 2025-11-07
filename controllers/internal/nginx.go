@@ -12,6 +12,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"io"
 	v1 "k8s.io/api/networking/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	"net/http"
 	"os"
@@ -69,8 +70,8 @@ func (nc *NginxController) Run() error {
 	return nil
 }
 
-// Check 先检查nginx.conf中的配置是否重复配置
-func (nc *NginxController) Check() error {
+// checkPublicCfg 先检查nginx.conf中的配置是否重复配置
+func (nc *NginxController) checkPublicCfg() error {
 	// nginx.conf中的stream功能
 	if nc.config.EnableStream.EnableStream {
 		b, err := json.Marshal(&nc.config.EnableStream.StreamBackendList)
@@ -83,15 +84,15 @@ func (nc *NginxController) Check() error {
 			return err
 		}
 
-		var tnb []*stream.Backend
-		if err := json.Unmarshal([]byte(cm1), &tnb); err != nil {
+		if _, err := nc.getStreamData(cm1); err != nil {
 			return err
 		}
 
-		nc.config.EnableStream.StreamBackendList = tnb
 	} else {
 		if err := nc.allResourcesData.ClearCmData(constants.StreamKey); err != nil {
-			return err
+			if !kerr.IsNotFound(err) {
+				return err
+			}
 		}
 	}
 
@@ -107,24 +108,69 @@ func (nc *NginxController) Check() error {
 			return err
 		}
 
-		var lb []*limitreq.ZoneRepConfig
-		if err := json.Unmarshal([]byte(cm2), &lb); err != nil {
+		if _, err := nc.getLimitReqData(cm2); err != nil {
 			return err
 		}
 
-		nc.config.EnableReqLimit.Bs.Backends = lb
 	} else {
 		if err := nc.allResourcesData.ClearCmData(constants.LimitReqKey); err != nil {
-			return err
+			if !kerr.IsNotFound(err) {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
+func (nc *NginxController) getStreamData(data string) ([]*stream.Backend, error) {
+	var tnb []*stream.Backend
+	if err := json.Unmarshal([]byte(data), &tnb); err != nil {
+		return tnb, err
+	}
+
+	return tnb, nil
+}
+
+func (nc *NginxController) getLimitReqData(data string) ([]*limitreq.ZoneRepConfig, error) {
+	var lb []*limitreq.ZoneRepConfig
+	if err := json.Unmarshal([]byte(data), &lb); err != nil {
+		return lb, err
+	}
+
+	return lb, nil
+}
+
 func (nc *NginxController) generateBackendCfg() error {
-	if err := nc.Check(); err != nil {
+	var err error
+
+	if err := nc.checkPublicCfg(); err != nil {
 		return err
+	}
+
+	cm, err := nc.allResourcesData.GetNgxConfigMap(nc.allResourcesData.GetNameSpace())
+	if err != nil {
+		return err
+	}
+
+	s, ok := cm[constants.StreamKey]
+	if s != "" && ok {
+		nc.config.EnableStream.EnableStream = true
+		data, err := nc.getStreamData(s)
+		if err != nil {
+			return err
+		}
+		nc.config.EnableStream.StreamBackendList = data
+	}
+
+	s1, ok := cm[constants.LimitReqKey]
+	if s != "" && ok {
+		nc.config.EnableReqLimit.EnableRequestLimit = true
+		data, err := nc.getLimitReqData(s1)
+		if err != nil {
+			return err
+		}
+		nc.config.EnableReqLimit.Bs.Backends = data
 	}
 
 	if err := nc.allResourcesData.CheckSvc(); err != nil {
@@ -135,12 +181,10 @@ func (nc *NginxController) generateBackendCfg() error {
 		return err
 	}
 
-	ips, err := nc.allResourcesData.GetAllEndPoints()
+	nc.podsIp, err = nc.allResourcesData.GetAllEndPoints()
 	if err != nil {
 		return err
 	}
-
-	nc.podsIp = ips
 
 	c := &Config{
 		ServerTmpl:    constants.NginxServerTmpl,

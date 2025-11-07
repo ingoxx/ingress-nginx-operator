@@ -42,7 +42,7 @@ type SetLimitConfig struct {
 }
 
 type Config struct {
-	Bs                 *SetLimitConfig
+	Bs                 SetLimitConfig
 	LimitConfig        string `json:"limit-config"`
 	EnableRequestLimit bool   `json:"enable-request-limit"`
 }
@@ -112,8 +112,8 @@ func (r *RequestLimitIng) validate(config *Config) error {
 		if config.LimitConfig == "" {
 			return cerr.NewMissIngressFieldValueError(limitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
-		var lq = new(SetLimitConfig)
-		if err := jsonParser.JSONToStruct(config.LimitConfig, lq); err != nil {
+		var lq SetLimitConfig
+		if err := jsonParser.JSONToStruct(config.LimitConfig, &lq); err != nil {
 			return err
 		}
 

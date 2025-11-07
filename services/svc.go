@@ -57,6 +57,10 @@ func (s *SvcServiceImpl) GetAllEndPoints() ([]string, error) {
 		}
 	}
 
+	if len(podIPs) == 0 {
+		return podIPs, fmt.Errorf("service %s has not yet obtained the pod IP", constants.SvcHandlesName)
+	}
+
 	return podIPs, nil
 }
 
