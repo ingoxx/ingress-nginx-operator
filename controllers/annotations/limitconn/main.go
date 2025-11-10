@@ -1,4 +1,4 @@
-package limitreq
+package limitconn
 
 import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	enableLimitReqAnnotations = "enable-limit-req"
-	limitConfigAnnotations    = "set-limit-req-config"
+	enableLimitConnAnnotations = "enable-limit-conn"
+	limitConfigAnnotations     = "set-limit-conn-config"
 )
 
-type RequestLimitIng struct {
+type ConnLimitIng struct {
 	ingress   service.K8sResourcesIngress
 	resources service.ResourcesMth
 }
@@ -22,38 +22,36 @@ type ZoneConfig struct {
 	LimitKey string `json:"limit_key"`
 	ZoneName string `json:"zone_name"`
 	Capacity string `json:"capacity"`
-	Rate     string `json:"rate"` // 10r/s, 10r/m
 }
 
-type ReqConfig struct {
+type ConnConfig struct {
 	ZoneName string `json:"zone_name"`
 	Burst    int    `json:"burst"`
-	Delay    bool   `json:"delay"`
 }
 
-type ZoneRepConfig struct {
+type ZoneConnConfig struct {
 	LimitZone []*ZoneConfig `json:"limit_zone"`
-	LimitReq  []*ReqConfig  `json:"limit_req"`
+	LimitConn []*ConnConfig `json:"limit_conn"`
 	Name      string        `json:"name"`
 }
 
 type SetLimitConfig struct {
-	Backends []*ZoneRepConfig `json:"backends"`
+	Backends []*ZoneConnConfig `json:"backends"`
 }
 
 type Config struct {
-	Bs                 SetLimitConfig
-	LimitConfig        string `json:"limit-config"`
-	EnableRequestLimit bool   `json:"enable-request-limit"`
+	Bs              SetLimitConfig
+	LimitConfig     string `json:"limit-config"`
+	EnableConnLimit bool   `json:"enable-conn-limit"`
 }
 
 var RequestLimitIngAnnotations = parser.AnnotationsContents{
-	enableLimitReqAnnotations: {
-		Doc: "set true or false to use limitreq.",
+	enableLimitConnAnnotations: {
+		Doc: "set true or false to use limitconn.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				if _, err := strconv.ParseBool(s); err != nil {
-					return cerr.NewInvalidIngressAnnotationsError(enableLimitReqAnnotations, ing.GetName(), ing.GetNameSpace())
+					return cerr.NewInvalidIngressAnnotationsError(enableLimitConnAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 			}
 
@@ -61,7 +59,7 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 		},
 	},
 	limitConfigAnnotations: {
-		Doc: "nginx limit req, same as the official configuration requirements of nginx, must be in JSON format",
+		Doc: "nginx limit conn, same as the official configuration requirements of nginx, must be in JSON format",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
 			if s != "" {
 				var lq = new(SetLimitConfig)
@@ -79,18 +77,18 @@ var RequestLimitIngAnnotations = parser.AnnotationsContents{
 	},
 }
 
-func NewRequestLimitIng(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
-	return &RequestLimitIng{
+func NewConnLimitIng(ingress service.K8sResourcesIngress, resources service.ResourcesMth) parser.IngressAnnotationsParser {
+	return &ConnLimitIng{
 		ingress:   ingress,
 		resources: resources,
 	}
 }
 
-func (r *RequestLimitIng) Parse() (interface{}, error) {
+func (r *ConnLimitIng) Parse() (interface{}, error) {
 	var err error
 	config := &Config{}
 
-	config.EnableRequestLimit, err = parser.GetBoolAnnotations(enableLimitReqAnnotations, r.ingress, RequestLimitIngAnnotations)
+	config.EnableConnLimit, err = parser.GetBoolAnnotations(enableLimitConnAnnotations, r.ingress, RequestLimitIngAnnotations)
 	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
@@ -107,8 +105,8 @@ func (r *RequestLimitIng) Parse() (interface{}, error) {
 	return config, err
 }
 
-func (r *RequestLimitIng) validate(config *Config) error {
-	if config.EnableRequestLimit {
+func (r *ConnLimitIng) validate(config *Config) error {
+	if config.EnableConnLimit {
 		if config.LimitConfig == "" {
 			return cerr.NewMissIngressFieldValueError(limitConfigAnnotations, r.ingress.GetName(), r.ingress.GetNameSpace())
 		}
@@ -127,6 +125,6 @@ func (r *RequestLimitIng) validate(config *Config) error {
 	return nil
 }
 
-func (r *RequestLimitIng) Validate(ing map[string]string) error {
+func (r *ConnLimitIng) Validate(ing map[string]string) error {
 	return parser.CheckAnnotations(ing, RequestLimitIngAnnotations, r.ingress)
 }

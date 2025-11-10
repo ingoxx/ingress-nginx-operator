@@ -1,6 +1,7 @@
 package constants
 
 const (
-	StreamKey   = "stream"
-	LimitReqKey = "limitReq"
+	StreamKey    = "stream"
+	LimitReqKey  = "limitReq"
+	LimitConnKey = "limitConn"
 )

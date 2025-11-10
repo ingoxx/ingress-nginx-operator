@@ -113,6 +113,25 @@ server {
 
         {{ end }}
 
+        ### limit_conn
+        {{ if $annotations.EnableConnLimit.EnableConnLimit }}
+
+        {{ range $lmpath := $annotations.EnableConnLimit.Bs.Backends }}
+
+        {{ if and $lmpath.Name $path.SvcName (eq $lmpath.Name $path.SvcName) }}
+
+        {{ range $lmreq := $lmpath.LimitConn }}
+
+        limit_conn {{ $lmreq.ZoneName }} {{ $lmreq.Burst }};
+
+        {{ end }}
+
+        {{ end }}
+
+        {{ end }}
+
+        {{ end }}
+
         set $best_http_host      $http_host;
         set $pass_server_port    $server_port;
         set $pass_port           $pass_server_port;

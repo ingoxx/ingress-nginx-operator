@@ -39,6 +39,15 @@ http {
     {{ end }}
     {{ end }}
     {{ end }}
+    ### limit_conn_zone
+    {{ if $annotations.EnableConnLimit.EnableConnLimit }}
+    {{ range $connZone  := $annotations.EnableConnLimit.Bs.Backends }}
+    {{ range $lmZone := $connZone.LimitZone }}
+    limit_conn_zone {{ $lmZone.LimitKey }} zone={{ $lmZone.ZoneName }}:{{ $lmZone.Capacity }};
+    {{ end }}
+    {{ end }}
+    {{ end }}
+
     log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
                       '$status $body_bytes_sent "$http_referer" '
                       '"$http_user_agent" "$http_x_forwarded_for"';

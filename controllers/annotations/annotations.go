@@ -5,6 +5,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowcos"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowiplist"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/denyiplist"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitconn"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/loadBalance"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
@@ -23,6 +24,7 @@ type IngressAnnotationsConfig struct {
 	SSLStapling       ssl.Config
 	EnableCos         allowcos.Config
 	EnableReqLimit    limitreq.Config
+	EnableConnLimit   limitconn.Config
 	EnableStream      stream.Config
 	EnableIpWhileList allowiplist.Config
 	EnableIpBlackList denyiplist.Config
@@ -44,6 +46,7 @@ func NewExtractor(ing service.K8sResourcesIngress, resources service.ResourcesMt
 			"SSLStapling":       ssl.NewSSL(ing, resources),
 			"EnableCos":         allowcos.NewEnableCosIng(ing, resources),
 			"EnableReqLimit":    limitreq.NewRequestLimitIng(ing, resources),
+			"EnableConnLimit":   limitconn.NewConnLimitIng(ing, resources),
 			"EnableStream":      stream.NewEnableStreamIng(ing, resources),
 			"EnableIpWhileList": allowiplist.NewEnableIpWhiteListIng(ing, resources),
 			"EnableIpBlackList": denyiplist.NewEnableIpBlackListIng(ing, resources),

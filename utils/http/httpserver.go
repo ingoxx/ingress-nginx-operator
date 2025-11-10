@@ -138,12 +138,12 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 	if err := file.HandleConfigUpdate(fmt.Sprintf("%s", ncp.FileName), ncp.FileBytes); err != nil {
 		ncp.H(RespData{
 			Code:   1007,
-			Msg:    "fail to save file",
+			Msg:    err.Error(),
 			Status: http.StatusBadRequest,
 		})
 		return
 	}
-	
+
 	ncp.H(RespData{
 		Code:   1000,
 		Msg:    "update nginx config ok",

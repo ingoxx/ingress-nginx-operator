@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitconn"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
@@ -141,6 +142,15 @@ func (nc *NginxController) getLimitReqData(data string) ([]*limitreq.ZoneRepConf
 	return lb, nil
 }
 
+func (nc *NginxController) getLimitConnData(data string) ([]*limitconn.ZoneConnConfig, error) {
+	var lb []*limitconn.ZoneConnConfig
+	if err := json.Unmarshal([]byte(data), &lb); err != nil {
+		return lb, err
+	}
+
+	return lb, nil
+}
+
 func (nc *NginxController) generateBackendCfg() error {
 	var err error
 
@@ -171,6 +181,16 @@ func (nc *NginxController) generateBackendCfg() error {
 			return err
 		}
 		nc.config.EnableReqLimit.Bs.Backends = data
+	}
+
+	s2, ok := cm[constants.LimitConnKey]
+	if s != "" && ok {
+		nc.config.EnableConnLimit.EnableConnLimit = true
+		data, err := nc.getLimitConnData(s2)
+		if err != nil {
+			return err
+		}
+		nc.config.EnableConnLimit.Bs.Backends = data
 	}
 
 	if err := nc.allResourcesData.CheckSvc(); err != nil {
