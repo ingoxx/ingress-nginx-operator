@@ -121,6 +121,30 @@ func (nc *NginxController) checkPublicCfg() error {
 		}
 	}
 
+	// nginx.conf中的limitconn功能
+	if nc.config.EnableConnLimit.EnableConnLimit {
+		b3, err := json.Marshal(&nc.config.EnableConnLimit.Bs.Backends)
+		if err != nil {
+			return err
+		}
+
+		cm3, err := nc.allResourcesData.UpdateConfigMap(nc.allResourcesData.GetCmName(), nc.allResourcesData.GetNameSpace(), constants.LimitConnKey, b3)
+		if err != nil {
+			return err
+		}
+
+		if _, err := nc.getLimitConnData(cm3); err != nil {
+			return err
+		}
+
+	} else {
+		if err := nc.allResourcesData.ClearCmData(constants.LimitConnKey); err != nil {
+			if !kerr.IsNotFound(err) {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -184,7 +208,7 @@ func (nc *NginxController) generateBackendCfg() error {
 	}
 
 	s2, ok := cm[constants.LimitConnKey]
-	if s != "" && ok {
+	if s2 != "" && ok {
 		nc.config.EnableConnLimit.EnableConnLimit = true
 		data, err := nc.getLimitConnData(s2)
 		if err != nil {

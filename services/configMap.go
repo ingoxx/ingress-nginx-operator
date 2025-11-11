@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitconn"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -139,12 +140,15 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(ns string) (map[string]string, er
 
 	var tnb []*stream.Backend
 	var tlb []*limitreq.ZoneRepConfig
+	var tlc []*limitconn.ZoneConnConfig
 
 	for _, v := range cms.Items {
 		var nb []*stream.Backend
 		var lb []*limitreq.ZoneRepConfig
+		var lc []*limitconn.ZoneConnConfig
 		s1 := v.Data[constants.StreamKey]
 		s2 := v.Data[constants.LimitReqKey]
+		s3 := v.Data[constants.LimitConnKey]
 
 		if s1 != "" {
 			if err := json.Unmarshal([]byte(s1), &nb); err != nil {
@@ -158,6 +162,13 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(ns string) (map[string]string, er
 				return v.Data, err
 			}
 			tlb = append(tlb, lb...)
+		}
+
+		if s3 != "" {
+			if err := json.Unmarshal([]byte(s3), &lc); err != nil {
+				return v.Data, err
+			}
+			tlc = append(tlc, lc...)
 		}
 
 	}
@@ -178,6 +189,15 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(ns string) (map[string]string, er
 		}
 
 		data[constants.LimitReqKey] = string(b2)
+	}
+
+	if len(tlc) > 0 {
+		b3, err := json.Marshal(&tlc)
+		if err != nil {
+			return data, err
+		}
+
+		data[constants.LimitConnKey] = string(b3)
 	}
 
 	return data, nil
