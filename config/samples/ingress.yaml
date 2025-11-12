@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
-#    ingress.nginx.k8s.io/lb-policy: "ip_hash"
+    ingress.nginx.k8s.io/lb-policy: "ip_hash"
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [
@@ -87,16 +87,16 @@ metadata:
     ingress.nginx.k8s.io/rewrite-target: "$2"
     ingress.nginx.k8s.io/rewrite-flag: "break"
     ingress.nginx.k8s.io/enable-regex: "true"
-#    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
-#    ingress.nginx.k8s.io/set-ip-white-config: |
-#      {
-#        "backends": [
-#          {
-#            "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.7", "192.168.3.196"],
-#            "backend": "nginx-service-a"
-#          }
-#        ]
-#      }
+    ingress.nginx.k8s.io/enable-ip-whitelist: "true"
+    ingress.nginx.k8s.io/set-ip-white-config: |
+      {
+        "backends": [
+          {
+            "ip": ["2.2.2.2", "2.2.2.3", "2.2.2.7", "192.168.3.196"],
+            "backend": "nginx-service-a"
+          }
+        ]
+      }
     ingress.nginx.k8s.io/enable-ip-blacklist: "true"
     ingress.nginx.k8s.io/set-ip-black-config: |
       {
@@ -108,9 +108,6 @@ metadata:
         ]
       }
   labels:
-    app.kubernetes.io/name: nginxingress
-    app.kubernetes.io/instance: nginxingress-sample
-    app.kubernetes.io/part-of: ingress-nginx-operator
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: ingress-nginx-operator
   name: api

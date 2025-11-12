@@ -9,6 +9,7 @@ const (
 	DaemonSetName    = "daemonset-manager"
 	DaemonSetSvcName = "daemonset-manager-svc"
 	Finalizer        = "ingress-operator/finalizer"
+	RecorderKey      = "operator-ngx.k8s.cn"
 )
 
 var (

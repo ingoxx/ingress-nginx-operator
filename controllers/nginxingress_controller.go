@@ -18,9 +18,12 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/internal"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -78,7 +81,18 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet common.K8sClientSet) error {
 	r.clientSet = clientSet
 	r.operatorCli = operatorCli.NewOperatorClientImp(mgr.GetClient())
-	r.recorder = mgr.GetEventRecorderFor("operator-ngx.k8s.cn")
+	r.recorder = mgr.GetEventRecorderFor(constants.RecorderKey)
+
+	// 启动 ConfigMap informer，但不 watch 它（不会触发 Reconcile）
+	ctx := context.Background()
+	if _, err := mgr.GetCache().GetInformer(ctx, &corev1.ConfigMap{}); err != nil {
+		return fmt.Errorf("failed to start ConfigMap informer: %w", err)
+	}
+
+	if err := mgr.GetCache().IndexField(ctx, &corev1.ConfigMap{}, "metadata.name", func(obj client.Object) []string { return []string{obj.GetName()} }); err != nil {
+		return fmt.Errorf("failed to create  ConfigMap index: %w", err)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Ingress{}).
 		//WithOptions(controller.Options{
