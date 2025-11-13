@@ -58,6 +58,7 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 	}
 
 	ing.NewIngress(ingress)
+
 	cert := services.NewCertServiceImpl(nc.ctx, ing)
 	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
 	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)

@@ -23,6 +23,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/operatorCli"
+	v12 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,16 +45,18 @@ type NginxIngressReconciler struct {
 //+kubebuilder:rbac:groups=ingress.ingress-k8s.io,resources=nginxingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ingress.ingress-k8s.io,resources=nginxingresses/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ingress.ingress-k8s.io,resources=nginxingresses/finalizers,verbs=update
+
 //+kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=cert-manager.io,resources=issuers,verbs=get;list;watch;create;update;patch;delete
+
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 
-// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses,verbs=get;list;watch;create;update;patch;delete
@@ -83,14 +86,29 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 	r.operatorCli = operatorCli.NewOperatorClientImp(mgr.GetClient())
 	r.recorder = mgr.GetEventRecorderFor(constants.RecorderKey)
 
-	// 启动 ConfigMap informer，但不 watch 它（不会触发 Reconcile）
 	ctx := context.Background()
 	if _, err := mgr.GetCache().GetInformer(ctx, &corev1.ConfigMap{}); err != nil {
 		return fmt.Errorf("failed to start ConfigMap informer: %w", err)
 	}
 
+	if _, err := mgr.GetCache().GetInformer(ctx, &v12.Deployment{}); err != nil {
+		return fmt.Errorf("failed to start Deployment informer: %w", err)
+	}
+
+	if _, err := mgr.GetCache().GetInformer(ctx, &corev1.Service{}); err != nil {
+		return fmt.Errorf("failed to start Service informer: %w", err)
+	}
+
 	if err := mgr.GetCache().IndexField(ctx, &corev1.ConfigMap{}, "metadata.name", func(obj client.Object) []string { return []string{obj.GetName()} }); err != nil {
 		return fmt.Errorf("failed to create  ConfigMap index: %w", err)
+	}
+
+	if err := mgr.GetCache().IndexField(ctx, &v12.Deployment{}, "metadata.name", func(obj client.Object) []string { return []string{obj.GetName()} }); err != nil {
+		return fmt.Errorf("failed to create  Deployment index: %w", err)
+	}
+
+	if err := mgr.GetCache().IndexField(ctx, &corev1.Service{}, "metadata.name", func(obj client.Object) []string { return []string{obj.GetName()} }); err != nil {
+		return fmt.Errorf("failed to create  Service index: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
