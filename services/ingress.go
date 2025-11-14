@@ -473,12 +473,12 @@ func (i *IngressServiceImpl) CheckHosts() error {
 func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	pattern := `^/`
 
-	var recordExistsPath = make(map[string]bool)
+	//var recordExistsPath = make(map[string]bool)
 	for _, p := range path {
-		if _, ok := recordExistsPath[p.Path]; ok {
-			return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
-		}
-		recordExistsPath[p.Path] = true
+		//if _, ok := recordExistsPath[p.Path]; ok {
+		//	return cerr.NewDuplicatePathError(i.GetName(), i.GetNameSpace())
+		//}
+		//recordExistsPath[p.Path] = true
 
 		matched, err := regexp.MatchString(pattern, p.Path)
 		if err != nil {

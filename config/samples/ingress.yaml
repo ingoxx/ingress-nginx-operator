@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
-    ingress.nginx.k8s.io/lb-policy: "ip_hash"
+    ingress.nginx.k8s.io/enable-lb: "true"
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [
@@ -142,14 +142,14 @@ spec:
     - host: "api.web99.com"
       http:
         paths:
-          - path: "/api"
+          - path: "/"
             pathType: Prefix
             backend:
               service:
                 name: nginx-service-g
                 port:
                   number: 9096
-          - path: "/admin"
+          - path: "/"
             pathType: Prefix
             backend:
               service:
