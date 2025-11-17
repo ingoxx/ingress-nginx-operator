@@ -7,7 +7,6 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
-	"strconv"
 	"strings"
 )
 
@@ -16,9 +15,8 @@ var (
 )
 
 const (
-	lbPolicyAnnotations       = "lb-policy"
-	lbConfigAnnotations       = "lb-config"
-	enableLbConfigAnnotations = "enable-lb"
+	lbPolicyAnnotations = "lb-policy"
+	lbConfigAnnotations = "lb-config"
 )
 
 type loadBalanceIng struct {
@@ -29,22 +27,9 @@ type loadBalanceIng struct {
 type Config struct {
 	LbConfig []*ingress.Backends `json:"lb-config"`
 	LbPolicy string              `json:"lb-policy"`
-	EnableLb bool                `json:"enable-lb"`
 }
 
 var loadBalanceAnnotations = parser.AnnotationsContents{
-	enableLbConfigAnnotations: {
-		Doc: "set true or false to use limitconn.",
-		Validator: func(s string, ing service.K8sResourcesIngress) error {
-			if s != "" {
-				if _, err := strconv.ParseBool(s); err != nil {
-					return cerr.NewInvalidIngressAnnotationsError(enableLbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-				}
-			}
-
-			return nil
-		},
-	},
 	lbPolicyAnnotations: {
 		Doc: fmt.Sprintf("nginx lb policy, the value of the flag must be selected from here: %v.", strings.Join(Policy, ",")),
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
@@ -162,6 +147,11 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 	config.LbConfig = upstreamConfig
 
 	return config, err
+}
+
+func (r *loadBalanceIng) validate(config *Config) error {
+
+	return nil
 }
 
 func (r *loadBalanceIng) Validate(ing map[string]string) error {

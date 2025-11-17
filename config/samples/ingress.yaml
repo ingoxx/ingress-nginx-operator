@@ -3,7 +3,6 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
-    ingress.nginx.k8s.io/enable-lb: "true"
     ingress.nginx.k8s.io/lb-config: |
       {
         "backends": [

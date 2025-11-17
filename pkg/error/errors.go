@@ -228,9 +228,9 @@ func (e DuplicatePathError) Error() string {
 	return e.errMsg
 }
 
-func NewDuplicatePathError(name, namespace string) error {
+func NewInconsistentPathError(name, namespace string) error {
 	return DuplicatePathError{
-		errMsg: fmt.Sprintf("'.spec.Host.path' duplicate, ingress '%s' in namespace '%s'", name, namespace),
+		errMsg: fmt.Sprintf("'.spec.Host.path' inconsistent, ingress '%s' in namespace '%s'", name, namespace),
 	}
 }
 
