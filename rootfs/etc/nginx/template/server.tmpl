@@ -7,11 +7,11 @@ upstream {{ $ut.Upstream }} {
     {{ if ne $annotations.LoadBalance.LbPolicy "" }}
     {{ $annotations.LoadBalance.LbPolicy }};
     {{ end }}
-    {{ range $backend := $ut.ServiceBackend }}
-    {{ if ne $backend.Services.Name "" }}
-    server {{ $backend.Services.Name }};
+
+    {{ range $sn := $ut.StreamServeName }}
+    server {{ $sn }};
     {{ end }}
-    {{ end }}
+
 }
 {{ end }}
 

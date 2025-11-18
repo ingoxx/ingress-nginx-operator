@@ -133,6 +133,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 						svc.Services.Name = r.resources.GetBackendName(svc.Services)
 					} else {
 						svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
+						v1.StreamServeName = append(v1.StreamServeName, svc.Services.Name)
 					}
 					updated = true
 					break // 找到后就退出

@@ -27,6 +27,7 @@ type Backends struct {
 	ServiceBackend       []*IngBackends `json:"service_backend"`
 	IngAnnotationsConfig IngConfig      `json:"ing_annotations_config"`
 	Cert                 Tls            `json:"cert"`
+	StreamServeName      []string       `json:"stream_backend"`
 	Host                 string         `json:"host"`
 	Upstream             string         `json:"upstream"`
 }
