@@ -319,15 +319,15 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 	for _, r := range rs {
 		var backends = make([]*ingress.IngBackends, 0, len(r.HTTP.Paths))
 		var isSameBackend = make(map[string]bool)
-		var isExistsPath = make(map[string]struct{})
+		//var isExistsPath = make(map[string]struct{})
 
 		for _, p := range r.HTTP.Paths {
-			_, ok := isExistsPath[p.Path]
-			if !ok {
-				isExistsPath[p.Path] = struct{}{}
-			} else {
-				continue
-			}
+			//_, ok := isExistsPath[p.Path]
+			//if !ok {
+			//	isExistsPath[p.Path] = struct{}{}
+			//} else {
+			//	continue
+			//}
 
 			backend, err := i.GetBackend(p.Backend.Service.Name)
 			if err != nil {
@@ -490,7 +490,7 @@ func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 			recordExistsPath[p.Path] = true
 			isOnceSet = true
 		}
-		
+
 		if _, ok := recordExistsPath[p.Path]; !ok {
 			return cerr.NewInconsistentPathError(i.GetName(), i.GetNameSpace())
 		}

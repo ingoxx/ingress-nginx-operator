@@ -150,27 +150,55 @@ func (nc *NginxController) checkPublicCfg() error {
 
 func (nc *NginxController) getStreamData(data string) ([]*stream.Backend, error) {
 	var tnb []*stream.Backend
+	//var nsd []*stream.Backend
+	//var dp = make(map[string]struct{})
 	if err := json.Unmarshal([]byte(data), &tnb); err != nil {
 		return tnb, err
 	}
+
+	//for _, v := range tnb {
+	//	if _, ok := dp[v.StreamBackendName]; !ok {
+	//		nsd = append(nsd, v)
+	//	}
+	//}
 
 	return tnb, nil
 }
 
 func (nc *NginxController) getLimitReqData(data string) ([]*limitreq.ZoneRepConfig, error) {
 	var lb []*limitreq.ZoneRepConfig
+	//var nlb []*limitreq.ZoneRepConfig
+	//var dp = make(map[string]struct{})
 	if err := json.Unmarshal([]byte(data), &lb); err != nil {
 		return lb, err
 	}
+
+	//for _, zone := range lb {
+	//	for _, zc := range zone.LimitZone {
+	//		if _, ok := dp[zc.ZoneName]; !ok {
+	//			nlb = append(nlb, zone)
+	//		}
+	//	}
+	//}
 
 	return lb, nil
 }
 
 func (nc *NginxController) getLimitConnData(data string) ([]*limitconn.ZoneConnConfig, error) {
 	var lb []*limitconn.ZoneConnConfig
+	//var nlb []*limitconn.ZoneConnConfig
+	//var dp = make(map[string]struct{})
 	if err := json.Unmarshal([]byte(data), &lb); err != nil {
 		return lb, err
 	}
+
+	//for _, zone := range lb {
+	//	for _, zc := range zone.LimitZone {
+	//		if _, ok := dp[zc.ZoneName]; !ok {
+	//			nlb = append(nlb, zone)
+	//		}
+	//	}
+	//}
 
 	return lb, nil
 }

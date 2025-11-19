@@ -147,10 +147,19 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 
 	config.LbConfig = upstreamConfig
 
+	if err := r.validate(config); err != nil {
+		return config, err
+	}
+
 	return config, err
 }
 
 func (r *loadBalanceIng) validate(config *Config) error {
+	for _, v1 := range config.LbConfig {
+		if len(v1.ServiceBackend) > 1 {
+			v1.ServiceBackend = v1.ServiceBackend[:1]
+		}
+	}
 
 	return nil
 }

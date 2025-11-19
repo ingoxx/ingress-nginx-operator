@@ -174,7 +174,9 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(ns string) (map[string]string, er
 	}
 
 	if len(tnb) > 0 {
-		b1, err := json.Marshal(&tnb)
+		nsb := c.removeDup(tnb)
+		streamBck := nsb.([]*stream.Backend)
+		b1, err := json.Marshal(&streamBck)
 		if err != nil {
 			return data, err
 		}
@@ -183,7 +185,9 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(ns string) (map[string]string, er
 	}
 
 	if len(tlb) > 0 {
-		b2, err := json.Marshal(&tlb)
+		lzr := c.removeDup(tlb)
+		lz := lzr.([]*limitreq.ZoneRepConfig)
+		b2, err := json.Marshal(&lz)
 		if err != nil {
 			return data, err
 		}
@@ -192,7 +196,9 @@ func (c *ConfigMapServiceImpl) GetNgxConfigMap(ns string) (map[string]string, er
 	}
 
 	if len(tlc) > 0 {
-		b3, err := json.Marshal(&tlc)
+		lzc := c.removeDup(tlc)
+		lc := lzc.([]*limitconn.ZoneConnConfig)
+		b3, err := json.Marshal(&lc)
 		if err != nil {
 			return data, err
 		}
@@ -224,4 +230,52 @@ func (c *ConfigMapServiceImpl) GetLatestStreamPorts(name string) ([]*stream.Back
 	}
 
 	return tnb, nil
+}
+
+func (c *ConfigMapServiceImpl) removeDup(data interface{}) interface{} {
+	var dp = make(map[string]struct{})
+
+	switch data.(type) {
+	case []*stream.Backend:
+		var sb = data.([]*stream.Backend)
+		var nd []*stream.Backend
+		for _, v := range sb {
+			if _, ok := dp[v.StreamBackendName]; !ok {
+				nd = append(nd, v)
+				dp[v.StreamBackendName] = struct{}{}
+			}
+		}
+
+		return nd
+
+	case []*limitreq.ZoneRepConfig:
+		var lzr = data.([]*limitreq.ZoneRepConfig)
+		var nd []*limitreq.ZoneRepConfig
+		for _, zone := range lzr {
+			for _, zc := range zone.LimitZone {
+				if _, ok := dp[zc.ZoneName]; !ok {
+					nd = append(nd, zone)
+					dp[zc.ZoneName] = struct{}{}
+				}
+			}
+		}
+
+		return nd
+	case []*limitconn.ZoneConnConfig:
+		var lzc = data.([]*limitconn.ZoneConnConfig)
+		var nd []*limitconn.ZoneConnConfig
+
+		for _, zone := range lzc {
+			for _, zc := range zone.LimitZone {
+				if _, ok := dp[zc.ZoneName]; !ok {
+					nd = append(nd, zone)
+					dp[zc.ZoneName] = struct{}{}
+				}
+			}
+		}
+
+		return nd
+	}
+
+	return nil
 }
