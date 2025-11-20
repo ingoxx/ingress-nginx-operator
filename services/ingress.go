@@ -319,16 +319,8 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 	for _, r := range rs {
 		var backends = make([]*ingress.IngBackends, 0, len(r.HTTP.Paths))
 		var isSameBackend = make(map[string]bool)
-		//var isExistsPath = make(map[string]struct{})
 
 		for _, p := range r.HTTP.Paths {
-			//_, ok := isExistsPath[p.Path]
-			//if !ok {
-			//	isExistsPath[p.Path] = struct{}{}
-			//} else {
-			//	continue
-			//}
-
 			backend, err := i.GetBackend(p.Backend.Service.Name)
 			if err != nil {
 				return nil, err

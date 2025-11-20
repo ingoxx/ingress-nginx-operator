@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/ingoxx/ingress-nginx-operator/external/webhook"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/client"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/config"
 	"k8s.io/klog/v2"
@@ -112,6 +113,11 @@ func main() {
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
+
+	// 注册自定义的ingress validate Webhook
+	if err := webhook.RegisterWebhook(mgr); err != nil {
+		panic(err)
+	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
