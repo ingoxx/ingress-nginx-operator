@@ -249,3 +249,20 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 	klog.Infof("[SUCCESS] update %s completed and reload\n", targetPath)
 	return nil
 }
+
+func HandleDeleteNgxConfig(targetFile string) error {
+	if _, err := os.Stat(targetFile); err != nil {
+		return nil
+	}
+
+	if err := os.Remove(targetFile); err != nil {
+		return err
+	}
+
+	// reload
+	if err := reloadNginx(); err != nil {
+		return fmt.Errorf("failed to nginx reload: %v", err)
+	}
+
+	return nil
+}

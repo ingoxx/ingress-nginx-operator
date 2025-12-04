@@ -9,4 +9,5 @@ type K8sResourceConfigMap interface {
 	GetCmName() string
 	GetCm() (*v1.ConfigMap, error)
 	ClearCmData(string) error
+	DeleteConfigMap() error
 }

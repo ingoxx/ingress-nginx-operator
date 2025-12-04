@@ -10,4 +10,5 @@ type K8sResourcesSecret interface {
 	GetTlsData(key client.ObjectKey) (map[string][]byte, error)
 	GetSecret(key client.ObjectKey) (*corev1.Secret, error)
 	GetTlsFile() (map[string]ingress.Tls, error)
+	DeleteSecret() error
 }

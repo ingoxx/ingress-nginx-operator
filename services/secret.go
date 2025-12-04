@@ -50,6 +50,19 @@ func (s *SecretServiceImpl) GetSecret(key client.ObjectKey) (*corev1.Secret, err
 	return sc, nil
 }
 
+func (s *SecretServiceImpl) DeleteSecret() error {
+	req := types.NamespacedName{Name: s.cert.SecretObjectKey(), Namespace: s.generic.GetNameSpace()}
+	secret, err := s.GetSecret(req)
+	if err != nil {
+		return err
+	}
+	if err := s.generic.GetClient().Delete(s.ctx, secret); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *SecretServiceImpl) extractTlsData(data map[string][]byte) (map[string][]byte, error) {
 	var parsed = make(map[string][]byte)
 	for k, v := range data {

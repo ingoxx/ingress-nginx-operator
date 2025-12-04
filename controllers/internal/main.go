@@ -54,7 +54,16 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 				return err
 			}
 		}
+		// 删除ingress后的逻辑处理
+
 		return nil
+	} else {
+		if !controllerutil.ContainsFinalizer(ingress, constants.Finalizer) {
+			controllerutil.AddFinalizer(ingress, constants.Finalizer)
+			if err := ing.UpdateIngress(ingress); err != nil {
+				return err
+			}
+		}
 	}
 
 	ing.NewIngress(ingress)

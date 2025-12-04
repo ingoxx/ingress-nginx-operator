@@ -73,6 +73,29 @@ func (c *ConfigMapServiceImpl) CreateConfigMap(name, key string, data []byte) (m
 	return cm.Data, nil
 }
 
+func (c *ConfigMapServiceImpl) getConfigMap() (*v1.ConfigMap, error) {
+	var cm = new(v1.ConfigMap)
+	req := types.NamespacedName{Name: c.GetCmName(), Namespace: c.generic.GetNameSpace()}
+	if err := c.generic.GetClient().Get(context.Background(), req, cm); err == nil {
+		return cm, err
+	}
+
+	return cm, nil
+}
+
+func (c *ConfigMapServiceImpl) DeleteConfigMap() error {
+	cm, err := c.getConfigMap()
+	if err != nil {
+		return err
+	}
+
+	if err := c.generic.GetClient().Delete(context.Background(), cm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
 	c.comLock.Lock()
 	defer c.comLock.Unlock()

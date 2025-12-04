@@ -86,6 +86,7 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 	r.operatorCli = operatorCli.NewOperatorClientImp(mgr.GetClient())
 	r.recorder = mgr.GetEventRecorderFor(constants.RecorderKey)
 
+	// 不同资源的informer
 	ctx := context.Background()
 	if _, err := mgr.GetCache().GetInformer(ctx, &corev1.ConfigMap{}); err != nil {
 		return fmt.Errorf("failed to start ConfigMap informer: %w", err)
@@ -99,6 +100,7 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 		return fmt.Errorf("failed to start Service informer: %w", err)
 	}
 
+	// 使用索引查找对应的资源
 	if err := mgr.GetCache().IndexField(ctx, &corev1.ConfigMap{}, "metadata.name", func(obj client.Object) []string { return []string{obj.GetName()} }); err != nil {
 		return fmt.Errorf("failed to create  ConfigMap index: %w", err)
 	}

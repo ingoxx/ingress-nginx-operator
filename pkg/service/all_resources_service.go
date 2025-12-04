@@ -49,4 +49,6 @@ type ResourcesMth interface {
 	ClearCmData(string) error
 	CheckDeploy() error
 	CheckSvc() error
+	DeleteConfigMap() error
+	DeleteSecret() error
 }

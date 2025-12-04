@@ -31,6 +31,7 @@ func httpServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/health", healthCheck)
 	mux.HandleFunc("/api/v1/nginx/config/update", updateNginxCfg)
+	mux.HandleFunc("/api/v1/nginx/config/delete", deleteNginxCfg)
 
 	listen := &http.Server{
 		Addr:              ":9092",
@@ -67,6 +68,82 @@ func (nc NginxCfgParams) H(rd RespData) {
 	if _, err := nc.resp.Write(b); err != nil {
 		klog.Fatalf(fmt.Sprintf("respone failed, esg '%s'", err.Error()))
 	}
+}
+
+func deleteNginxCfg(resp http.ResponseWriter, req *http.Request) {
+	var ncp = NginxCfgParams{resp: resp}
+	if req.Header.Get("X-Auth-Token") != constants.AuthToken {
+		ncp.H(RespData{
+			Msg:    "request unauthorized",
+			Code:   1001,
+			Status: http.StatusUnauthorized,
+		})
+		return
+	}
+
+	if req.Header.Get("Content-Type") != "application/json" {
+		ncp.H(RespData{
+			Code:   1002,
+			Msg:    "bad request header",
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	if req.Method != http.MethodPost {
+		ncp.H(RespData{
+			Code:   1003,
+			Msg:    "bad request method",
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		ncp.H(RespData{
+			Code:   1004,
+			Msg:    "invalid body",
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	if err := json.Unmarshal(body, &ncp); err != nil {
+		ncp.H(RespData{
+			Code:   1005,
+			Msg:    "json parsing failed",
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	if ncp.FileName == "" {
+		ncp.H(RespData{
+			Code:   1006,
+			Msg:    "missing or empty 'file_name' parameter",
+			Status: http.StatusBadRequest,
+		})
+		return
+	}
+
+	if len(ncp.FileBytes) == 0 {
+		if err := file.HandleDeleteNgxConfig(ncp.FileName); err != nil {
+			ncp.H(RespData{
+				Code:   1007,
+				Msg:    err.Error(),
+				Status: http.StatusBadRequest,
+			})
+			return
+		}
+	}
+
+	ncp.H(RespData{
+		Code:   1000,
+		Msg:    "update nginx config ok",
+		Status: http.StatusOK,
+	})
+
 }
 
 func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {

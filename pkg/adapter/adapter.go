@@ -190,3 +190,11 @@ func (r ResourceAdapter) CheckDeploy() error {
 func (r ResourceAdapter) CheckSvc() error {
 	return r.Svc.CheckSvc()
 }
+
+func (r ResourceAdapter) DeleteConfigMap() error {
+	return r.ConfigMap.DeleteConfigMap()
+}
+
+func (r ResourceAdapter) DeleteSecret() error {
+	return r.Secret.DeleteSecret()
+}
