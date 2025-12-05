@@ -9,8 +9,11 @@ import (
 	"io"
 	"k8s.io/klog/v2"
 	"net/http"
+	"sync"
 	"time"
 )
+
+var lock sync.Mutex
 
 func main() {
 	go func() {
@@ -212,7 +215,8 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := file.HandleConfigUpdate(fmt.Sprintf("%s", ncp.FileName), ncp.FileBytes); err != nil {
+	lock.Lock()
+	if err := file.HandleConfigUpdate(ncp.FileName, ncp.FileBytes); err != nil {
 		ncp.H(RespData{
 			Code:   1007,
 			Msg:    err.Error(),
@@ -220,6 +224,7 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
+	lock.Unlock()
 
 	ncp.H(RespData{
 		Code:   1000,

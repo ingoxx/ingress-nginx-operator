@@ -11,6 +11,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
+	"golang.org/x/net/context"
 	"io"
 	v1 "k8s.io/api/networking/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +21,13 @@ import (
 	"path/filepath"
 	"sync"
 	"text/template"
+	"time"
+)
+
+const (
+	queueSize      = 90                     // 队列缓冲大小（可根据内存 / QPS 调整）
+	workerCount    = 30                     // worker 数量（并发处理数）
+	enqueueTimeout = 100 * time.Millisecond // 当队列已满时，尝试放入队列的超时时间（实现 backpressure）
 )
 
 type RespData struct {
@@ -339,6 +347,7 @@ func (nc *NginxController) renderTemplateData(file string) (*template.Template, 
 	return tmp, nil
 }
 
+// http
 func (nc *NginxController) updateNginxConfig(config NginxConfig) error {
 	var respData RespData
 	b, err := json.Marshal(config)
@@ -354,7 +363,7 @@ func (nc *NginxController) updateNginxConfig(config NginxConfig) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Auth-Token", constants.AuthToken)
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: time.Second * time.Duration(3)}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -401,6 +410,84 @@ func (nc *NginxController) updateNginxTls(url string) error {
 		if err := nc.updateNginxConfig(file); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// 删除nginx配置
+func (nc *NginxController) deleteNginxConfig() {}
+
+func (nc *NginxController) worker(ctx context.Context, task chan string, wg *sync.WaitGroup, cfg *Config, errs chan error) {
+	defer wg.Done()
+
+	for {
+		select {
+		case ip := <-task:
+			var buffer bytes.Buffer
+
+			serverTemp, err := nc.renderTemplateData(cfg.ServerTmpl)
+			if err != nil {
+				errs <- err
+				return
+			}
+
+			if err := serverTemp.Execute(&buffer, cfg); err != nil {
+				errs <- err
+				return
+			}
+
+			url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, constants.NginxConfUpUrl)
+			file := NginxConfig{
+				FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
+				Url:       url,
+				FileBytes: buffer.Bytes(),
+			}
+
+			if err := nc.updateNginxTls(url); err != nil {
+				errs <- err
+				return
+			}
+
+			if err := nc.updateNginxConfig(file); err != nil {
+				errs <- err
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (nc *NginxController) multiRun(cfg *Config) error {
+	var wg *sync.WaitGroup
+	var tasks = make(chan string, queueSize)
+	var errs = make(chan error, len(nc.podsIp))
+	var te error
+	var ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(3))
+	defer cancel()
+
+	wg.Add(workerCount)
+	for i := 0; i < workerCount; i++ {
+		go nc.worker(ctx, tasks, wg, cfg, errs)
+	}
+
+	for _, v := range nc.podsIp {
+		select {
+		case tasks <- v:
+		case <-time.After(enqueueTimeout):
+		}
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for e := range errs {
+		te = errors.Join(e)
+	}
+
+	if te != nil {
+		return te
 	}
 
 	return nil

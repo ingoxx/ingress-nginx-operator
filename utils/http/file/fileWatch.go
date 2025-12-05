@@ -192,6 +192,7 @@ func IsNginxRunning() error {
 
 // HandleConfigUpdate 处理配置文件更新
 func HandleConfigUpdate(targetPath string, newContent []byte) error {
+
 	tmpPath := targetPath + ".tmp"
 
 	// 如果存在，先比对
