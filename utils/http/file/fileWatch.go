@@ -192,7 +192,6 @@ func IsNginxRunning() error {
 
 // HandleConfigUpdate 处理配置文件更新
 func HandleConfigUpdate(targetPath string, newContent []byte) error {
-
 	tmpPath := targetPath + ".tmp"
 
 	// 如果存在，先比对
@@ -202,9 +201,11 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 			if err := os.Remove(targetPath); err != nil {
 				return err
 			}
+
 			if err := reloadNginx(); err != nil {
 				return fmt.Errorf("failed to nginx reload: %v", err)
 			}
+
 			return nil
 		}
 
@@ -248,6 +249,7 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 	}
 
 	klog.Infof("[SUCCESS] update %s completed and reload\n", targetPath)
+
 	return nil
 }
 

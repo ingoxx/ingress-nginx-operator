@@ -74,9 +74,9 @@ func (s *SvcServiceImpl) GetSvc(key client.ObjectKey) (*v13.Service, error) {
 }
 
 func (s *SvcServiceImpl) UpdateSvc(svc *v13.Service, data *buildSvcData) error {
-	lock := s.getSvcLock(constants.DeploySvcName)
-	lock.Lock()
-	defer lock.Unlock()
+	//lock := s.getSvcLock(constants.DeploySvcName)
+	//lock.Lock()
+	//defer lock.Unlock()
 
 	svc.Spec.Ports = s.svcServicePort(data.sbp)
 	if err := s.generic.GetClient().Update(s.ctx, svc); err != nil {

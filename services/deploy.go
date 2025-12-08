@@ -81,10 +81,10 @@ func (d *DeploymentServiceImpl) isUpdate(deploy *v1.Deployment) bool {
 }
 
 func (d *DeploymentServiceImpl) UpdateDeploy(deploy *v1.Deployment) error {
-	lock := d.getDepLock()
-
-	lock.Lock()
-	defer lock.Unlock()
+	//lock := d.getDepLock()
+	//
+	//lock.Lock()
+	//defer lock.Unlock()
 
 	if !d.isUpdate(deploy) {
 		deploy.Spec.Template.Spec.Containers = d.deployPodContainer()
@@ -350,7 +350,7 @@ func (d *DeploymentServiceImpl) deployIsReady(deploy *v1.Deployment) bool {
 }
 
 func (d *DeploymentServiceImpl) getBackends() error {
-	lock := d.getDepLock()
+	//lock := d.getDepLock()
 	var bks = make([]*v14.ServiceBackendPort, 0, 10)
 
 	for _, p := range constants.HttpPorts {
@@ -379,9 +379,9 @@ func (d *DeploymentServiceImpl) getBackends() error {
 		bks = append(bks, backend)
 	}
 
-	lock.Lock()
+	//lock.Lock()
 	d.bks = bks
-	lock.Unlock()
+	//lock.Unlock()
 
 	return nil
 }

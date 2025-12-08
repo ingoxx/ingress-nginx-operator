@@ -97,8 +97,8 @@ func (c *ConfigMapServiceImpl) DeleteConfigMap() error {
 }
 
 func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
-	c.comLock.Lock()
-	defer c.comLock.Unlock()
+	//c.comLock.Lock()
+	//defer c.comLock.Unlock()
 
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}

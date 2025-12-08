@@ -13,7 +13,13 @@ import (
 	"time"
 )
 
-var lock sync.Mutex
+var (
+	lock   sync.Mutex
+	fileCh = make(chan NginxCfgParams, 10)
+)
+
+//var lock sync.Mutex
+//var fileCh = make(chan NginxCfgParams, 10)
 
 func main() {
 	go func() {
@@ -215,22 +221,36 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	lock.Lock()
 	if err := file.HandleConfigUpdate(ncp.FileName, ncp.FileBytes); err != nil {
 		ncp.H(RespData{
 			Code:   1007,
 			Msg:    err.Error(),
 			Status: http.StatusBadRequest,
 		})
+
 		return
 	}
-	lock.Unlock()
 
-	ncp.H(RespData{
-		Code:   1000,
-		Msg:    "update nginx config ok",
-		Status: http.StatusOK,
-	})
+	select {
+	case fileCh <- ncp:
+		ncp.H(RespData{
+			Code:   1000,
+			Msg:    "update nginx config ok",
+			Status: http.StatusOK,
+		})
+	default:
+		ncp.H(RespData{
+			Code:   1008,
+			Msg:    "handling timeouts",
+			Status: http.StatusOK,
+		})
+	}
+
+	//ncp.H(RespData{
+	//	Code:   1000,
+	//	Msg:    "update nginx config ok",
+	//	Status: http.StatusOK,
+	//})
 }
 
 func healthCheck(resp http.ResponseWriter, req *http.Request) {
