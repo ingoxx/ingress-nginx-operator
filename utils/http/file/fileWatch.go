@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/ingoxx/ingress-nginx-operator/utils/http/internal/domain"
 	"github.com/ingoxx/ingress-nginx-operator/utils/http/nginxpath"
 	"io"
 	"k8s.io/klog/v2"
@@ -190,15 +191,25 @@ func IsNginxRunning() error {
 	return nil
 }
 
+func StartFileWork(data chan domain.ReqFormData) {
+	go func() {
+		for f := range data {
+			if err := HandleConfigUpdate(f); err != nil {
+				klog.Errorf("fail to update file, error '%s'", err.Error())
+			}
+		}
+	}()
+}
+
 // HandleConfigUpdate 处理配置文件更新
-func HandleConfigUpdate(targetPath string, newContent []byte) error {
-	tmpPath := targetPath + ".tmp"
+func HandleConfigUpdate(data domain.ReqFormDataImp) error {
+	tmpPath := data.GeFileName() + ".tmp"
 
 	// 如果存在，先比对
-	_, err := os.Stat(targetPath)
+	_, err := os.Stat(data.GeFileName())
 	if err == nil {
-		if len(newContent) == 0 {
-			if err := os.Remove(targetPath); err != nil {
+		if len(data.GetFileBytes()) == 0 {
+			if err := os.Remove(data.GeFileName()); err != nil {
 				return err
 			}
 
@@ -209,12 +220,12 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 			return nil
 		}
 
-		oldMD5, err := getFileMD5(targetPath)
+		oldMD5, err := getFileMD5(data.GeFileName())
 		if err != nil {
 			return fmt.Errorf("failed to calculate MD5 of the original file: %v", err)
 		}
 
-		newMD5 := getContentMD5(newContent)
+		newMD5 := getContentMD5(data.GetFileBytes())
 		if oldMD5 == newMD5 {
 			klog.Info("[INFO] content MD5 consistent, no need to update")
 			return nil
@@ -222,7 +233,7 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 	}
 
 	// 写临时文件
-	if err := writeToFile(tmpPath, newContent); err != nil {
+	if err := writeToFile(tmpPath, data.GetFileBytes()); err != nil {
 		return fmt.Errorf("failed to write temporary file: %v", err)
 	}
 
@@ -235,7 +246,7 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 	}
 
 	// OK，替换
-	if err := writeToFile(targetPath, newContent); err != nil {
+	if err := writeToFile(data.GeFileName(), data.GetFileBytes()); err != nil {
 		return fmt.Errorf("failed to overwrite official documents: %v", err)
 	}
 
@@ -248,7 +259,7 @@ func HandleConfigUpdate(targetPath string, newContent []byte) error {
 		return err
 	}
 
-	klog.Infof("[SUCCESS] update %s completed and reload\n", targetPath)
+	klog.Infof("[SUCCESS] update %s completed and reload\n", data.GeFileName())
 
 	return nil
 }

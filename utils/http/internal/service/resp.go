@@ -4,22 +4,33 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ingoxx/ingress-nginx-operator/utils/http/internal/domain"
+	"io"
 	"k8s.io/klog/v2"
 	"net/http"
 )
 
-type NginxCfgService struct {
-	resp      http.ResponseWriter
-	rp        domain.ReqParamsImp
-	FileBytes []byte `json:"file_bytes"`
-	FileName  string `json:"file_name"`
+type RespService struct {
+	req  *http.Request
+	resp http.ResponseWriter
 }
 
-func NewNginxCfgParams() *NginxCfgService {
-	return &NginxCfgService{}
+func NewRespService(resp http.ResponseWriter, req *http.Request) *RespService {
+	return &RespService{
+		req:  req,
+		resp: resp,
+	}
 }
 
-func (nc NginxCfgService) H(rd domain.RespData) {
+func (nc *RespService) B() ([]byte, error) {
+	body, err := io.ReadAll(nc.req.Body)
+	if err != nil {
+		return body, err
+	}
+
+	return body, nil
+}
+
+func (nc *RespService) H(rd domain.RespData) {
 	nc.resp.Header().Set("Content-Type", "application/json")
 	nc.resp.WriteHeader(rd.Status)
 

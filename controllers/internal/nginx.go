@@ -461,14 +461,14 @@ func (nc *NginxController) worker(ctx context.Context, task chan string, wg *syn
 
 func (nc *NginxController) multiRun(cfg *Config) error {
 	var wg *sync.WaitGroup
-	var tasks = make(chan string, queueSize)
+	var tasks = make(chan string, len(nc.podsIp))
 	var errs = make(chan error, len(nc.podsIp))
 	var te error
 	var ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(3))
 	defer cancel()
 
-	wg.Add(workerCount)
-	for i := 0; i < workerCount; i++ {
+	wg.Add(len(nc.podsIp))
+	for i := 0; i < len(nc.podsIp); i++ {
 		go nc.worker(ctx, tasks, wg, cfg, errs)
 	}
 
