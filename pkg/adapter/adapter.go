@@ -198,3 +198,7 @@ func (r ResourceAdapter) DeleteConfigMap() error {
 func (r ResourceAdapter) DeleteSecret() error {
 	return r.Secret.DeleteSecret()
 }
+
+func (r ResourceAdapter) DeleteIssuer() error {
+	return r.Issuer.DeleteIssuer()
+}

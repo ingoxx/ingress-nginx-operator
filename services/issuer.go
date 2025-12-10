@@ -64,8 +64,8 @@ func (i *IssuerServiceImpl) CreateIssuer(ctx context.Context, namespace, name st
 	return nil
 }
 
-func (i *IssuerServiceImpl) DeleteIssuer(ctx context.Context, namespace, name string) error {
-	if err := i.ing.GetDynamicClientSet().Resource(i.issuerGVR()).Namespace(i.ing.GetNameSpace()).Delete(ctx, i.cert.IssuerObjectKey(), metav1.DeleteOptions{}); err != nil {
+func (i *IssuerServiceImpl) DeleteIssuer() error {
+	if err := i.ing.GetDynamicClientSet().Resource(i.issuerGVR()).Namespace(i.ing.GetNameSpace()).Delete(context.Background(), i.cert.IssuerObjectKey(), metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

@@ -48,38 +48,16 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 }
 
 func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) error {
-	if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
-		if controllerutil.RemoveFinalizer(ingress, constants.Finalizer) {
-			if err := ing.UpdateIngress(ingress); err != nil {
-				return err
-			}
-		}
-		// 删除ingress后的逻辑处理
-
-		return nil
-	} else {
-		if !controllerutil.ContainsFinalizer(ingress, constants.Finalizer) {
-			controllerutil.AddFinalizer(ingress, constants.Finalizer)
-			if err := ing.UpdateIngress(ingress); err != nil {
-				return err
-			}
-		}
-	}
-
 	ing.NewIngress(ingress)
 
 	cert := services.NewCertServiceImpl(nc.ctx, ing)
 	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
 	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
 	configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
+	ngx := NewNginxController()
 
 	if err := ing.CheckController(); err != nil {
 		nc.recorder.Event(ingress, "Normal", "NoCustomControllerSelected", err.Error())
-		return err
-	}
-
-	if err := ing.CheckService(); err != nil {
-		nc.recorder.Event(ingress, "Warning", "BackendsNoServiceAvailable", err.Error())
 		return err
 	}
 
@@ -89,6 +67,11 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		Cert:      cert,
 		Issuer:    issuer,
 		ConfigMap: configMap,
+	}
+
+	if err := ing.CheckService(); err != nil {
+		nc.recorder.Event(ingress, "Warning", "BackendsNoServiceAvailable", err.Error())
+		return err
 	}
 
 	if err := ar.CheckCert(); err != nil {
@@ -106,9 +89,47 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 
 	ar.Deployment = services.NewDeploymentServiceImpl(nc.ctx, ing, ar, extract)
 
-	ngx := NewNginxController(ar, extract)
+	if !controllerutil.ContainsFinalizer(ingress, constants.Finalizer) {
+		controllerutil.AddFinalizer(ingress, constants.Finalizer)
+		if err := ing.UpdateIngress(ingress); err != nil {
+			return err
+		}
+	}
 
-	if err := ngx.Run(); err != nil {
+	if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
+		// 删除ingress后的逻辑处理
+		ngx.IsDel = true
+		if err := ar.ConfigMap.DeleteConfigMap(); err != nil {
+			return err
+		}
+
+		if err := ar.Cert.DeleteCert(); err != nil {
+			return err
+		}
+
+		if err := ar.Issuer.DeleteIssuer(); err != nil {
+			return err
+		}
+
+		if err := ar.Secret.DeleteSecret(); err != nil {
+			return err
+		}
+
+		if err := ngx.Run(ar, extract); err != nil {
+			nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
+			return err
+		}
+
+		if controllerutil.RemoveFinalizer(ingress, constants.Finalizer) {
+			if err := ing.UpdateIngress(ingress); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if err := ngx.Run(ar, extract); err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
 		return err
 	}

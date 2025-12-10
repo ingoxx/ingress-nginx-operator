@@ -58,19 +58,21 @@ type NginxController struct {
 	config           *annotations.IngressAnnotationsConfig
 	mux              *sync.Mutex
 	podsIp           []string
+	IsDel            bool
 }
 
-func NewNginxController(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *NginxController {
+func NewNginxController() *NginxController {
 	return &NginxController{
-		allResourcesData: data,
-		config:           config,
-		mux:              new(sync.Mutex),
+		mux: new(sync.Mutex),
 	}
 }
 
-func (nc *NginxController) Run() error {
+func (nc *NginxController) Run(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) error {
 	nc.mux.Lock()
 	defer nc.mux.Unlock()
+
+	nc.allResourcesData = data
+	nc.config = config
 
 	if err := nc.generateBackendCfg(); err != nil {
 		return err
@@ -246,11 +248,7 @@ func (nc *NginxController) generateBackendCfg() error {
 		ConfDir:       constants.NginxConfDir,
 	}
 
-	if err := nc.generateNgxConfTmpl(c); err != nil {
-		return err
-	}
-
-	if err := nc.generateServerTmpl(c); err != nil {
+	if err := nc.multiRun(c); err != nil {
 		return err
 	}
 
@@ -258,8 +256,9 @@ func (nc *NginxController) generateBackendCfg() error {
 }
 
 // generateServerTmpl 生成conf.d/下的各个子配置
-func (nc *NginxController) generateServerTmpl(cfg *Config) error {
+func (nc *NginxController) generateServerTmpl(cfg *Config, ip string) error {
 	var buffer bytes.Buffer
+	var nUrl string
 
 	serverTemp, err := nc.renderTemplateData(cfg.ServerTmpl)
 	if err != nil {
@@ -270,28 +269,32 @@ func (nc *NginxController) generateServerTmpl(cfg *Config) error {
 		return err
 	}
 
-	for _, ip := range nc.podsIp {
-		url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, constants.NginxConfUpUrl)
-		file := NginxConfig{
-			FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
-			Url:       url,
-			FileBytes: buffer.Bytes(),
-		}
+	if nc.IsDel {
+		nUrl = constants.NginxConfDelUrl
+	} else {
+		nUrl = constants.NginxConfUpUrl
+	}
 
-		if err := nc.updateNginxTls(url); err != nil {
-			return err
-		}
+	url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, nUrl)
+	file := NginxConfig{
+		FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
+		Url:       url,
+		FileBytes: buffer.Bytes(),
+	}
 
-		if err := nc.updateNginxConfig(file); err != nil {
-			return err
-		}
+	if err := nc.updateNginxTls(url); err != nil {
+		return err
+	}
+
+	if err := nc.updateNginxConfig(file); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // generateNgxConfTmpl 生成nginx.conf配置
-func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
+func (nc *NginxController) generateNgxConfTmpl(cfg *Config, ip string) error {
 	var buffer bytes.Buffer
 
 	backend, err := nc.allResourcesData.GetDefaultBackend()
@@ -314,17 +317,15 @@ func (nc *NginxController) generateNgxConfTmpl(cfg *Config) error {
 		return err
 	}
 
-	for _, ip := range nc.podsIp {
-		url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, constants.NginxConfUpUrl)
-		file := NginxConfig{
-			FileName:  constants.NginxMainConf,
-			Url:       url,
-			FileBytes: buffer.Bytes(),
-		}
+	url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, constants.NginxConfUpUrl)
+	file := NginxConfig{
+		FileName:  constants.NginxMainConf,
+		Url:       url,
+		FileBytes: buffer.Bytes(),
+	}
 
-		if err := nc.updateNginxConfig(file); err != nil {
-			return err
-		}
+	if err := nc.updateNginxConfig(file); err != nil {
+		return err
 	}
 
 	return nil
@@ -415,41 +416,18 @@ func (nc *NginxController) updateNginxTls(url string) error {
 	return nil
 }
 
-// 删除nginx配置
-func (nc *NginxController) deleteNginxConfig() {}
-
 func (nc *NginxController) worker(ctx context.Context, task chan string, wg *sync.WaitGroup, cfg *Config, errs chan error) {
 	defer wg.Done()
 
 	for {
 		select {
 		case ip := <-task:
-			var buffer bytes.Buffer
-
-			serverTemp, err := nc.renderTemplateData(cfg.ServerTmpl)
-			if err != nil {
+			if err := nc.generateNgxConfTmpl(cfg, ip); err != nil {
 				errs <- err
 				return
 			}
 
-			if err := serverTemp.Execute(&buffer, cfg); err != nil {
-				errs <- err
-				return
-			}
-
-			url := fmt.Sprintf("http://%s:%d%s", ip, constants.HealthPort, constants.NginxConfUpUrl)
-			file := NginxConfig{
-				FileName:  fmt.Sprintf("%s/%s_%s.conf", constants.NginxConfDir, nc.allResourcesData.GetName(), nc.allResourcesData.GetNameSpace()),
-				Url:       url,
-				FileBytes: buffer.Bytes(),
-			}
-
-			if err := nc.updateNginxTls(url); err != nil {
-				errs <- err
-				return
-			}
-
-			if err := nc.updateNginxConfig(file); err != nil {
+			if err := nc.generateServerTmpl(cfg, ip); err != nil {
 				errs <- err
 				return
 			}

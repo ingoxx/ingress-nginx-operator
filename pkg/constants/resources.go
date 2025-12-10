@@ -13,14 +13,15 @@ const (
 )
 
 var (
-	HealthUrl      = "/api/v1/health"
-	NginxConfUpUrl = "/api/v1/nginx/config/update"
-	HealthPort     = 9092
-	Command        = []string{"/httpserver"}
-	Images         = "gotec007/manager-nginx"
-	Replicas       = 2
-	AuthToken      = "k8s"
-	HttpStatusOk   = 1000
-	HttpPorts      = []int32{80, 443, 9092}
-	DefaultPort    = 80
+	HealthUrl       = "/api/v1/health"
+	NginxConfUpUrl  = "/api/v1/nginx/config/update"
+	NginxConfDelUrl = "/api/v1/nginx/config/delete"
+	HealthPort      = 9092
+	Command         = []string{"/httpserver"}
+	Images          = "gotec007/manager-nginx"
+	Replicas        = 2
+	AuthToken       = "k8s"
+	HttpStatusOk    = 1000
+	HttpPorts       = []int32{80, 443, 9092}
+	DefaultPort     = 80
 )

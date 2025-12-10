@@ -51,4 +51,5 @@ type ResourcesMth interface {
 	CheckSvc() error
 	DeleteConfigMap() error
 	DeleteSecret() error
+	DeleteIssuer() error
 }

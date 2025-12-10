@@ -8,7 +8,6 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/utils/http/file"
 	"github.com/ingoxx/ingress-nginx-operator/utils/http/internal/domain"
 	"github.com/ingoxx/ingress-nginx-operator/utils/http/internal/service"
-	"io"
 	"k8s.io/klog/v2"
 	"net/http"
 	"time"
@@ -79,74 +78,74 @@ func (nc NginxCfgParams) H(rd RespData) {
 }
 
 func deleteNginxCfg(resp http.ResponseWriter, req *http.Request) {
-	var ncp = NginxCfgParams{resp: resp}
+	var fd domain.ReqFormData
+	var ncp = service.NewRespService(resp, req)
+
 	if req.Header.Get("X-Auth-Token") != constants.AuthToken {
-		ncp.H(RespData{
+		ncp.H(domain.RespData{
 			Msg:    "request unauthorized",
 			Code:   1001,
-			Status: http.StatusUnauthorized,
+			Status: http.StatusOK,
 		})
 		return
 	}
 
 	if req.Header.Get("Content-Type") != "application/json" {
-		ncp.H(RespData{
+		ncp.H(domain.RespData{
 			Code:   1002,
 			Msg:    "bad request header",
-			Status: http.StatusBadRequest,
+			Status: http.StatusOK,
 		})
 		return
 	}
 
 	if req.Method != http.MethodPost {
-		ncp.H(RespData{
+		ncp.H(domain.RespData{
 			Code:   1003,
 			Msg:    "bad request method",
-			Status: http.StatusBadRequest,
+			Status: http.StatusOK,
 		})
 		return
 	}
 
-	body, err := io.ReadAll(req.Body)
+	body, err := ncp.B()
 	if err != nil {
-		ncp.H(RespData{
-			Code:   1004,
-			Msg:    "invalid body",
-			Status: http.StatusBadRequest,
-		})
-		return
-	}
-
-	if err := json.Unmarshal(body, &ncp); err != nil {
-		ncp.H(RespData{
+		ncp.H(domain.RespData{
 			Code:   1005,
-			Msg:    "json parsing failed",
-			Status: http.StatusBadRequest,
+			Msg:    err.Error(),
+			Status: http.StatusOK,
 		})
 		return
 	}
 
-	if ncp.FileName == "" {
-		ncp.H(RespData{
+	if err := json.Unmarshal(body, &fd); err != nil {
+		ncp.H(domain.RespData{
+			Code:   1005,
+			Msg:    err.Error(),
+			Status: http.StatusOK,
+		})
+		return
+	}
+
+	if fd.FileName == "" {
+		ncp.H(domain.RespData{
 			Code:   1006,
-			Msg:    "missing or empty 'file_name' parameter",
-			Status: http.StatusBadRequest,
+			Msg:    "illegal request",
+			Status: http.StatusOK,
 		})
 		return
 	}
 
-	if len(ncp.FileBytes) == 0 {
-		if err := file.HandleDeleteNgxConfig(ncp.FileName); err != nil {
-			ncp.H(RespData{
-				Code:   1007,
-				Msg:    err.Error(),
-				Status: http.StatusBadRequest,
-			})
-			return
-		}
+	if err := file.HandleDeleteNgxConfig(fd.FileName); err != nil {
+		ncp.H(domain.RespData{
+			Code:   1007,
+			Msg:    err.Error(),
+			Status: http.StatusOK,
+		})
+		return
 	}
 
-	ncp.H(RespData{
+	ncp.H(domain.RespData{
 		Code:   1000,
 		Msg:    "update nginx config ok",
 		Status: http.StatusOK,
@@ -213,7 +212,7 @@ func updateNginxCfg(resp http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
-	
+
 	select {
 	case fileCh <- fd:
 		ncp.H(domain.RespData{
