@@ -96,22 +96,29 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		}
 	}
 
+	fmt.Println("DeletionTimestamp >>> ", ingress.ObjectMeta.DeletionTimestamp.IsZero())
+
 	if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
 		// 删除ingress后的逻辑处理
+		fmt.Println("delete action ------>")
 		ngx.IsDel = true
 		if err := ar.ConfigMap.DeleteConfigMap(); err != nil {
+			nc.recorder.Event(ingress, "Warning", "FailToDeleteConfigMap", err.Error())
 			return err
 		}
 
 		if err := ar.Cert.DeleteCert(); err != nil {
+			nc.recorder.Event(ingress, "Warning", "FailToDeleteCert", err.Error())
 			return err
 		}
 
 		if err := ar.Issuer.DeleteIssuer(); err != nil {
+			nc.recorder.Event(ingress, "Warning", "FailToDeleteIssuer", err.Error())
 			return err
 		}
 
 		if err := ar.Secret.DeleteSecret(); err != nil {
+			nc.recorder.Event(ingress, "Warning", "FailToDeleteSecret", err.Error())
 			return err
 		}
 

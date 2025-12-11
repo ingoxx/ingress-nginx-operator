@@ -56,21 +56,16 @@ type NginxConfig struct {
 type NginxController struct {
 	allResourcesData service.ResourcesMth
 	config           *annotations.IngressAnnotationsConfig
-	mux              *sync.Mutex
+	wg               sync.WaitGroup
 	podsIp           []string
 	IsDel            bool
 }
 
 func NewNginxController() *NginxController {
-	return &NginxController{
-		mux: new(sync.Mutex),
-	}
+	return &NginxController{}
 }
 
 func (nc *NginxController) Run(data service.ResourcesMth, config *annotations.IngressAnnotationsConfig) error {
-	nc.mux.Lock()
-	defer nc.mux.Unlock()
-
 	nc.allResourcesData = data
 	nc.config = config
 
@@ -416,8 +411,8 @@ func (nc *NginxController) updateNginxTls(url string) error {
 	return nil
 }
 
-func (nc *NginxController) worker(ctx context.Context, task chan string, wg *sync.WaitGroup, cfg *Config, errs chan error) {
-	defer wg.Done()
+func (nc *NginxController) worker(ctx context.Context, task chan string, cfg *Config, errs chan error) {
+	defer nc.wg.Done()
 
 	for {
 		select {
@@ -438,16 +433,15 @@ func (nc *NginxController) worker(ctx context.Context, task chan string, wg *syn
 }
 
 func (nc *NginxController) multiRun(cfg *Config) error {
-	var wg *sync.WaitGroup
 	var tasks = make(chan string, len(nc.podsIp))
 	var errs = make(chan error, len(nc.podsIp))
 	var te error
 	var ctx, cancel = context.WithTimeout(context.Background(), time.Second*time.Duration(3))
 	defer cancel()
 
-	wg.Add(len(nc.podsIp))
+	nc.wg.Add(len(nc.podsIp))
 	for i := 0; i < len(nc.podsIp); i++ {
-		go nc.worker(ctx, tasks, wg, cfg, errs)
+		go nc.worker(ctx, tasks, cfg, errs)
 	}
 
 	for _, v := range nc.podsIp {
@@ -457,7 +451,7 @@ func (nc *NginxController) multiRun(cfg *Config) error {
 		}
 	}
 
-	wg.Wait()
+	nc.wg.Wait()
 	close(errs)
 
 	for e := range errs {

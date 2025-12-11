@@ -11,6 +11,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,6 +87,10 @@ func (c *ConfigMapServiceImpl) getConfigMap() (*v1.ConfigMap, error) {
 func (c *ConfigMapServiceImpl) DeleteConfigMap() error {
 	cm, err := c.getConfigMap()
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+
 		return err
 	}
 
