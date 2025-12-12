@@ -34,12 +34,6 @@ func NewConfigMapServiceImpl(ctx context.Context, clientSet common.Generic) *Con
 	return &ConfigMapServiceImpl{ctx: ctx, generic: clientSet, comLock: sync.Mutex{}}
 }
 
-func (c *ConfigMapServiceImpl) getCmLock(cm string) *sync.Mutex {
-	svcName := fmt.Sprintf("%s/%s", cm, c.generic.GetNameSpace())
-	val, _ := cmLocks.LoadOrStore(svcName, &sync.Mutex{})
-	return val.(*sync.Mutex)
-}
-
 func (c *ConfigMapServiceImpl) GetConfigMapData(name string) ([]byte, error) {
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}
@@ -76,8 +70,9 @@ func (c *ConfigMapServiceImpl) CreateConfigMap(name, key string, data []byte) (m
 
 func (c *ConfigMapServiceImpl) getConfigMap() (*v1.ConfigMap, error) {
 	var cm = new(v1.ConfigMap)
+
 	req := types.NamespacedName{Name: c.GetCmName(), Namespace: c.generic.GetNameSpace()}
-	if err := c.generic.GetClient().Get(context.Background(), req, cm); err == nil {
+	if err := c.generic.GetClient().Get(context.Background(), req, cm); err != nil {
 		return cm, err
 	}
 
@@ -102,9 +97,6 @@ func (c *ConfigMapServiceImpl) DeleteConfigMap() error {
 }
 
 func (c *ConfigMapServiceImpl) UpdateConfigMap(name, ns, key string, data []byte) (string, error) {
-	//c.comLock.Lock()
-	//defer c.comLock.Unlock()
-
 	var cm = new(v1.ConfigMap)
 	req := types.NamespacedName{Name: name, Namespace: c.generic.GetNameSpace()}
 	if err := c.generic.GetClient().Get(context.Background(), req, cm); err == nil {

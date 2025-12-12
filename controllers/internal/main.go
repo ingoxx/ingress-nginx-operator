@@ -6,10 +6,12 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/adapter"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
+	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/services"
 	"golang.org/x/net/context"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -96,11 +98,8 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		}
 	}
 
-	fmt.Println("DeletionTimestamp >>> ", ingress.ObjectMeta.DeletionTimestamp.IsZero())
-
 	if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
 		// 删除ingress后的逻辑处理
-		fmt.Println("delete action ------>")
 		ngx.IsDel = true
 		if err := ar.ConfigMap.DeleteConfigMap(); err != nil {
 			nc.recorder.Event(ingress, "Warning", "FailToDeleteConfigMap", err.Error())
@@ -133,6 +132,8 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 			}
 		}
 
+		klog.Infof("ingress %s deletion complete", ingress.Name)
+
 		return nil
 	}
 
@@ -144,4 +145,11 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 	nc.recorder.Event(ingress, "Normal", "RunSuccessfully", fmt.Sprintf("'%s' ingress update successfully", ingress.Name))
 
 	return nil
+}
+
+func (nc *CrdNginxController) start(ingress *v1.Ingress, ing common.Generic, resources service.ResourcesMth) {
+
+}
+
+func (nc *CrdNginxController) stop(ingress *v1.Ingress, ing common.Generic, resources service.ResourcesMth) {
 }

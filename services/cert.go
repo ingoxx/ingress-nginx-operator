@@ -55,15 +55,15 @@ func (c *CertServiceImpl) certUnstructuredData() *unstructured.Unstructured {
 }
 
 func (c *CertServiceImpl) CertObjectKey() string {
-	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-cert"
+	return fmt.Sprintf("%s-%s-cert", c.ing.GetName(), c.ing.GetNameSpace())
 }
 
 func (c *CertServiceImpl) SecretObjectKey() string {
-	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-secret"
+	return fmt.Sprintf("%s-%s-secret", c.ing.GetName(), c.ing.GetNameSpace())
 }
 
 func (c *CertServiceImpl) IssuerObjectKey() string {
-	return c.ing.GetName() + "-" + c.ing.GetNameSpace() + "-issuer"
+	return fmt.Sprintf("%s-%s-issuer", c.ing.GetName(), c.ing.GetNameSpace())
 }
 
 func (c *CertServiceImpl) GetCert() (*unstructured.Unstructured, error) {
