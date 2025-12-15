@@ -23,6 +23,10 @@ server {
     listen  [::]:443 ssl;
     server_name {{ $ut.Host }};
 
+    if ($host != {{ $ut.Host }}) {
+        return 403;
+    }
+
     ### ssl
     ssl_certificate {{ $ut.Cert.TlsCrt }};
     ssl_certificate_key {{ $ut.Cert.TlsKey }};

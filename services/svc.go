@@ -34,8 +34,8 @@ type SvcServiceImpl struct {
 	config           *annotations.IngressAnnotationsConfig
 }
 
-func NewSvcServiceImpl(ctx context.Context, clientSet common.Generic, allRes service.ResourcesMth, config *annotations.IngressAnnotationsConfig) *SvcServiceImpl {
-	return &SvcServiceImpl{ctx: ctx, generic: clientSet, allResourcesData: allRes, config: config}
+func NewSvcServiceImpl(ctx context.Context, clientSet common.Generic, allRes service.ResourcesMth) *SvcServiceImpl {
+	return &SvcServiceImpl{ctx: ctx, generic: clientSet, allResourcesData: allRes}
 }
 
 func (s *SvcServiceImpl) getSvcLock(svc string) *sync.Mutex {

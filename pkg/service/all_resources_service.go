@@ -52,4 +52,6 @@ type ResourcesMth interface {
 	DeleteConfigMap() error
 	DeleteSecret() error
 	DeleteIssuer() error
+	CheckCert() error
+	DeleteCert() error
 }

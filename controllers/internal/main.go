@@ -52,16 +52,15 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) error {
 	ing.NewIngress(ingress)
 
-	cert := services.NewCertServiceImpl(nc.ctx, ing)
-	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
-	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
-	configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
-	ngx := NewNginxController()
-
 	if err := ing.CheckController(); err != nil {
 		nc.recorder.Event(ingress, "Normal", "NoCustomControllerSelected", err.Error())
 		return err
 	}
+
+	cert := services.NewCertServiceImpl(nc.ctx, ing)
+	secret := services.NewSecretServiceImpl(nc.ctx, ing, cert)
+	issuer := services.NewIssuerServiceImpl(nc.ctx, ing, cert)
+	configMap := services.NewConfigMapServiceImpl(nc.ctx, ing)
 
 	ar := adapter.ResourceAdapter{
 		Ingress:   ing,
@@ -71,6 +70,41 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		ConfigMap: configMap,
 	}
 
+	ar.Svc = services.NewSvcServiceImpl(nc.ctx, ing, ar)
+	ar.Deployment = services.NewDeploymentServiceImpl(nc.ctx, ing, ar)
+
+	extract := annotations.NewExtractor(ing, ar)
+
+	ngx := NewNginxController()
+
+	if !controllerutil.ContainsFinalizer(ingress, constants.Finalizer) {
+		controllerutil.AddFinalizer(ingress, constants.Finalizer)
+		if err := ing.UpdateIngress(ingress); err != nil {
+			return err
+		}
+	}
+
+	// 删除ingress
+	if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
+		if err := nc.delete(ingress, ing, ar, extract, ngx); err != nil {
+			nc.recorder.Event(ingress, "Warning", "FailToDeleteIngress", err.Error())
+			return err
+		}
+
+		return nil
+
+	} else {
+		if err := nc.run(ingress, ing, ar, extract, ngx); err != nil {
+			nc.recorder.Event(ingress, "Warning", "IngressValidationFailed", err.Error())
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (nc *CrdNginxController) run(ingress *v1.Ingress, ing common.Generic, ar service.ResourcesMth, extract *annotations.Extractor, ngx *NginxController) error {
 	if err := ing.CheckService(); err != nil {
 		nc.recorder.Event(ingress, "Warning", "BackendsNoServiceAvailable", err.Error())
 		return err
@@ -81,63 +115,13 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 		return err
 	}
 
-	extract, err := annotations.NewExtractor(ing, ar).Extract()
+	config, err := extract.Extract()
 	if err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToExtractAnnotations", err.Error())
 		return err
 	}
 
-	ar.Svc = services.NewSvcServiceImpl(nc.ctx, ing, ar, extract)
-
-	ar.Deployment = services.NewDeploymentServiceImpl(nc.ctx, ing, ar, extract)
-
-	if !controllerutil.ContainsFinalizer(ingress, constants.Finalizer) {
-		controllerutil.AddFinalizer(ingress, constants.Finalizer)
-		if err := ing.UpdateIngress(ingress); err != nil {
-			return err
-		}
-	}
-
-	if !ingress.ObjectMeta.DeletionTimestamp.IsZero() {
-		// 删除ingress后的逻辑处理
-		ngx.IsDel = true
-		if err := ar.ConfigMap.DeleteConfigMap(); err != nil {
-			nc.recorder.Event(ingress, "Warning", "FailToDeleteConfigMap", err.Error())
-			return err
-		}
-
-		if err := ar.Cert.DeleteCert(); err != nil {
-			nc.recorder.Event(ingress, "Warning", "FailToDeleteCert", err.Error())
-			return err
-		}
-
-		if err := ar.Issuer.DeleteIssuer(); err != nil {
-			nc.recorder.Event(ingress, "Warning", "FailToDeleteIssuer", err.Error())
-			return err
-		}
-
-		if err := ar.Secret.DeleteSecret(); err != nil {
-			nc.recorder.Event(ingress, "Warning", "FailToDeleteSecret", err.Error())
-			return err
-		}
-
-		if err := ngx.Run(ar, extract); err != nil {
-			nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
-			return err
-		}
-
-		if controllerutil.RemoveFinalizer(ingress, constants.Finalizer) {
-			if err := ing.UpdateIngress(ingress); err != nil {
-				return err
-			}
-		}
-
-		klog.Infof("ingress %s deletion complete", ingress.Name)
-
-		return nil
-	}
-
-	if err := ngx.Run(ar, extract); err != nil {
+	if err := ngx.Run(ar, config); err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
 		return err
 	}
@@ -147,9 +131,48 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 	return nil
 }
 
-func (nc *CrdNginxController) start(ingress *v1.Ingress, ing common.Generic, resources service.ResourcesMth) {
+func (nc *CrdNginxController) delete(ingress *v1.Ingress, ing common.Generic, ar service.ResourcesMth, extract *annotations.Extractor, ngx *NginxController) error {
+	ngx.IsDel = true
 
-}
+	fmt.Println("current >>> ", ingress)
+	config, err := extract.Extract()
+	if err != nil {
+		nc.recorder.Event(ingress, "Warning", "FailToExtractAnnotations", err.Error())
+		return err
+	}
 
-func (nc *CrdNginxController) stop(ingress *v1.Ingress, ing common.Generic, resources service.ResourcesMth) {
+	if err := ngx.Run(ar, config); err != nil {
+		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
+		return err
+	}
+
+	if err := ar.DeleteConfigMap(); err != nil {
+		nc.recorder.Event(ingress, "Warning", "FailToDeleteConfigMap", err.Error())
+		return err
+	}
+
+	if err := ar.DeleteCert(); err != nil {
+		nc.recorder.Event(ingress, "Warning", "FailToDeleteCert", err.Error())
+		return err
+	}
+
+	if err := ar.DeleteIssuer(); err != nil {
+		nc.recorder.Event(ingress, "Warning", "FailToDeleteIssuer", err.Error())
+		return err
+	}
+
+	if err := ar.DeleteSecret(); err != nil {
+		nc.recorder.Event(ingress, "Warning", "FailToDeleteSecret", err.Error())
+		return err
+	}
+
+	if controllerutil.RemoveFinalizer(ingress, constants.Finalizer) {
+		if err := ing.UpdateIngress(ingress); err != nil {
+			return err
+		}
+	}
+
+	klog.Infof("ingress %s deletion complete", ingress.Name)
+
+	return nil
 }

@@ -202,3 +202,7 @@ func (r ResourceAdapter) DeleteSecret() error {
 func (r ResourceAdapter) DeleteIssuer() error {
 	return r.Issuer.DeleteIssuer()
 }
+
+func (r ResourceAdapter) DeleteCert() error {
+	return r.Cert.DeleteCert()
+}
