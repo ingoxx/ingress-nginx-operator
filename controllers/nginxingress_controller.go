@@ -74,7 +74,7 @@ func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//_ = log.FromContext(ctx)
 
 	if err := internal.NewCrdNginxController(ctx, r.clientSet, r.operatorCli, r.recorder).Start(req); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(45)}, nil
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(15)}, nil
 	}
 
 	return ctrl.Result{}, nil

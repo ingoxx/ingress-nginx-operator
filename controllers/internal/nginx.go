@@ -448,6 +448,7 @@ func (nc *NginxController) multiRun(cfg *Config) error {
 		select {
 		case tasks <- v:
 		case <-time.After(enqueueTimeout):
+			klog.Info("currently processing busy,need to wait for processing")
 		}
 	}
 

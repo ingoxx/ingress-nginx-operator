@@ -134,7 +134,6 @@ func (nc *CrdNginxController) run(ingress *v1.Ingress, ing common.Generic, ar se
 func (nc *CrdNginxController) delete(ingress *v1.Ingress, ing common.Generic, ar service.ResourcesMth, extract *annotations.Extractor, ngx *NginxController) error {
 	ngx.IsDel = true
 
-	fmt.Println("current >>> ", ingress)
 	config, err := extract.Extract()
 	if err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToExtractAnnotations", err.Error())
@@ -172,7 +171,7 @@ func (nc *CrdNginxController) delete(ingress *v1.Ingress, ing common.Generic, ar
 		}
 	}
 
-	klog.Infof("ingress %s deletion complete", ingress.Name)
+	klog.Infof("the ingress %s has been successfully deleted\n", ingress.Name)
 
 	return nil
 }

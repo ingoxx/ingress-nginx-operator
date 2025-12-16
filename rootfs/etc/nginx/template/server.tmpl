@@ -24,7 +24,7 @@ server {
     server_name {{ $ut.Host }};
 
     if ($host != {{ $ut.Host }}) {
-        return 403;
+        return 404;
     }
 
     ### ssl
