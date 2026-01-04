@@ -3,13 +3,8 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
-    ingress.nginx.k8s.io/lb-config: |
-      {
-        "backends": [
-          {"host": "api.web99.com", "name": "nginx-service-g", "config": "max_fails=3 fail_timeout=30s weight=80"},
-          {"host": "api.web99.com", "name": "nginx-service-h", "config": "max_fails=3 fail_timeout=30s weight=20"}
-        ]
-      }
+
+
     ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {
@@ -118,40 +113,13 @@ spec:
       port:
         number: 9099
   rules:
-    - host: "api.web22.com"
+    - host: "api.web99.com"
       http:
         paths:
           - path: "/a2/(p1|p2)(/.*)$"
             pathType: ImplementationSpecific
             backend:
               service:
-                name: nginx-service-a
+                name: nginx-service-g
                 port:
                   number: 9094
-    - host: "api.web88.com"
-      http:
-        paths:
-          - path: "/gg"
-            pathType: Exact
-            backend:
-              service:
-                name: nginx-service-g
-                port:
-                  number: 9096
-    - host: "api.web99.com"
-      http:
-        paths:
-          - path: "/"
-            pathType: Prefix
-            backend:
-              service:
-                name: nginx-service-g
-                port:
-                  number: 9096
-          - path: "/"
-            pathType: Prefix
-            backend:
-              service:
-                name: nginx-service-h
-                port:
-                  number: 9098

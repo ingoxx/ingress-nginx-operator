@@ -230,7 +230,7 @@ func (e DuplicatePathError) Error() string {
 
 func NewInconsistentPathError(name, namespace string) error {
 	return DuplicatePathError{
-		errMsg: fmt.Sprintf("'.spec.Host.path' inconsistent, ingress '%s' in namespace '%s'", name, namespace),
+		errMsg: fmt.Sprintf("duplicate '.spec.Host.path', ingress '%s' in namespace '%s'", name, namespace),
 	}
 }
 

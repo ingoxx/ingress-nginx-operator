@@ -474,18 +474,15 @@ func (i *IngressServiceImpl) CheckHosts() error {
 
 func (i *IngressServiceImpl) CheckPath(path []v1.HTTPIngressPath) error {
 	var pattern = `^/`
-	var recordExistsPath = make(map[string]bool)
-	var isOnceSet bool
+	var recordExistsPath = make(map[string]string)
 
 	for _, p := range path {
-		if !isOnceSet {
-			recordExistsPath[p.Path] = true
-			isOnceSet = true
-		}
-
-		if _, ok := recordExistsPath[p.Path]; !ok {
+		_, ok := recordExistsPath[p.Path]
+		if ok {
 			return cerr.NewInconsistentPathError(i.GetName(), i.GetNameSpace())
 		}
+
+		recordExistsPath[p.Path] = p.Backend.Service.Name
 
 		matched, err := regexp.MatchString(pattern, p.Path)
 		if err != nil {
