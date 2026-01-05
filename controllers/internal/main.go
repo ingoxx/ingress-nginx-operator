@@ -53,8 +53,7 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 	ing.NewIngress(ingress)
 
 	if err := ing.CheckController(); err != nil {
-		nc.recorder.Event(ingress, "Normal", "NoCustomControllerSelected", err.Error())
-		return err
+		return nil
 	}
 
 	cert := services.NewCertServiceImpl(nc.ctx, ing)

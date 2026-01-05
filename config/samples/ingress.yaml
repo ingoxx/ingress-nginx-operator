@@ -3,8 +3,13 @@ kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: ingress-operator
-
-
+    ingress.nginx.k8s.io/lb-config: |
+      {
+        "backends": [
+          {"host": "admin.k8s.com", "name": "nginx-service-g", port: 9094, "config": "max_fails=3 fail_timeout=30s weight=80"},
+          {"host": "admin.k8s.com", "name": "nginx-service-h", port: 9098, "config": "max_fails=3 fail_timeout=30s weight=20"}
+        ]
+      }
     ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {

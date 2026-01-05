@@ -340,22 +340,23 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 			}
 
 			bk := &ingress.IngBackends{
-				Services:        backend,
-				Path:            p.Path,
-				PathType:        string(*p.PathType),
-				SvcName:         backend.Name,
-				IsPathIsRegex:   parser.IsRegex(p.Path),
-				IsSingleService: i.isOneSvc(r.HTTP.Paths),
+				Services:      backend,
+				Path:          p.Path,
+				PathType:      string(*p.PathType),
+				SvcName:       backend.Name,
+				IsPathIsRegex: parser.IsRegex(p.Path),
+				//IsSingleService: i.isOneSvc(r.HTTP.Paths),
+
 			}
 			backends = append(backends, bk)
 		}
 
-		var up string
-		if len(r.HTTP.Paths) > 1 {
-			up = i.getUpstreamName(r.Host)
-		} else {
-			up = ""
-		}
+		var up = i.getUpstreamName(r.Host)
+		//if len(r.HTTP.Paths) > 1 {
+		//	up = i.getUpstreamName(r.Host)
+		//} else {
+		//	up = ""
+		//}
 
 		uc := &ingress.Backends{
 			Host:           r.Host,

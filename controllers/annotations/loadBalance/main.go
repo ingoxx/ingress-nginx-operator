@@ -7,6 +7,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
+	"k8s.io/apimachinery/pkg/types"
 	"strings"
 )
 
@@ -62,14 +63,18 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 				}
 
 				for _, v := range bks.Backends {
-					if _, err := ing.GetBackend(v.Name); err != nil {
-						//return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+					key := types.NamespacedName{Name: v.Name, Namespace: ing.GetNameSpace()}
+					if _, err := ing.GetService(key); err != nil {
 						return err
 					}
+					//if _, err := ing.GetBackend(v.Name); err != nil {
+					//	//return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
+					//	return err
+					//}
 
-					if !ing.CheckHost(v.Host) {
-						return cerr.NewIngressHostNotFoundError(v.Host, ing.GetName(), ing.GetNameSpace())
-					}
+					//if !ing.CheckHost(v.Host) {
+					//	return cerr.NewIngressHostNotFoundError(v.Host, ing.GetName(), ing.GetNameSpace())
+					//}
 				}
 			}
 
@@ -125,9 +130,6 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 			svc.BackendDns = r.resources.GetBackendName(svc.Services)
 			var updated bool
 			for _, v3 := range bks.Backends {
-				if svc.Services.Name == "" {
-					continue
-				}
 				if svc.Services.Name == v3.Name && v1.Host == v3.Host {
 					if svc.IsSingleService {
 						svc.Services.Name = r.resources.GetBackendName(svc.Services)
