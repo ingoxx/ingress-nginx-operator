@@ -206,3 +206,7 @@ func (r ResourceAdapter) DeleteIssuer() error {
 func (r ResourceAdapter) DeleteCert() error {
 	return r.Cert.DeleteCert()
 }
+
+func (r ResourceAdapter) GetSvcPort(svc *corev1.Service) []int32 {
+	return r.Ingress.GetSvcPort(svc)
+}

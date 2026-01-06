@@ -7,6 +7,7 @@ import (
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
+	v12 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"strings"
 )
@@ -64,17 +65,23 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 
 				for _, v := range bks.Backends {
 					key := types.NamespacedName{Name: v.Name, Namespace: ing.GetNameSpace()}
-					if _, err := ing.GetService(key); err != nil {
+					svc, err := ing.GetService(key)
+					if err != nil {
 						return err
 					}
-					//if _, err := ing.GetBackend(v.Name); err != nil {
-					//	//return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
-					//	return err
-					//}
 
-					//if !ing.CheckHost(v.Host) {
-					//	return cerr.NewIngressHostNotFoundError(v.Host, ing.GetName(), ing.GetNameSpace())
-					//}
+					var isExistPort bool
+					port := ing.GetSvcPort(svc)
+					for _, p := range port {
+						if p == v.Port {
+							isExistPort = true
+							break
+						}
+					}
+
+					if !isExistPort {
+						return fmt.Errorf("service '%s' port error", svc.Name)
+					}
 				}
 			}
 
@@ -121,30 +128,33 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		}
 	}
 
+	var isE = make(map[string]struct{})
 	for _, v1 := range upstreamConfig {
+
+		var st = make([]string, len(upstreamConfig))
 		v1.Cert = tls[v1.Host]
-		for _, svc := range v1.ServiceBackend {
-			if svc.Services.Name == "" {
-				continue
+
+		for _, v2 := range bks.Backends {
+			fmt.Println("v2 >>> ", v2.Config)
+			svc := &v12.ServiceBackendPort{
+				Name:   v2.Name,
+				Number: v2.Port,
 			}
-			svc.BackendDns = r.resources.GetBackendName(svc.Services)
-			var updated bool
-			for _, v3 := range bks.Backends {
-				if svc.Services.Name == v3.Name && v1.Host == v3.Host {
-					if svc.IsSingleService {
-						svc.Services.Name = r.resources.GetBackendName(svc.Services)
-					} else {
-						svc.Services.Name = fmt.Sprintf("%s %s", r.resources.GetBackendName(svc.Services), v3.Config)
-						v1.StreamServeName = append(v1.StreamServeName, svc.Services.Name)
-					}
-					updated = true
-					break // 找到后就退出
+
+			if v1.Host == v2.Host {
+				bn := fmt.Sprintf("%s %s", r.resources.GetBackendName(svc), v2.Config)
+				fmt.Println("bn >>> ", bn)
+				_, ok := isE[v2.Name]
+				if !ok {
+
+					st = append(st, bn)
+					isE[v2.Name] = struct{}{}
 				}
 			}
-			if !updated {
-				svc.Services.Name = r.resources.GetBackendName(svc.Services)
-			}
 		}
+
+		fmt.Println("st >>> ", st)
+		v1.StreamServeName = st
 	}
 
 	config.LbConfig = upstreamConfig

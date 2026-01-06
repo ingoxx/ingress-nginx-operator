@@ -54,4 +54,5 @@ type ResourcesMth interface {
 	DeleteIssuer() error
 	CheckCert() error
 	DeleteCert() error
+	GetSvcPort(*corev1.Service) []int32
 }
