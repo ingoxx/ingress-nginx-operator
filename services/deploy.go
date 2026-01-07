@@ -237,7 +237,7 @@ func (d *DeploymentServiceImpl) deployPodContainer() []v13.Container {
 	c := v13.Container{
 		Command: constants.Command,
 		Name:    d.generic.GetDeployNameLabel(),
-		Image:   constants.Images,
+		Image:   fmt.Sprintf("%s:%s", constants.Images, constants.Version),
 		Ports:   cps,
 		Resources: v13.ResourceRequirements{
 			Requests: v13.ResourceList{

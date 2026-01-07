@@ -163,7 +163,7 @@ func (ds *DaemonSetServiceImpl) daemonSetPodContainer(data *buildDaemonSetData) 
 	c := v13.Container{
 		Command: constants.Command,
 		Name:    ds.generic.GetDaemonSetNameLabel(),
-		Image:   constants.Images,
+		Image:   fmt.Sprintf("%s:%s", constants.Images, constants.Version),
 		Ports:   cps,
 		Resources: v13.ResourceRequirements{
 			Requests: v13.ResourceList{
