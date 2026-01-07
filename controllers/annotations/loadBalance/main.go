@@ -63,7 +63,9 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					return cerr.NewInvalidIngressAnnotationsError(lbConfigAnnotations, ing.GetName(), ing.GetNameSpace())
 				}
 
+				var isInIng bool
 				for _, v := range bks.Backends {
+
 					key := types.NamespacedName{Name: v.Name, Namespace: ing.GetNameSpace()}
 					svc, err := ing.GetService(key)
 					if err != nil {
@@ -82,6 +84,15 @@ var loadBalanceAnnotations = parser.AnnotationsContents{
 					if !isExistPort {
 						return fmt.Errorf("service '%s' port error", svc.Name)
 					}
+
+					backendPort := ing.GetBackendPort(svc)
+					if backendPort > 0 {
+						isInIng = true
+					}
+				}
+
+				if !isInIng {
+					return fmt.Errorf("the backend is not in ingress '%s'", ing.GetName())
 				}
 			}
 
@@ -130,30 +141,32 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 
 	var isE = make(map[string]struct{})
 	for _, v1 := range upstreamConfig {
-
-		var st = make([]string, len(upstreamConfig))
 		v1.Cert = tls[v1.Host]
+		var st = make([]string, 0, len(upstreamConfig))
 
-		for _, v2 := range bks.Backends {
-			fmt.Println("v2 >>> ", v2.Config)
-			svc := &v12.ServiceBackendPort{
-				Name:   v2.Name,
-				Number: v2.Port,
-			}
-
-			if v1.Host == v2.Host {
-				bn := fmt.Sprintf("%s %s", r.resources.GetBackendName(svc), v2.Config)
-				fmt.Println("bn >>> ", bn)
-				_, ok := isE[v2.Name]
-				if !ok {
-
-					st = append(st, bn)
-					isE[v2.Name] = struct{}{}
+		if len(bks.Backends) > 0 {
+			for _, v2 := range bks.Backends {
+				svc := &v12.ServiceBackendPort{
+					Name:   v2.Name,
+					Number: v2.Port,
 				}
+
+				if v1.Host == v2.Host {
+					bn := fmt.Sprintf("%s %s", r.resources.GetBackendName(svc), v2.Config)
+					_, ok := isE[v2.Name]
+					if !ok {
+						st = append(st, bn)
+						isE[v2.Name] = struct{}{}
+					}
+				}
+			}
+		} else {
+			for _, ib := range v1.ServiceBackend {
+				bn := fmt.Sprintf("%s", r.resources.GetBackendName(ib.Services))
+				st = append(st, bn)
 			}
 		}
 
-		fmt.Println("st >>> ", st)
 		v1.StreamServeName = st
 	}
 

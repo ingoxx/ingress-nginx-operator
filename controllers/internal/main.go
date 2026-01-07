@@ -53,6 +53,7 @@ func (nc *CrdNginxController) check(ingress *v1.Ingress, ing common.Generic) err
 	ing.NewIngress(ingress)
 
 	if err := ing.CheckController(); err != nil {
+		klog.Info("set 'kubernetes.io/ingress.class: ingress-operator' in annotations if use ingress-operator")
 		return nil
 	}
 
