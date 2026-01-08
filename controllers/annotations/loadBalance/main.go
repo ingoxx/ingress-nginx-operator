@@ -145,6 +145,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		var st = make([]string, 0, len(upstreamConfig))
 
 		if len(bks.Backends) > 0 {
+			// 这里是使用upstream功能，支持自定义权重，策略，超时等设置
 			for _, v2 := range bks.Backends {
 				svc := &v12.ServiceBackendPort{
 					Name:   v2.Name,
@@ -160,21 +161,19 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 					}
 				}
 			}
+
+			v1.StreamServeName = st
 		} else {
+			// 这里是普通的后端地址：http://svc.namespace.svc:port
+			v1.Upstream = ""
 			for _, ib := range v1.ServiceBackend {
-				bn := fmt.Sprintf("%s", r.resources.GetBackendName(ib.Services))
-				st = append(st, bn)
+				ib.BackendDns = r.resources.GetBackendName(ib.Services)
 			}
 		}
 
-		v1.StreamServeName = st
 	}
 
 	config.LbConfig = upstreamConfig
-
-	if err := r.validate(config); err != nil {
-		return config, err
-	}
 
 	return config, err
 }

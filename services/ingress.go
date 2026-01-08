@@ -331,13 +331,12 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 				return upStreamConfigList, cerr.NewSetPathTypeError(i.GetName(), i.GetNameSpace())
 			}
 
-			b, ok := isSameBackend[p.Backend.Service.Name]
-			if !ok {
-				isSameBackend[p.Backend.Service.Name] = true
+			_, ok := isSameBackend[p.Backend.Service.Name]
+			if ok {
+				continue
 			}
-			if b {
-				backend = new(v1.ServiceBackendPort)
-			}
+
+			isSameBackend[p.Backend.Service.Name] = true
 
 			bk := &ingress.IngBackends{
 				Services:      backend,
@@ -345,24 +344,18 @@ func (i *IngressServiceImpl) GetUpstreamConfig() ([]*ingress.Backends, error) {
 				PathType:      string(*p.PathType),
 				SvcName:       backend.Name,
 				IsPathIsRegex: parser.IsRegex(p.Path),
-				//IsSingleService: i.isOneSvc(r.HTTP.Paths),
-
 			}
+
 			backends = append(backends, bk)
 		}
 
 		var up = i.getUpstreamName(r.Host)
-		//if len(r.HTTP.Paths) > 1 {
-		//	up = i.getUpstreamName(r.Host)
-		//} else {
-		//	up = ""
-		//}
-
 		uc := &ingress.Backends{
 			Host:           r.Host,
 			Upstream:       up,
 			ServiceBackend: backends,
 		}
+
 		upStreamConfigList = append(upStreamConfigList, uc)
 	}
 
