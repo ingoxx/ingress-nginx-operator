@@ -2,6 +2,8 @@ package loadBalance
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
@@ -9,7 +11,6 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
 	v12 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"strings"
 )
 
 var (

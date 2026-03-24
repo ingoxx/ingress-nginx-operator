@@ -2,6 +2,8 @@ package services
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
@@ -11,7 +13,6 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -138,15 +139,13 @@ func (s *SecretServiceImpl) caSigned() (map[string]ingress.Tls, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		for _, h := range v.Hosts {
 			for k, v2 := range data {
-				fileName := filepath.Join(constants.NginxSSLDir, s.cert.SecretObjectKey())
+				fileName := filepath.Join(constants.NginxSSLDir, fmt.Sprintf("%s-%s", s.cert.SecretObjectKey(), k))
 				if err := file.SaveToFile(fileName, v2); err != nil {
 					return ht, err
 				}
-				//if err := os.WriteFile(fileName, v2, 0644); err != nil {
-				//	return nil, err
-				//}
 
 				if k == constants.NginxTlsCrt {
 					ss.TlsCrt = fileName
@@ -154,6 +153,7 @@ func (s *SecretServiceImpl) caSigned() (map[string]ingress.Tls, error) {
 					ss.TlsKey = fileName
 				}
 			}
+
 			ht[h] = ss
 		}
 	}
