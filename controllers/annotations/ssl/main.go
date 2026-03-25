@@ -1,16 +1,18 @@
 package ssl
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
-	"os"
-	"path/filepath"
-	"strconv"
 )
 
 const (
+	sslRedirectAnnotations          = "ssl-redirect"
 	sslStaplingVerifyAnnotations    = "ssl-stapling-verify"
 	sslStaplingAnnotations          = "ssl-stapling"
 	sslStaplingConfigMapAnnotations = "ssl-trusted-config-map"
@@ -22,6 +24,7 @@ type sslIng struct {
 }
 
 type Config struct {
+	SslRedirect        bool   `json:"ssl-redirect"`
 	SSllStaplingVerify bool   `json:"ssl-stapling-verify"`
 	SSlStapling        bool   `json:"ssl-stapling-stapling"`
 	SSLTrustedCMName   string `json:"ssl-trusted-cm-name"`
@@ -29,6 +32,18 @@ type Config struct {
 }
 
 var sslAnnotations = parser.AnnotationsContents{
+	sslRedirectAnnotations: {
+		Doc: "optional, true or false.",
+		Validator: func(s string, ing service.K8sResourcesIngress) error {
+			if s != "" {
+				if _, err := strconv.ParseBool(s); err != nil {
+					return cerr.NewInvalidIngressAnnotationsError(sslRedirectAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
+			}
+
+			return nil
+		},
+	},
 	sslStaplingVerifyAnnotations: {
 		Doc: "optional, true or false.",
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
@@ -72,10 +87,16 @@ func (s *sslIng) Parse() (interface{}, error) {
 	var err error
 	config := &Config{}
 
+	config.SslRedirect, err = parser.GetBoolAnnotations(sslRedirectAnnotations, s.ingress, sslAnnotations)
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
+		return config, err
+	}
+
 	config.SSllStaplingVerify, err = parser.GetBoolAnnotations(sslStaplingVerifyAnnotations, s.ingress, sslAnnotations)
 	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
 	}
+
 	config.SSlStapling, err = parser.GetBoolAnnotations(sslStaplingAnnotations, s.ingress, sslAnnotations)
 	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
@@ -86,8 +107,10 @@ func (s *sslIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	if verr := s.validate(config); verr != nil {
-		return config, verr
+	if config.SslRedirect {
+		if verr := s.validate(config); verr != nil {
+			return config, verr
+		}
 	}
 
 	return config, err

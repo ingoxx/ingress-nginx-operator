@@ -19,15 +19,19 @@ upstream {{ $ut.Upstream }} {
 server {
     listen       80;
     listen  [::]:80;
+    ### ssl verify
+    {{ if $annotations.SSLStapling.SslRedirect }}
     listen       443 ssl;
     listen  [::]:443 ssl;
+    {{ end }}
     server_name {{ $ut.Host }};
 
     if ($host != {{ $ut.Host }}) {
         return 404;
     }
 
-    ### ssl
+    ### ssl verify
+    {{ if $annotations.SSLStapling.SslRedirect }}
     ssl_certificate {{ $ut.Cert.TlsCrt }};
     ssl_certificate_key {{ $ut.Cert.TlsKey }};
     ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
@@ -43,6 +47,7 @@ server {
     {{ if $annotations.SSLStapling.SSllStaplingVerify }}
     ssl_stapling_verify on;
     ssl_trusted_certificate {{ $annotations.SSLStapling.SSLTrustCertFile }};
+    {{ end }}
     {{ end }}
 
     ### allow cos
