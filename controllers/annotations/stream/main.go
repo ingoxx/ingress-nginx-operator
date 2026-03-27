@@ -1,13 +1,14 @@
 package stream
 
 import (
+	"strconv"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"strconv"
 )
 
 const (
@@ -136,7 +137,7 @@ func (r *enableStreamIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (r *enableStreamIng) validate(config *Config) error {

@@ -2,10 +2,11 @@ package rewrite
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
-	"strings"
 )
 
 var (
@@ -100,7 +101,7 @@ func (r *rewriteIng) Parse() (interface{}, error) {
 		return config, verr
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (r *rewriteIng) validate(config *Config) error {

@@ -5,6 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
+	"text/template"
+	"time"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitconn"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
@@ -12,16 +20,9 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/pkg/constants"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"golang.org/x/net/context"
-	"io"
 	v1 "k8s.io/api/networking/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
-	"net/http"
-	"os"
-	"path/filepath"
-	"sync"
-	"text/template"
-	"time"
 )
 
 const (

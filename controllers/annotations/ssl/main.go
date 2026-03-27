@@ -113,7 +113,7 @@ func (s *sslIng) Parse() (interface{}, error) {
 		}
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (s *sslIng) validate(config *Config) error {

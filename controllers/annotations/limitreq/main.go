@@ -1,11 +1,12 @@
 package limitreq
 
 import (
+	"strconv"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
-	"strconv"
 )
 
 const (
@@ -104,7 +105,7 @@ func (r *RequestLimitIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (r *RequestLimitIng) validate(config *Config) error {

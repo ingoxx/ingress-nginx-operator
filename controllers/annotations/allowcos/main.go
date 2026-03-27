@@ -1,10 +1,11 @@
 package allowcos
 
 import (
+	"strconv"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
-	"strconv"
 )
 
 const (
@@ -51,7 +52,7 @@ func (s *enableCosIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (s *enableCosIng) Validate(ing map[string]string) error {

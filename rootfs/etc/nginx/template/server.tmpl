@@ -152,7 +152,6 @@ server {
 
 
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-For        $remote_addr;
         proxy_set_header X-Forwarded-Host       $best_http_host;
         proxy_set_header X-Forwarded-Port       $pass_port;
@@ -164,9 +163,9 @@ server {
 
         # Custom headers to proxied server
 
-        proxy_connect_timeout                   5s;
-        proxy_send_timeout                      60s;
-        proxy_read_timeout                      60s;
+        proxy_connect_timeout                   30s;
+        proxy_send_timeout                      3600s;
+        proxy_read_timeout                      3600s;
 
         proxy_buffering                         off;
         proxy_buffer_size                       4k;
@@ -188,6 +187,8 @@ server {
         ### proxy backend
         {{ if ne $ut.Upstream "" }}
         proxy_pass http://{{ $ut.Upstream }};
+        {{ else if ne $annotations.LoadBalance.LbProto "" }}
+        proxy_pass https://{{ $path.BackendDns }};
         {{ else }}
         proxy_pass http://{{ $path.BackendDns }};
         {{ end }}

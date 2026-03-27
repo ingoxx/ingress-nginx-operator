@@ -2,6 +2,7 @@ package annotations
 
 import (
 	"fmt"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowcos"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/allowiplist"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/denyiplist"
@@ -79,6 +80,7 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 		if val != nil {
 			ia[name] = val
 		}
+
 	}
 
 	if err := mapstructure.Decode(ia, iak); err != nil {
@@ -86,6 +88,7 @@ func (e *Extractor) Extract() (*IngressAnnotationsConfig, error) {
 		return nil, err
 	}
 
+	//
 	//if err := mergo.MapWithOverwrite(iak, ia); err != nil {
 	//	klog.ErrorS(err, fmt.Sprintf("unexpected error merging extracted annotations, ingress '%s', namespace '%s'", e.ingress.GetName(), e.ingress.GetNameSpace()))
 	//	return nil, err

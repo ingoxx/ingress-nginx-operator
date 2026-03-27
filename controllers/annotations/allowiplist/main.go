@@ -1,12 +1,13 @@
 package allowiplist
 
 import (
+	"strconv"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	cerr "github.com/ingoxx/ingress-nginx-operator/pkg/error"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/service"
 	"github.com/ingoxx/ingress-nginx-operator/utils/jsonParser"
-	"strconv"
 )
 
 const (
@@ -90,7 +91,7 @@ func (r *enableIpWhiteListIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (r *enableIpWhiteListIng) validate(config *Config) error {

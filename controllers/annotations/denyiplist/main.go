@@ -90,7 +90,7 @@ func (r *enableIpBlackListIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
-	return config, err
+	return config, nil
 }
 
 func (r *enableIpBlackListIng) validate(config *Config) error {

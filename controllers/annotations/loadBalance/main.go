@@ -14,12 +14,14 @@ import (
 )
 
 var (
-	Policy = []string{"ip_hash", "random", "least_conn", "hash $request_uri consistent"}
+	Policy  = []string{"ip_hash", "random", "least_conn", "hash $request_uri consistent"}
+	LbProto = []string{"http", "https"}
 )
 
 const (
 	lbPolicyAnnotations = "lb-policy"
 	lbConfigAnnotations = "lb-config"
+	lbProtoAnnotations  = "lb-proto"
 )
 
 type loadBalanceIng struct {
@@ -30,9 +32,28 @@ type loadBalanceIng struct {
 type Config struct {
 	LbConfig []*ingress.Backends `json:"lb-config"`
 	LbPolicy string              `json:"lb-policy"`
+	LbProto  string              `json:"lb-proto"`
 }
 
 var loadBalanceAnnotations = parser.AnnotationsContents{
+	lbProtoAnnotations: {
+		Doc: fmt.Sprintf("http,https, default: http"),
+		Validator: func(s string, ing service.K8sResourcesIngress) error {
+			if s != "" {
+				var isValidPolicy bool
+				for _, v := range LbProto {
+					if s == v {
+						isValidPolicy = true
+					}
+				}
+
+				if !isValidPolicy {
+					return cerr.NewInvalidIngressAnnotationsError(lbProtoAnnotations, ing.GetName(), ing.GetNameSpace())
+				}
+			}
+			return nil
+		},
+	},
 	lbPolicyAnnotations: {
 		Doc: fmt.Sprintf("nginx lb policy, the value of the flag must be selected from here: %v.", strings.Join(Policy, ",")),
 		Validator: func(s string, ing service.K8sResourcesIngress) error {
@@ -119,6 +140,11 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 		return config, err
 	}
 
+	config.LbProto, err = parser.GetStringAnnotation(lbProtoAnnotations, r.ingress, loadBalanceAnnotations)
+	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
+		return config, err
+	}
+
 	lbConfig, err := parser.GetStringAnnotation(lbConfigAnnotations, r.ingress, loadBalanceAnnotations)
 	if err != nil && !cerr.IsMissIngressAnnotationsError(err) {
 		return config, err
@@ -176,7 +202,7 @@ func (r *loadBalanceIng) Parse() (interface{}, error) {
 
 	config.LbConfig = upstreamConfig
 
-	return config, err
+	return config, nil
 }
 
 func (r *loadBalanceIng) validate(config *Config) error {
