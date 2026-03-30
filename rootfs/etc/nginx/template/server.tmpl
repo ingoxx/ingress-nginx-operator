@@ -1,6 +1,11 @@
 {{ $annotations := .Annotations }}
-{{ range $ut := $annotations.LoadBalance.LbConfig }}
 
+map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+}
+
+{{ range $ut := $annotations.LoadBalance.LbConfig }}
 ### start {{ $ut.Host }} ###
 {{ if ne $ut.Upstream "" }}
 upstream {{ $ut.Upstream }} {
@@ -41,6 +46,17 @@ server {
     ssl_session_cache builtin:1000 shared:SSL:10m;
     ssl_buffer_size 1400;
     add_header Strict-Transport-Security max-age=15768000;
+
+    {{ if ne $annotations.SSLStapling.SslVerify "" }}
+    proxy_ssl_verify {{ $annotations.SSLStapling.SslVerify }};
+    {{ end }}
+    {{ if ne $annotations.SSLStapling.SslServerName "" }}
+    proxy_ssl_server_name {{ $annotations.SSLStapling.SslServerName }};
+    {{ end }}
+    {{ if ne $annotations.SSLStapling.SslName "" }}
+    proxy_ssl_name {{ $annotations.SSLStapling.SslName }};
+    {{ end }}
+
     {{ if $annotations.SSLStapling.SSlStapling }}
     ssl_stapling on;
     {{ end }}
@@ -148,21 +164,31 @@ server {
 
         # Allow websocket connections
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
 
+        # new connection_upgrade
+        {{ if eq $annotations.UpgradePoxy.HttpUpgrade "$http_upgrade" }}
+        proxy_set_header Connection $connection_upgrade;
+        {{ else }}
+        proxy_set_header Connection "upgrade";
+        {{ end }}
 
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For        $remote_addr;
         proxy_set_header X-Forwarded-Host       $best_http_host;
         proxy_set_header X-Forwarded-Port       $pass_port;
+
+        {{ if ne $annotations.LoadBalance.LbProto "" }}
+        proxy_set_header X-Forwarded-Proto https;
+        {{ else }}
         proxy_set_header X-Forwarded-Proto      $pass_access_scheme;
+        {{ end }}
+
         proxy_set_header X-Forwarded-Scheme     $pass_access_scheme;
         proxy_set_header X-Scheme               $pass_access_scheme;
         # Pass the original X-Forwarded-For
         proxy_set_header X-Original-Forwarded-For $http_x_forwarded_for;
 
         # Custom headers to proxied server
-
         proxy_connect_timeout                   30s;
         proxy_send_timeout                      3600s;
         proxy_read_timeout                      3600s;

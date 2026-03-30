@@ -10,8 +10,13 @@ metadata:
           {"host": "admin.k8s.com", "name": "nginx-service-h", port: 9098, "config": "max_fails=3 fail_timeout=30s weight=20"}
         ]
       }
-    ingress.nginx.k8s.io/enable-stream: "true"
+
     ingress.nginx.k8s.io/ssl-redirect: "true"
+    ingress.nginx.k8s.io/ssl-verify: "off"
+    ingress.nginx.k8s.io/ssl-name: "rancher.my-cluster.com"
+    ingress.nginx.k8s.io/ssl-server-name: "on"
+    ingress.nginx.k8s.io/http-upgrade: "$http_upgrade"
+    ingress.nginx.k8s.io/enable-stream: "true"
     ingress.nginx.k8s.io/set-stream-config: |
       {
         "backends": [

@@ -10,6 +10,7 @@ import (
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/loadBalance"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
+	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/proxy"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/rewrite"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/ssl"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
@@ -29,6 +30,7 @@ type IngressAnnotationsConfig struct {
 	EnableStream      stream.Config
 	EnableIpWhileList allowiplist.Config
 	EnableIpBlackList denyiplist.Config
+	UpgradePoxy       proxy.Config
 }
 
 func (iac *IngressAnnotationsConfig) GetIngAnnConfig() {}
@@ -51,6 +53,7 @@ func NewExtractor(ing service.K8sResourcesIngress, resources service.ResourcesMt
 			"EnableStream":      stream.NewEnableStreamIng(ing, resources),
 			"EnableIpWhileList": allowiplist.NewEnableIpWhiteListIng(ing, resources),
 			"EnableIpBlackList": denyiplist.NewEnableIpBlackListIng(ing, resources),
+			"UpgradePoxy":       proxy.NewUpgradePoxy(ing, resources),
 		},
 		ingress:   ing,
 		resources: resources,
