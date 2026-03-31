@@ -2,6 +2,9 @@ package services
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/parser"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/ingress"
 	"github.com/ingoxx/ingress-nginx-operator/pkg/common"
@@ -15,9 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"regexp"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 // IngressServiceImpl 实现 IngressService 接口
@@ -31,6 +33,18 @@ type IngressServiceImpl struct {
 // NewIngressServiceImpl 创建 Service 实例
 func NewIngressServiceImpl(ctx context.Context, k8sCli common.K8sClientSet, operatorCli common.OperatorClientSet) *IngressServiceImpl {
 	return &IngressServiceImpl{ctx: ctx, k8sCli: k8sCli, operatorCli: operatorCli}
+}
+
+func (i *IngressServiceImpl) OwnerRefFromIngress() metav1.OwnerReference {
+	ingMeta := i.ingress.ObjectMeta
+	return metav1.OwnerReference{
+		APIVersion:         "networking.k8s.io/v1",
+		Kind:               "Ingress",
+		Name:               ingMeta.Name,
+		UID:                ingMeta.UID,
+		Controller:         pointer.Bool(true),
+		BlockOwnerDeletion: pointer.Bool(true),
+	}
 }
 
 func (i *IngressServiceImpl) GetIngressList(ctx context.Context, req client.ObjectKey) (*v1.IngressList, error) {

@@ -6,6 +6,7 @@ import (
 	v12 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -209,4 +210,8 @@ func (r ResourceAdapter) DeleteCert() error {
 
 func (r ResourceAdapter) GetSvcPort(svc *corev1.Service) []int32 {
 	return r.Ingress.GetSvcPort(svc)
+}
+
+func (r ResourceAdapter) OwnerRefFromIngress() metav1.OwnerReference {
+	return r.Ingress.OwnerRefFromIngress()
 }

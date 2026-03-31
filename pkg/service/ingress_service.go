@@ -45,4 +45,5 @@ type K8sResourcesIngress interface {
 	UpdateIngress(*v1.Ingress) error
 	NewIngress(*v1.Ingress)
 	GetSvcPort(*corev1.Service) []int32
+	OwnerRefFromIngress() metav1.OwnerReference
 }

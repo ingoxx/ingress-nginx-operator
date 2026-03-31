@@ -3,6 +3,8 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
+
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitconn"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/limitreq"
 	"github.com/ingoxx/ingress-nginx-operator/controllers/annotations/stream"
@@ -15,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sync"
 )
 
 var cmLocks = sync.Map{}
