@@ -168,6 +168,5 @@ func (nc *CrdNginxController) delete(ingress *v1.Ingress, ing common.Generic, ar
 	}
 
 	klog.Infof("the ingress %s has been successfully deleted\n", ingress.Name)
-
 	return nil
 }
