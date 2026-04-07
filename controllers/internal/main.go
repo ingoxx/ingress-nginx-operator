@@ -41,26 +41,10 @@ func (nc *CrdNginxController) Start(req ctrl.Request) error {
 		return err
 	}
 
-	ingChan := make(chan *v1.Ingress, len(ingList.Items))
-
-	go func() {
-		for {
-			select {
-			case <-nc.ctx.Done():
-				close(ingChan)
-				return
-			case ig := <-ingChan:
-				if err := nc.check(ig, ing); err != nil {
-					nc.recorder.Event(ig, "Warning", "FailToStartController", err.Error())
-					close(ingChan)
-					return
-				}
-			}
-		}
-	}()
-
 	for _, ig := range ingList.Items {
-		ingChan <- &ig
+		if err := nc.check(&ig, ing); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -132,7 +116,7 @@ func (nc *CrdNginxController) run(ingress *v1.Ingress, ing common.Generic, ar se
 		nc.recorder.Event(ingress, "Warning", "FailToExtractAnnotations", err.Error())
 		return err
 	}
-	
+
 	if err := ngx.Run(ar, config); err != nil {
 		nc.recorder.Event(ingress, "Warning", "FailToGenerateNgxConfig", err.Error())
 		return err

@@ -144,6 +144,7 @@ func (r *NginxIngressReconciler) SetupWithManager(mgr ctrl.Manager, clientSet co
 	if err := mgr.GetCache().IndexField(ctx, &corev1.ConfigMap{}, "metadata.name", func(obj client.Object) []string { return []string{obj.GetName()} }); err != nil {
 		return fmt.Errorf("failed to create ConfigMap index: %w", err)
 	}
+
 	if err := mgr.GetCache().IndexField(ctx, &v12.Deployment{}, "metadata.name", func(obj client.Object) []string { return []string{obj.GetName()} }); err != nil {
 		return fmt.Errorf("failed to create Deployment index: %w", err)
 	}
