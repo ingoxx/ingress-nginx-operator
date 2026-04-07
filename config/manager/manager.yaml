@@ -70,7 +70,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: gotec007/ingress-operator:v1240
+        image: gotec007/ingress-operator:v1241
         name: manager
         securityContext:
           # allowPrivilegeEscalation: false
