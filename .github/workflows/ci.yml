@@ -50,33 +50,40 @@ jobs:
   update-manifest:
     needs: build-and-push
     runs-on: arc-runner-set
-    # Only update manifest on push to main, not on PRs
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
-      contents: write   # needed to push back to same repo
+      contents: write
 
     steps:
-      - name: Checkout same repo
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GHCR_TOKEN }}
-          # No 'repository' field needed — defaults to current repo
 
-      - name: Update image tag in config/default
+      - name: Install Kustomize
         run: |
-          NEW_TAG=${{ needs.build-and-push.outputs.image-tag }}
-          # Update the image tag in your manager deployment
-          # Adjust the grep pattern to match your actual image name
-          find config/default -name "*.yaml" | xargs sed -i \
-            "s|image: ghcr.io/ingoxx/ingress-nginx-operator:.*|image: ghcr.io/ingoxx/ingress-nginx-operator:${NEW_TAG}|g"
-          echo "Updated to image tag: ${NEW_TAG}"
-          grep -r "image:" config/default/
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
 
-      - name: Commit and push manifest update
+      - name: Update image tag
+        run: |
+          # 1. 获取新 Tag (例如 sha-ad123)
+          NEW_TAG=${{ needs.build-and-push.outputs.image-tag }}
+          
+          # 2. 进入 config/manager 目录（这是 operator 镜像定义的源头）
+          cd config/manager
+          
+          # 3. 使用 kustomize 自动寻找并替换镜像名
+          # 它会自动识别原本是 gotec007 还是 ingoxx，并强行替换为最新的
+          kustomize edit set image controller=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${NEW_TAG}
+          
+          echo "Kustomize 替换完成"
+          cat kustomization.yaml | grep "newTag"
+
+      - name: Commit and push
         run: |
           git config user.email "ci-bot@github.com"
           git config user.name "CI Bot"
-          git add config/default/
-          git diff --staged --quiet || \
-            git commit -m "ci: update operator image to ${{ needs.build-and-push.outputs.image-tag }}"
-          git push
+          git add config/manager/kustomization.yaml
+          # 如果没有变化则不提交（避免报错）
+          git diff --staged --quiet || (git commit -m "ci: update operator image to ${{ needs.build-and-push.outputs.image-tag }}" && git push)
