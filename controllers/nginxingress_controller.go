@@ -75,7 +75,7 @@ type NginxIngressReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *NginxIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	fmt.Println(">>> test github ci status")
+	fmt.Println(">>> test github ci status 1")
 	if err := internal.NewCrdNginxController(ctx, r.clientSet, r.operatorCli, r.recorder).Start(req); err != nil {
 		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 	}
