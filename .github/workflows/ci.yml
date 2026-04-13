@@ -60,30 +60,34 @@ jobs:
         with:
           token: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Install Kustomize
-        run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo mv kustomize /usr/local/bin/
-
       - name: Update image tag
         run: |
-          # 1. 获取新 Tag (例如 sha-ad123)
           NEW_TAG=${{ needs.build-and-push.outputs.image-tag }}
+          FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           
-          # 2. 进入 config/manager 目录（这是 operator 镜像定义的源头）
-          cd config/manager
+          # 1. 放弃复杂的 kustomize 别名匹配，直接查找 manager.yaml
+          # 这样直接修改镜像源头，Argo CD 渲染时一定会读到正确值
+          FILE_PATH="config/manager/manager.yaml"
           
-          # 3. 使用 kustomize 自动寻找并替换镜像名
-          # 它会自动识别原本是 gotec007 还是 ingoxx，并强行替换为最新的
-          kustomize edit set image controller=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${NEW_TAG}
-          
-          echo "Kustomize 替换完成"
-          cat kustomization.yaml | grep "newTag"
+          if [ -f "$FILE_PATH" ]; then
+            # 查找以 image: 开头的行，将其后的内容替换为新的镜像地址
+            sed -i "s|image:.*|image: ${FULL_IMAGE}:${NEW_TAG}|g" $FILE_PATH
+            echo "Successfully updated $FILE_PATH to ${FULL_IMAGE}:${NEW_TAG}"
+            cat $FILE_PATH | grep "image:"
+          else
+            echo "Error: $FILE_PATH not found"
+            exit 1
+          fi
 
       - name: Commit and push
         run: |
           git config user.email "ci-bot@github.com"
           git config user.name "CI Bot"
-          git add config/manager/kustomization.yaml
-          # 如果没有变化则不提交（避免报错）
-          git diff --staged --quiet || (git commit -m "ci: update operator image to ${{ needs.build-and-push.outputs.image-tag }}" && git push)
+          git add config/manager/manager.yaml
+          # 检查是否有变化
+          if ! git diff --staged --quiet; then
+            git commit -m "ci: update operator image to ${{ needs.build-and-push.outputs.image-tag }}"
+            git push
+          else
+            echo "No changes detected, skipping commit."
+          fi
