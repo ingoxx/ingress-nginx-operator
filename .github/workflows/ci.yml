@@ -55,25 +55,16 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GHCR_TOKEN }}
-
       - name: Update image tag
         run: |
           NEW_TAG=${{ needs.build-and-push.outputs.image-tag }}
-          FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          
-          # 1. 放弃复杂的 kustomize 别名匹配，直接查找 manager.yaml
-          # 这样直接修改镜像源头，Argo CD 渲染时一定会读到正确值
-          FILE_PATH="config/manager/manager.yaml"
-          
+
+          FILE_PATH="config/manager/kustomization.yaml"
+
           if [ -f "$FILE_PATH" ]; then
-            # 查找以 image: 开头的行，将其后的内容替换为新的镜像地址
-            sed -i "s|image:.*|image: ${FULL_IMAGE}:${NEW_TAG}|g" $FILE_PATH
-            echo "Successfully updated $FILE_PATH to ${FULL_IMAGE}:${NEW_TAG}"
-            cat $FILE_PATH | grep "image:"
+            sed -i "s|newTag:.*|newTag: ${NEW_TAG}|g" $FILE_PATH
+            echo "Successfully updated $FILE_PATH to ${NEW_TAG}"
+            cat $FILE_PATH | grep "newTag"
           else
             echo "Error: $FILE_PATH not found"
             exit 1
@@ -83,8 +74,7 @@ jobs:
         run: |
           git config user.email "ci-bot@github.com"
           git config user.name "CI Bot"
-          git add config/manager/manager.yaml
-          # 检查是否有变化
+          git add config/manager/kustomization.yaml   # ← changed from manager.yaml
           if ! git diff --staged --quiet; then
             git commit -m "ci: update operator image to ${{ needs.build-and-push.outputs.image-tag }}"
             git push
