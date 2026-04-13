@@ -70,7 +70,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        image: controller:latest
+        image: ghcr.io/ingoxx/ingress-nginx-operator:latest
         name: controller
         securityContext:
           # allowPrivilegeEscalation: false
