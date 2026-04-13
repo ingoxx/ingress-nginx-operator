@@ -55,16 +55,22 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GHCR_TOKEN }}
+
       - name: Update image tag
         run: |
           NEW_TAG=${{ needs.build-and-push.outputs.image-tag }}
-
-          FILE_PATH="config/manager/kustomization.yaml"
-
+          FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          
+          FILE_PATH="config/manager/manager.yaml"
+          
           if [ -f "$FILE_PATH" ]; then
-            sed -i "s|newTag:.*|newTag: ${NEW_TAG}|g" $FILE_PATH
-            echo "Successfully updated $FILE_PATH to ${NEW_TAG}"
-            cat $FILE_PATH | grep "newTag"
+            sed -i "s|image:.*|image: ${FULL_IMAGE}:${NEW_TAG}|g" $FILE_PATH
+            echo "Successfully updated $FILE_PATH to ${FULL_IMAGE}:${NEW_TAG}"
+            cat $FILE_PATH | grep "image:"
           else
             echo "Error: $FILE_PATH not found"
             exit 1
@@ -74,7 +80,8 @@ jobs:
         run: |
           git config user.email "ci-bot@github.com"
           git config user.name "CI Bot"
-          git add config/manager/kustomization.yaml   # ← changed from manager.yaml
+          git add config/manager/manager.yaml
+          # 检查是否有变化
           if ! git diff --staged --quiet; then
             git commit -m "ci: update operator image to ${{ needs.build-and-push.outputs.image-tag }}"
             git push
