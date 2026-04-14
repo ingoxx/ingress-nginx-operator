@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/ingoxx/ingress-nginx-operator
-  newTag: 1bd8405
+  newTag: ed11466
