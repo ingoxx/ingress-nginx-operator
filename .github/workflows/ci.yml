@@ -3,6 +3,9 @@ name: CI - Build and Deploy
 on:
   push:
     branches: [main]
+    paths-ignore:
+      # 忽略清单文件的自动提交，防止触发 CI 的无限循环
+      - 'config/manager/kustomization.yaml'
   pull_request:
     branches: [main]
 
@@ -19,6 +22,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 强制将 Repository 名称转为小写，防止 Docker 镜像名因大写字母不合法
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
@@ -58,8 +62,9 @@ jobs:
         with:
           token: ${{ secrets.GHCR_TOKEN }}
           ref: main
-          fetch-depth: 0
+          fetch-depth: 0 # 获取完整历史记录，防止后续 rebase 合并冲突失败
 
+      # 获取合法的小写镜像名
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
@@ -74,19 +79,24 @@ jobs:
           FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           
           cd config/manager
-          # 这一步只会生成或修改 kustomization.yaml，绝对不会动 manager.yaml！
+          # Kustomize 会自动生成或修改 kustomization.yaml，不会破坏 manager.yaml 原文件
           kustomize edit set image controller=${FULL_IMAGE}:${SHORT_SHA}
+          
+          echo "Successfully updated kustomization.yaml to ${FULL_IMAGE}:${SHORT_SHA}"
 
       - name: Commit and push
         run: |
           git config user.email "ci-bot@github.com"
           git config user.name "CI Bot"
           
-          # 我们只提交 kustomization.yaml ！！
+          # 我们只提交 kustomization.yaml
           git add config/manager/kustomization.yaml
           
           if ! git diff --staged --quiet; then
-            git commit -m "ci: update operator image tag to $(echo ${{ github.sha }} | cut -c1-7)"
+            # 提交信息末尾加入 [skip ci] 魔法指令，双重防止触发无限循环
+            git commit -m "ci: update operator image tag to $(echo ${{ github.sha }} | cut -c1-7) [skip ci]"
+          
+            # 在 Push 之前先 pull --rebase 拉取最新代码，防止推送报错
             git pull --rebase origin main
             git push origin main
           else
