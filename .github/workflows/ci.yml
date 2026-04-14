@@ -19,7 +19,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 强制将 Repository 名称转为小写，防止 Docker 镜像名不合法
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
@@ -37,7 +36,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,prefix=,format=short
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -59,41 +57,38 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GHCR_TOKEN }}
+          ref: main
+          fetch-depth: 0
 
-      # 同样在此 Job 中获取合法的小写镜像名
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      # 2. 安装 Kustomize 工具
       - name: Install Kustomize
         run: |
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
 
-      # 3. 使用标准 Kustomize 命令更新镜像，抛弃脆弱的 sed
       - name: Update image tag with Kustomize
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           
           cd config/manager
-          # Kustomize 会自动寻找 controller 占位符并生成对应的 images 替换规则
+          # 这一步只会生成或修改 kustomization.yaml，绝对不会动 manager.yaml！
           kustomize edit set image controller=${FULL_IMAGE}:${SHORT_SHA}
-          
-          echo "Successfully updated kustomization.yaml to ${FULL_IMAGE}:${SHORT_SHA}"
 
       - name: Commit and push
         run: |
           git config user.email "ci-bot@github.com"
           git config user.name "CI Bot"
           
-          # 4. 注意：这里提交的是 kustomization.yaml，而不是 manager.yaml！
+          # 我们只提交 kustomization.yaml ！！
           git add config/manager/kustomization.yaml
           
           if ! git diff --staged --quiet; then
-            # 提交信息也变得更明确
             git commit -m "ci: update operator image tag to $(echo ${{ github.sha }} | cut -c1-7)"
-            git push
+            git pull --rebase origin main
+            git push origin main
           else
             echo "No changes detected, skipping commit."
           fi
